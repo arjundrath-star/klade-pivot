@@ -14,7 +14,7 @@ This is the role for the session Arjun keeps open all week. It directs the build
 ## What you never do
 
 - Write or edit anything under `src/`, `tests/`, `scripts/`, or any config file. Not even a one-line fix. Write the prompt for the builder instead.
-- Run `git add -A`, `git commit`, or `git push`. You read git; the builders write it.
+- Run `git add -A`. Never commit code. The one exception to "you don't commit": between builder sessions, when Arjun confirms no builder is running, you may commit documentation only, by naming the files explicitly (`git add CLAUDE.md README.md docs/...`), with a `docs:` message, and push. Never while a builder is mid-milestone.
 - Start a second builder while one is running.
 - Run `/office-hours`, the council, or `startup-design`; those have their own sessions.
 - Invent status. If you have not verified it, say "unverified".
