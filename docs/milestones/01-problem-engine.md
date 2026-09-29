@@ -1,6 +1,6 @@
 # Milestone 01: Problem engine
 
-Status: not started
+Status: done
 Session: one shot
 
 ## Goal
@@ -41,4 +41,12 @@ None (no UI in this milestone). The home page smoke test still runs.
 
 ## Notes for the next milestone
 
-Filled in at the end of the session.
+- Public API, one module each, no barrel: `defineTemplate` (`template.ts`), `generateInstance(template, seed)` (`generate.ts`), `renderProblem(template, instance, interests, index)` (`render.ts`), `checkAnswer(input, rational(instance.solution))` (`check.ts`, `rational.ts`), `solutionSteps(instance)` and `formatEquation(instance)` (`solve.ts`, `format.ts`).
+- Every template must go through `defineTemplate`. It validates ranges, draws and placeholders at module load, and returns a branded `ValidTemplate`; `generateInstance` and `renderProblem` only accept that type.
+- Ranges are for `a`, `b`, `x` (plus `c` for both-sides and distribution). The last constant is derived from `x` (`c` for two-step, `d` otherwise), so realism limits on the answer go on `ranges.x`, and the derived total is bounded by the others. `a`, `b` are never zero; `c` is never zero and never cancels `a`.
+- Placeholders substitute the value verbatim. `defineTemplate` rejects word templates with non-positive ranges (and both-sides word templates unless `a.min > c.max`, so `d` stays positive), stray braces, and bounds outside ±1000. The student-facing equation for symbolic templates comes back in `RenderedProblem.equation`; word problems return no equation on purpose.
+- Persist `seed` and `templateKey` on each attempt: the pair regenerates the instance exactly. A session can draw its per-problem seeds from `createRng(sessionSeed).int(0, 2 ** 32 - 1)`.
+- Error convention: bad student input is a typed result (`checkAnswer` never throws). Programmer errors throw at once: an invalid template at module load, a template/instance key mismatch in `renderProblem`, a negative problem index, `rational()` with a zero denominator. `Rational` is branded, so an answer stored as `{ num, den }` must go back through `rational()` or `tryRational()` before `checkAnswer`.
+- `checkAnswer` returns `normalized: null` for malformed input, so the UI can say "enter a number" instead of "wrong". It accepts the U+2212 minus sign as well as `-`.
+- Not built here, needed by 03: the warm-up's integer-operation and one-step problems are not one of the three structures. Either add a `one-step` structure (`ax = c`, `x + b = c`) to the engine or hard-code the warm-up items with `rational()` answers.
+- Example templates live only in `tests/unit/engine/fixtures.ts`; real content goes in `src/content/`.
