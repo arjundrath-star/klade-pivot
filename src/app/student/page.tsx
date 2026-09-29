@@ -1,0 +1,55 @@
+import type { Metadata } from "next";
+import { connection } from "next/server";
+import { startTodaySession } from "./actions";
+import { DEMO_STUDENT_ID } from "@/db/demo";
+import { findTodaySession } from "@/db/queries/sessions";
+import { getStudent } from "@/db/queries/students";
+
+export const metadata: Metadata = { title: "Today · Klade" };
+
+export default async function StudentHome() {
+  // Reads the database, so it renders per request, never at build time.
+  await connection();
+  const [student, today] = await Promise.all([
+    getStudent(DEMO_STUDENT_ID),
+    findTodaySession(DEMO_STUDENT_ID),
+  ]);
+
+  return (
+    <div className="flex flex-col gap-8">
+      {student ? (
+        <>
+          <h1 className="text-3xl font-semibold tracking-tight">Hi, {student.name}</h1>
+          <section
+            aria-labelledby="today-heading"
+            className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-6 dark:border-zinc-800"
+          >
+            <h2
+              id="today-heading"
+              className="text-sm font-medium tracking-wide text-zinc-600 uppercase dark:text-zinc-400"
+            >
+              Today&apos;s session
+            </h2>
+            {today.kind === "complete" ? (
+              <p className="text-lg">Every session in this unit is done.</p>
+            ) : (
+              <>
+                <p className="text-xl font-semibold">{today.title}</p>
+                <p className="text-zinc-600 dark:text-zinc-400">
+                  About 30 minutes: warm-up, lesson, guided practice, explain-back, exit check.
+                </p>
+                <form action={startTodaySession}>
+                  <button type="submit" className="btn-primary">
+                    {today.kind === "open" ? "Resume" : "Start"}
+                  </button>
+                </form>
+              </>
+            )}
+          </section>
+        </>
+      ) : (
+        <p>No student yet. Run npm run db:seed to add the demo student.</p>
+      )}
+    </div>
+  );
+}

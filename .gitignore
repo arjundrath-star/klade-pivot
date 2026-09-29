@@ -50,7 +50,6 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /data/
-/drizzle/meta/
 
 # keep the documented env template
 !.env.example

@@ -1,0 +1,85 @@
+import type { ReactNode } from "react";
+import { notFound } from "next/navigation";
+import { z } from "zod";
+import { ProblemCard } from "./problem-card";
+import { SessionComplete } from "./session-complete";
+import { SessionRunner } from "./session-runner";
+import { generateInstance } from "@/engine/generate";
+import { renderProblem } from "@/engine/render";
+import type { AnsweredBlockId, BlockId } from "@/session/blocks";
+import { DEMO_STUDENT_ID } from "@/db/demo";
+import { loadSession } from "@/session/load";
+import { timeInBlock } from "@/session/timer";
+
+function StubPanel({ children }: { children: ReactNode }) {
+  return (
+    <p className="rounded-lg border border-dashed border-zinc-300 p-5 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+      {children}
+    </p>
+  );
+}
+
+export default async function SessionPage({ params }: PageProps<"/student/session/[id]">) {
+  const { id } = await params;
+  if (!z.uuid().safeParse(id).success) notFound();
+
+  // Sign-in is not built yet, so the page acts as the demo student.
+  const loaded = await loadSession(id, DEMO_STUDENT_ID);
+  if (!loaded) notFound();
+  const { session, problems, counts, solved } = loaded;
+  if (session.status === "done") return <SessionComplete title={session.title} />;
+  if (session.status !== "in_progress") notFound();
+
+  // Problems render on the server so the answers never reach the browser.
+  const problemPanel = (block: AnsweredBlockId) => (
+    <div className="flex flex-col gap-4">
+      {problems
+        .filter((p) => p.block === block)
+        .map((p) => {
+          const rendered = renderProblem(
+            p.template,
+            generateInstance(p.template, p.seed),
+            session.interests,
+            p.index,
+          );
+          return (
+            <ProblemCard
+              key={p.index}
+              sessionId={session.id}
+              block={block}
+              index={p.index}
+              text={rendered.text}
+              equation={rendered.kind === "symbolic" ? rendered.equation : undefined}
+            />
+          );
+        })}
+    </div>
+  );
+
+  const panels: Record<BlockId, ReactNode> = {
+    warmup: problemPanel("warmup"),
+    learn: <StubPanel>The lesson and worked example for this session are not built yet.</StubPanel>,
+    guided: problemPanel("guided"),
+    explain: <StubPanel>Explain-back is not built yet.</StubPanel>,
+    exit: <StubPanel>The exit check is not built yet.</StubPanel>,
+  };
+
+  return (
+    <SessionRunner
+      // A server refresh after the session moved elsewhere remounts the runner with fresh state.
+      key={`${session.currentBlock}:${session.blockStartedAt?.getTime()}`}
+      sessionId={session.id}
+      title={session.title}
+      initialBlock={session.currentBlock}
+      initialElapsedMs={timeInBlock(
+        session.blockElapsedMs,
+        session.currentBlock,
+        session.blockStartedAt,
+      )}
+      timerMode={session.timerMode}
+      counts={counts}
+      initialSolved={[...solved]}
+      panels={panels}
+    />
+  );
+}

@@ -1,4 +1,8 @@
+import { existsSync } from "node:fs";
 import { defineConfig } from "drizzle-kit";
+
+// Read the same DATABASE_URL `next dev` reads. Variables already set in the shell win.
+if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 export default defineConfig({
   dialect: "turso",

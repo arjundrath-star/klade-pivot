@@ -4,6 +4,10 @@ import { defineConfig, devices } from "@playwright/test";
 // They boot the app, walk the core flow, and fail on any console error.
 const PORT = 3100;
 
+// A fresh, seeded database for every run, so the flow starts from Maya's first session. Set here
+// so the web server and the test workers (which read problem seeds from it) share it.
+process.env.DATABASE_URL = "file:./data/smoke.db";
+
 export default defineConfig({
   testDir: "./tests/smoke",
   outputDir: "./test-results",
@@ -17,7 +21,7 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `npx next start -p ${PORT}`,
+    command: `npm run -s db:reset && npx next start -p ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false,
     timeout: 60_000,

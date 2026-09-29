@@ -1,14 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-
-// Every smoke spec collects console errors and fails the test if any appear.
-function watchConsole(page: Page): string[] {
-  const errors: string[] = [];
-  page.on("console", (msg) => {
-    if (msg.type() === "error") errors.push(msg.text());
-  });
-  page.on("pageerror", (err) => errors.push(err.message));
-  return errors;
-}
+import { test, expect } from "@playwright/test";
+import { watchConsole } from "./console";
 
 test("home page renders without console errors", async ({ page }) => {
   const errors = watchConsole(page);

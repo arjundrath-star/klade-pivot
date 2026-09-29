@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs";
 
 const PORT = 3101;
 const BASE = `http://localhost:${PORT}`;
-const ROUTES = ["/"];
+const ROUTES = ["/", "/student"];
 const THRESHOLDS = { performance: 0.9, accessibility: 0.9, "best-practices": 0.9 };
 const OUT_DIR = "lighthouse";
 
@@ -32,18 +32,33 @@ async function waitFor(url, ms) {
   throw new Error(`server did not answer at ${url} within ${ms}ms`);
 }
 
+// A fresh, seeded database with a session open, so /student and the session page render the
+// demo student's real pages. The session route has a generated id, so it is appended here.
+const serverEnv = { ...process.env, DATABASE_URL: "file:./data/lighthouse.db" };
+const seeded = spawnSync("npm", ["run", "-s", "db:reset", "--", "--open-session"], {
+  stdio: ["ignore", "pipe", "inherit"],
+  encoding: "utf8",
+  env: serverEnv,
+});
+const sessionRoute = seeded.stdout?.match(/^\/student\/session\/\S+$/m)?.[0];
+if (seeded.status !== 0 || !sessionRoute) {
+  console.error(`seeding the lighthouse database failed\n${seeded.stdout ?? ""}`);
+  process.exit(1);
+}
+
 // Detached so the whole process group (npx → next → next-server) can be
 // killed at the end; otherwise the server outlives this script and keeps
 // stdio pipes open, which hangs any caller that waits on our output.
 const server = spawn("npx", ["next", "start", "-p", String(PORT)], {
   stdio: "ignore",
   detached: true,
+  env: serverEnv,
 });
 let failed = false;
 try {
   await waitFor(BASE, 60_000);
   mkdirSync(OUT_DIR, { recursive: true });
-  for (const route of ROUTES) {
+  for (const route of [...ROUTES, sessionRoute]) {
     const name = route === "/" ? "home" : route.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
     const out = `${OUT_DIR}/${name}.json`;
     const env = { ...process.env };
