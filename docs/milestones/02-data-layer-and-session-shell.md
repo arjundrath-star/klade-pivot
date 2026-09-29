@@ -1,6 +1,6 @@
 # Milestone 02: Data layer and session shell
 
-Status: not started
+Status: done
 Session: one shot
 
 ## Goal
@@ -44,4 +44,12 @@ Add `/student` to `ROUTES` in `scripts/lighthouse.mjs`.
 
 ## Notes for the next milestone
 
-Filled in at the end of the session.
+- Content lives in `src/content/algebra1/linear-equations/s1.ts` as a `SessionContent` (`src/content/types.ts`): `warmup`, `learn { explanation, example { template, seed } }`, `guided`, `exit`. It is a two-problem fixture today (one symbolic two-step in warm-up, one word two-step in guided, `exit: []`). 03 replaces the data in that file; `src/content/sessions.ts` maps the `content_key` on each `session_templates` row to it (`S1_KEY`), and `sessionContent` throws on an unknown key.
+- Problem seeds: `problemSeed(sessionSeed, block, index)` in `src/session/problems.ts` hashes the position, so growing warm-up to 3 problems does not change guided or exit seeds. Every attempt stores `template_key` and `seed`; `generateInstance(template, seed)` rebuilds the instance.
+- Gating is `isBlockComplete` in `src/session/blocks.ts`: blocks in `ANSWERED_BLOCK_IDS` (`warmup`, `guided`) need a correct attempt on every problem; every other block is always complete. That function is the one place to add 03's "I've read this" gate, 05's explain-back pass and 06's exit rule (answered, 2 of 3). Do not add `exit` to `ANSWERED_BLOCK_IDS`: "all correct" would trap a student who fails the exit check. The server decides completeness in `moveBlock` from the database; the client check only enables the button.
+- Panels: `page.tsx` renders each block's panel on the server and passes them to `SessionRunner` as `panels: Record<BlockId, ReactNode>`. Answers never reach the browser. 03 swaps the `learn` stub for the lesson; `ProblemCard` reports solves through `useSolved()` context.
+- Server actions in `src/app/student/session/[id]/actions.ts` return typed results. `submitAnswer` does not record input that is not a number and clamps `time_ms` at one hour. Every load goes through `loadSession(id, DEMO_STUDENT_ID)`, which filters on the student. When sign-in lands, replace `DEMO_STUDENT_ID` in the two server entry points (`page.tsx`, `actions.ts`, `/student`).
+- Timer: `session_logs.block_elapsed_ms` keeps time per block across Back/Next and reloads; `blockBudgetSeconds` gives 1.5x for `extended` and null for `untimed`. It is display only. 06's 90-second per-problem exit timer must be enforced on the server, not from this clock.
+- Database: local `file:` URLs migrate on first connection (`src/db/migrate.ts`); a hosted URL needs `npm run db:migrate` at deploy (milestone 10). `drizzle/meta/` is now committed, since the migrator needs `_journal.json`. `npm run db:seed` and `db:reset` (delete the local file, then seed) read `.env.local`; `db:reset -- --open-session` also opens Maya's session and prints its path.
+- Smoke and Lighthouse each get a fresh database (`data/smoke.db`, `data/lighthouse.db`). Smoke specs read answers through `tests/helpers/answers.ts`. Lighthouse covers `/`, `/student` and one opened `/student/session/[id]`: all three scored 100/100/100.
+- First-load JS: Next 16's build output no longer prints route sizes, so the 150 KB rule is not enforced by the gate. Measured by hand from the built HTML, gzipped and excluding the `noModule` polyfill: `/` 130 KB, `/student/session/[id]` 137 KB. A size check in `scripts/lighthouse.mjs` (sum script transfer size from the report) would close this gap.
