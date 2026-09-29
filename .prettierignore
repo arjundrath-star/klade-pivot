@@ -1,0 +1,11 @@
+node_modules
+.next
+.agents
+.claude/skills
+docs/memo
+drizzle
+lighthouse
+test-results
+playwright-report
+package-lock.json
+data

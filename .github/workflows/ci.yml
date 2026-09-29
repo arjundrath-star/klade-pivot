@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Gate
+        run: scripts/gate.sh
+        env:
+          CI: "1"
+          GATE_LIGHTHOUSE: "1"
+      - name: Upload smoke and lighthouse artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-artifacts
+          path: |
+            .gate.log
+            test-results/
+            lighthouse/
+          if-no-files-found: ignore
