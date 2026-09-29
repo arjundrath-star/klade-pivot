@@ -1,6 +1,8 @@
 import type { SessionContent } from "@/content/types";
+import { generateInstance } from "@/engine/generate";
 import { createRng } from "@/engine/random";
-import type { ValidTemplate } from "@/engine/types";
+import { renderProblem, type RenderedProblem } from "@/engine/render";
+import type { Interest, ValidTemplate } from "@/engine/types";
 import {
   PROBLEM_BLOCK_IDS,
   problemKey,
@@ -41,6 +43,15 @@ export function sessionProblems(content: SessionContent, sessionSeed: number): S
       seed: problemSeed(sessionSeed, block, index),
     })),
   );
+}
+
+/** A session problem as its student sees it, framed by their interests. */
+export function renderSessionProblem(
+  problem: SessionProblem,
+  interests: readonly Interest[],
+): RenderedProblem {
+  const instance = generateInstance(problem.template, problem.seed);
+  return renderProblem(problem.template, instance, interests, problem.index);
 }
 
 export function problemCounts(content: SessionContent): ProblemCounts {

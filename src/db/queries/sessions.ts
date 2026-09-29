@@ -1,4 +1,4 @@
-import { and, asc, eq, notExists } from "drizzle-orm";
+import { and, asc, eq, notExists, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { sessionLogs, sessionTemplates, students, units } from "@/db/schema";
 import type { BlockId } from "@/session/blocks";
@@ -86,6 +86,7 @@ export async function getSession(id: string, studentId: string) {
       currentBlock: sessionLogs.currentBlock,
       blockStartedAt: sessionLogs.blockStartedAt,
       blockElapsedMs: sessionLogs.blockElapsedMs,
+      lessonReadAt: sessionLogs.lessonReadAt,
       title: sessionTemplates.title,
       contentKey: sessionTemplates.contentKey,
       interests: students.interests,
@@ -127,4 +128,25 @@ export async function moveSession(
     )
     .returning({ id: sessionLogs.id });
   return moved.length > 0;
+}
+
+/**
+ * Records that the student read the lesson of their open session on the learn block, keeping the
+ * first confirmation's time. False when the student has no session open on the learn block.
+ */
+export async function markLessonRead(id: string, studentId: string): Promise<boolean> {
+  const db = await getDb();
+  const marked = await db
+    .update(sessionLogs)
+    .set({ lessonReadAt: sql`coalesce(${sessionLogs.lessonReadAt}, ${Date.now()})` })
+    .where(
+      and(
+        eq(sessionLogs.id, id),
+        eq(sessionLogs.studentId, studentId),
+        eq(sessionLogs.status, "in_progress"),
+        eq(sessionLogs.currentBlock, "learn"),
+      ),
+    )
+    .returning({ id: sessionLogs.id });
+  return marked.length > 0;
 }

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { recordAttempt } from "@/db/queries/attempts";
 import { DEMO_STUDENT_ID } from "@/db/demo";
-import { moveSession } from "@/db/queries/sessions";
+import { markLessonRead, moveSession } from "@/db/queries/sessions";
 import { checkAnswer } from "@/engine/check";
 import { generateInstance } from "@/engine/generate";
 import { rational } from "@/engine/rational";
@@ -36,6 +36,10 @@ export type AnswerResult =
   | { ok: true; verdict: "correct" | "incorrect" | "not-a-number" }
   | { ok: false; error: "invalid" | "closed" | "wrong-block" | "already-solved" };
 
+const LessonInput = z.object({ sessionId: z.uuid() });
+
+export type LessonResult = { ok: true } | { ok: false; error: "invalid" | "closed" };
+
 const MoveInput = z.object({
   sessionId: z.uuid(),
   from: z.enum(BLOCK_IDS),
@@ -64,7 +68,9 @@ export async function submitAnswer(input: z.input<typeof AnswerInput>): Promise<
   if (open.session.currentBlock !== block) return { ok: false, error: "wrong-block" };
   const problem = open.problems.find((p) => p.block === block && p.index === index);
   if (!problem) return { ok: false, error: "invalid" };
-  if (open.solved.has(problemKey(block, index))) return { ok: false, error: "already-solved" };
+  if (open.progress.solved.has(problemKey(block, index))) {
+    return { ok: false, error: "already-solved" };
+  }
 
   const instance = generateInstance(problem.template, problem.seed);
   const check = checkAnswer(answer, rational(instance.solution));
@@ -84,6 +90,17 @@ export async function submitAnswer(input: z.input<typeof AnswerInput>): Promise<
   return { ok: true, verdict: check.correct ? "correct" : "incorrect" };
 }
 
+/**
+ * Records that the student read the lesson, which unlocks Next out of the learn block. "closed"
+ * means the session is not open on the learn block, for example because another tab moved it.
+ */
+export async function confirmLesson(input: z.input<typeof LessonInput>): Promise<LessonResult> {
+  const parsed = LessonInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid" };
+  const marked = await markLessonRead(parsed.data.sessionId, DEMO_STUDENT_ID);
+  return marked ? { ok: true } : { ok: false, error: "closed" };
+}
+
 /** Moves the session one block. The server decides whether the current block is complete. */
 export async function moveBlock(input: z.input<typeof MoveInput>): Promise<MoveResult> {
   const parsed = MoveInput.safeParse(input);
@@ -94,7 +111,7 @@ export async function moveBlock(input: z.input<typeof MoveInput>): Promise<MoveR
   if (!open) return { ok: false, error: "closed" };
   if (open.session.currentBlock !== from) return { ok: false, error: "moved" };
 
-  const result = step(from, direction, isBlockComplete(from, open.counts, open.solved));
+  const result = step(from, direction, isBlockComplete(from, open.counts, open.progress));
   if (!result.ok) return result;
   const times = leaveBlock(open.session.blockElapsedMs, from, open.session.blockStartedAt);
   const moved = await moveSession(sessionId, from, result.to, times);

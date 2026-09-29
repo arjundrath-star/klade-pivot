@@ -4,11 +4,11 @@ import { z } from "zod";
 import { ProblemCard } from "./problem-card";
 import { SessionComplete } from "./session-complete";
 import { SessionRunner } from "./session-runner";
-import { generateInstance } from "@/engine/generate";
-import { renderProblem } from "@/engine/render";
+import { WorkedExample } from "./worked-example";
 import type { AnsweredBlockId, BlockId } from "@/session/blocks";
 import { DEMO_STUDENT_ID } from "@/db/demo";
 import { loadSession } from "@/session/load";
+import { renderSessionProblem } from "@/session/problems";
 import { timeInBlock } from "@/session/timer";
 
 function StubPanel({ children }: { children: ReactNode }) {
@@ -26,7 +26,7 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
   // Sign-in is not built yet, so the page acts as the demo student.
   const loaded = await loadSession(id, DEMO_STUDENT_ID);
   if (!loaded) notFound();
-  const { session, problems, counts, solved } = loaded;
+  const { session, content, problems, counts, progress } = loaded;
   if (session.status === "done") return <SessionComplete title={session.title} />;
   if (session.status !== "in_progress") notFound();
 
@@ -36,12 +36,7 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
       {problems
         .filter((p) => p.block === block)
         .map((p) => {
-          const rendered = renderProblem(
-            p.template,
-            generateInstance(p.template, p.seed),
-            session.interests,
-            p.index,
-          );
+          const rendered = renderSessionProblem(p, session.interests);
           return (
             <ProblemCard
               key={p.index}
@@ -56,9 +51,24 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
     </div>
   );
 
+  const { learn } = content;
+
   const panels: Record<BlockId, ReactNode> = {
     warmup: problemPanel("warmup"),
-    learn: <StubPanel>The lesson and worked example for this session are not built yet.</StubPanel>,
+    learn: (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-3 leading-relaxed">
+          {learn.explanation.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </div>
+        <WorkedExample
+          sessionId={session.id}
+          equation={learn.example.equation}
+          steps={learn.example.steps}
+        />
+      </div>
+    ),
     guided: problemPanel("guided"),
     explain: <StubPanel>Explain-back is not built yet.</StubPanel>,
     exit: <StubPanel>The exit check is not built yet.</StubPanel>,
@@ -78,7 +88,8 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
       )}
       timerMode={session.timerMode}
       counts={counts}
-      initialSolved={[...solved]}
+      initialSolved={[...progress.solved]}
+      initialLessonRead={progress.lessonRead}
       panels={panels}
     />
   );

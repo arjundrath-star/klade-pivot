@@ -1,0 +1,1 @@
+ALTER TABLE `session_logs` ADD `lesson_read_at` integer;

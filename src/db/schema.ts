@@ -97,6 +97,8 @@ export const sessionLogs = sqliteTable(
       .$type<Partial<Record<BlockId, number>>>()
       .notNull()
       .default({}),
+    /** When the student confirmed they read the lesson. Next out of the learn block waits for it. */
+    lessonReadAt: integer("lesson_read_at", { mode: "timestamp_ms" }),
     startedAt: integer("started_at", { mode: "timestamp_ms" }),
     completedAt: integer("completed_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),

@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useId, useRef } from "react";
 import { submitAnswer, type AnswerResult } from "./actions";
-import { useSolved } from "./session-runner";
+import { useProgress } from "./session-runner";
 import { problemKey, type AnsweredBlockId } from "@/session/blocks";
 
 interface ProblemCardProps {
@@ -39,7 +39,7 @@ const TONES = {
 } as const;
 
 export function ProblemCard({ sessionId, block, index, text, equation }: ProblemCardProps) {
-  const { solved, markSolved } = useSolved();
+  const { solved, markSolved } = useProgress();
   const key = problemKey(block, index);
   const isSolved = solved.has(key);
   const inputId = useId();

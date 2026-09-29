@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { moveBlock, submitAnswer } from "@/app/student/session/[id]/actions";
+import { confirmLesson, moveBlock, submitAnswer } from "@/app/student/session/[id]/actions";
 import { s1 } from "@/content/algebra1/linear-equations/s1";
 import { getDb } from "@/db/client";
 import { DEMO_STUDENT_ID, nextMay, seedDemo } from "@/db/demo";
@@ -11,6 +11,7 @@ import { findTodaySession, getSession, openTodaySession } from "@/db/queries/ses
 import { loadSession } from "@/session/load";
 import { getStudent } from "@/db/queries/students";
 import { attempts, students } from "@/db/schema";
+import type { AnsweredBlockId } from "@/session/blocks";
 import { sessionProblems } from "@/session/problems";
 import { answersFor } from "../../helpers/answers";
 
@@ -21,6 +22,22 @@ beforeAll(async () => {
   vi.stubEnv("DATABASE_URL", `file:${path.join(dir, "test.db")}`);
   await seedDemo(new Date("2026-09-29T12:00:00Z"));
 });
+
+/** Answers the problems at `indexes` in `block` correctly. */
+async function solve(sessionId: string, block: AnsweredBlockId, indexes: readonly number[]) {
+  const answers = await answersFor(sessionId, block);
+  for (const index of indexes) {
+    const answer = String(answers[index]);
+    expect(await submitAnswer({ sessionId, block, index, answer, timeMs: 1000 })).toEqual({
+      ok: true,
+      verdict: "correct",
+    });
+  }
+}
+
+async function lessonReadAt(sessionId: string) {
+  return (await getSession(sessionId, DEMO_STUDENT_ID))?.lessonReadAt;
+}
 
 afterAll(() => {
   vi.unstubAllEnvs();
@@ -140,6 +157,16 @@ describe("session flow", () => {
     ).toEqual({ ok: false, error: "invalid" });
   });
 
+  it("unlocks the lesson only after every warm-up problem is solved", async () => {
+    await solve(sessionId, "warmup", [1]);
+    expect(await moveBlock({ sessionId, from: "warmup", direction: "next" })).toMatchObject({
+      error: "incomplete",
+    });
+    // The lesson cannot be confirmed from a block the session is not on.
+    expect(await confirmLesson({ sessionId })).toEqual({ ok: false, error: "closed" });
+    await solve(sessionId, "warmup", [2]);
+  });
+
   it("moves forward and back, and resumes at the stored block", async () => {
     expect(await moveBlock({ sessionId, from: "warmup", direction: "next" })).toEqual({
       ok: true,
@@ -152,6 +179,33 @@ describe("session flow", () => {
       ok: false,
       error: "moved",
     });
+    expect(await moveBlock({ sessionId, from: "learn", direction: "back" })).toMatchObject({
+      to: "warmup",
+    });
+    expect(await moveBlock({ sessionId, from: "warmup", direction: "next" })).toMatchObject({
+      to: "learn",
+    });
+  });
+
+  it("holds the student in the lesson until the server has their confirmation", async () => {
+    expect(await moveBlock({ sessionId, from: "learn", direction: "next" })).toEqual({
+      ok: false,
+      error: "incomplete",
+    });
+    expect(await confirmLesson({ sessionId: "not-a-uuid" })).toEqual({
+      ok: false,
+      error: "invalid",
+    });
+    expect(await lessonReadAt(sessionId)).toBeNull();
+
+    expect(await confirmLesson({ sessionId })).toEqual({ ok: true });
+    const first = await lessonReadAt(sessionId);
+    expect(first).toBeInstanceOf(Date);
+    expect(await confirmLesson({ sessionId })).toEqual({ ok: true });
+    expect(await lessonReadAt(sessionId)).toEqual(first);
+    expect((await loadSession(sessionId, DEMO_STUDENT_ID))?.progress.lessonRead).toBe(true);
+
+    // Going back to the warm-up and returning keeps the lesson confirmed.
     expect(await moveBlock({ sessionId, from: "learn", direction: "back" })).toMatchObject({
       to: "warmup",
     });
@@ -185,6 +239,10 @@ describe("session flow", () => {
       .from(attempts)
       .where(and(eq(attempts.sessionLogId, sessionId), eq(attempts.block, "guided")));
     expect(guided.timeMs).toBe(60 * 60 * 1000);
+    expect(await moveBlock({ sessionId, from: "guided", direction: "next" })).toMatchObject({
+      error: "incomplete",
+    });
+    await solve(sessionId, "guided", [1, 2, 3, 4]);
     for (const from of ["guided", "explain"] as const) {
       expect(await moveBlock({ sessionId, from, direction: "next" })).toMatchObject({ ok: true });
     }
