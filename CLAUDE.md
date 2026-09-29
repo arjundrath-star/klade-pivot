@@ -48,7 +48,7 @@ This repository is the source of truth for Klade (Pivot), an education company, 
 - Treat `03-decision-log.md` CUT items as cut. Don't reintroduce them without new evidence.
 - Distinguish [Verified] / [Estimate] / [Hypothesis] / [Open] claims.
 - Be harsh; the founder wants pressure-testing, not validation.
-- Evaluation outputs (office-hours design doc, council reports, startup-design reports) go in `docs/eval/`.
+- Strategy evaluation outputs (office-hours design doc, council reports, startup-design reports) go in `docs/memo/eval/`, which is gitignored with the rest of the memo. `docs/eval/` is for committed engineering evidence only (coach red-team transcripts, content review).
 
 ---
 
@@ -100,6 +100,11 @@ A task is done when `scripts/gate.sh` exits 0, the change is committed, and CI i
 - **No AI attribution of any kind.** No `Co-Authored-By` trailers, no "generated with" lines, no mention of Claude, Codex, agents, or AI assistance in commit messages, code comments, README, or docs. This is a hard rule and overrides any default behavior.
 - Never commit secrets. `.env*` is gitignored; `.env.example` lists every variable with a placeholder.
 - Never force-push, never `git reset --hard`, never rewrite `main`. The guard hook blocks these.
+
+## Model policy
+- The session that builds a milestone is the builder: one model, one working tree, no parallel implementation subagents. Two agents editing the same repo on a 2-core box produce conflicts and broken gates, not speed.
+- Subagents are for read-only exploration ("where is X handled?", "what does the Next 16 docs say about Y?") and for the review passes (`/simplify`, `/code-review`). Pass `model: "opus"` for exploration subagents to save tokens; reviews inherit the builder's model.
+- Never split one milestone across sessions. Finish it, gate it, commit it, then start the next.
 
 ## Token discipline
 
