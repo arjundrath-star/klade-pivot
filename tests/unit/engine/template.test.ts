@@ -16,6 +16,22 @@ const twoStep = {
   ...symbolic,
 } satisfies ProblemTemplate;
 
+const multiply = {
+  key: "one-step-multiply",
+  structure: "one-step",
+  form: "multiply",
+  ranges: { a: { min: -9, max: 9 }, x: { min: -9, max: 9 } },
+  ...symbolic,
+} satisfies ProblemTemplate;
+
+const add = {
+  key: "one-step-add",
+  structure: "one-step",
+  form: "add",
+  ranges: { b: { min: -9, max: 9 }, x: { min: -9, max: 9 } },
+  ...symbolic,
+} satisfies ProblemTemplate;
+
 function withC(
   structure: "both-sides" | "distribution",
   a: [number, number],
@@ -36,6 +52,8 @@ function withC(
 
 describe("templateIssues", () => {
   it("accepts well-formed templates", () => {
+    expect(templateIssues(multiply)).toEqual([]);
+    expect(templateIssues(add)).toEqual([]);
     expect(templateIssues(twoStep)).toEqual([]);
     expect(templateIssues(withC("both-sides", [2, 5], [1, 3]))).toEqual([]);
     expect(templateIssues(withC("distribution", [2, 5], [-4, 4]))).toEqual([]);
@@ -54,6 +72,27 @@ describe("templateIssues", () => {
     expect(
       templateIssues({ ...twoStep, ranges: { ...twoStep.ranges, b: { min: 0, max: 0 } } }),
     ).toEqual(["range b has no nonzero value"]);
+  });
+
+  it("rejects one-step ranges that leave nothing to undo", () => {
+    expect(
+      templateIssues({ ...multiply, ranges: { ...multiply.ranges, a: { min: 0, max: 1 } } }),
+    ).toEqual(["range a has no value other than 0 and 1"]);
+    expect(
+      templateIssues({ ...multiply, ranges: { ...multiply.ranges, a: { min: -1, max: 1 } } }),
+    ).toEqual([]);
+    expect(templateIssues({ ...add, ranges: { ...add.ranges, b: { min: 0, max: 0 } } })).toEqual([
+      "range b has no nonzero value",
+    ]);
+  });
+
+  it("allows only the placeholders of the one-step form", () => {
+    expect(templateIssues({ ...multiply, variants: { neutral: "{a} {b} {c}" } })).toEqual([
+      "variant neutral has unknown placeholder {b}",
+    ]);
+    expect(templateIssues({ ...add, variants: { neutral: "{a} {b} {c}" } })).toEqual([
+      "variant neutral has unknown placeholder {a}",
+    ]);
   });
 
   it("rejects c ranges with no allowed value for some drawable a", () => {
@@ -87,6 +126,10 @@ describe("templateIssues", () => {
       "word problem range a must sit above range c so d stays positive",
     ]);
     expect(templateIssues({ ...withC("both-sides", [4, 5], [1, 3]), ...word })).toEqual([]);
+    expect(templateIssues({ ...add, kind: "word", variants: wordVariants("{b} {c}") })).toEqual([
+      "word problem range b must be positive",
+      "word problem range x must be positive",
+    ]);
   });
 
   it("rejects unknown placeholders and empty variants", () => {

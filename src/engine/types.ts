@@ -9,20 +9,24 @@ export interface IntRange {
 }
 
 /**
- * The three S1/S2/S3 equation shapes. The unknown is always `x`.
+ * The equation shapes: one-step for the S1 warm-up, then the S1/S2/S3 shapes. The unknown is
+ * always `x`.
+ * - `one-step`:     ax = c (form `multiply`) or x + b = c (form `add`)
  * - `two-step`:     ax + b = c
  * - `both-sides`:   ax + b = cx + d
  * - `distribution`: a(x + b) + cx = d
  */
-export type Structure = "two-step" | "both-sides" | "distribution";
+export type Structure = "one-step" | "two-step" | "both-sides" | "distribution";
 
 /**
- * Ranges for the values drawn at random. The last constant (`c` for two-step, `d` otherwise)
- * is derived from the drawn solution so every instance has an integer answer.
+ * Ranges for the values drawn at random. The last constant (`c` for one-step and two-step, `d`
+ * otherwise) is derived from the drawn solution so every instance has an integer answer.
  */
 type FourRanges = { a: IntRange; b: IntRange; c: IntRange; x: IntRange };
 
 type StructureSpec =
+  | { structure: "one-step"; form: "multiply"; ranges: { a: IntRange; x: IntRange } }
+  | { structure: "one-step"; form: "add"; ranges: { b: IntRange; x: IntRange } }
   | { structure: "two-step"; ranges: { a: IntRange; b: IntRange; x: IntRange } }
   | { structure: "both-sides"; ranges: FourRanges }
   | { structure: "distribution"; ranges: FourRanges };
@@ -52,6 +56,8 @@ export type ProblemInstance = {
   /** Always an integer. */
   solution: number;
 } & (
+  | { structure: "one-step"; form: "multiply"; values: { a: number; c: number } }
+  | { structure: "one-step"; form: "add"; values: { b: number; c: number } }
   | { structure: "two-step"; values: TwoStepValues }
   | { structure: "both-sides"; values: FourValues }
   | { structure: "distribution"; values: FourValues }

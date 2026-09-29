@@ -9,6 +9,22 @@ const base = { templateKey: "example", seed: 0 };
 
 describe("formatEquation", () => {
   it.each<[ProblemInstance, string]>([
+    [
+      { ...base, structure: "one-step", form: "multiply", solution: -4, values: { a: 3, c: -12 } },
+      "3x = -12",
+    ],
+    [
+      { ...base, structure: "one-step", form: "multiply", solution: 6, values: { a: -1, c: -6 } },
+      "-x = -6",
+    ],
+    [
+      { ...base, structure: "one-step", form: "add", solution: 5, values: { b: -8, c: -3 } },
+      "x - 8 = -3",
+    ],
+    [
+      { ...base, structure: "one-step", form: "add", solution: -9, values: { b: 4, c: -5 } },
+      "x + 4 = -5",
+    ],
     [{ ...base, structure: "two-step", solution: 5, values: { a: 3, b: 5, c: 20 } }, "3x + 5 = 20"],
     [
       { ...base, structure: "two-step", solution: 2, values: { a: -1, b: -4, c: -6 } },
@@ -36,6 +52,27 @@ describe("formatEquation", () => {
 });
 
 describe("solutionSteps", () => {
+  it("solves a one-step equation with one inverse operation", () => {
+    expect(
+      solutionSteps({
+        ...base,
+        structure: "one-step",
+        form: "multiply",
+        solution: 7,
+        values: { a: -4, c: -28 },
+      }),
+    ).toEqual([{ description: "Divide both sides by -4", equationAfter: "x = 7" }]);
+    expect(
+      solutionSteps({
+        ...base,
+        structure: "one-step",
+        form: "add",
+        solution: 5,
+        values: { b: -8, c: -3 },
+      }),
+    ).toEqual([{ description: "Add 8 to both sides", equationAfter: "x = 5" }]);
+  });
+
   it("solves a two-step equation", () => {
     expect(
       solutionSteps({ ...base, structure: "two-step", solution: 5, values: { a: 3, b: 5, c: 20 } }),
@@ -111,6 +148,7 @@ describe("solutionSteps", () => {
         const instance = generateInstance(template, seed);
         const steps = solutionSteps(instance);
         expect(steps.at(-1)?.equationAfter).toBe(`x = ${instance.solution}`);
+        if (instance.structure === "one-step") expect(steps).toHaveLength(1);
       }
     }
   });

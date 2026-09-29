@@ -9,6 +9,10 @@ const SEEDS = Array.from({ length: 200 }, (_, i) => i * 7919 + 1);
 
 function holds(instance: ProblemInstance, x: number): boolean {
   switch (instance.structure) {
+    case "one-step":
+      return instance.form === "multiply"
+        ? instance.values.a * x === instance.values.c
+        : x + instance.values.b === instance.values.c;
     case "two-step": {
       const { a, b, c } = instance.values;
       return a * x + b === c;
@@ -28,7 +32,7 @@ function within(value: number, range: IntRange): boolean {
   return Number.isInteger(value) && value >= range.min && value <= range.max;
 }
 
-describe.each(FIXTURES)("generateInstance for $structure", (template) => {
+describe.each(FIXTURES)("generateInstance for $key", (template) => {
   const instances = SEEDS.map((seed) => generateInstance(template, seed));
 
   it("gives every instance an integer solution that satisfies its equation", () => {
@@ -50,16 +54,23 @@ describe.each(FIXTURES)("generateInstance for $structure", (template) => {
   });
 
   it("draws values from the template ranges with non-degenerate coefficients", () => {
+    const ranges: Record<string, IntRange> = template.ranges;
+    const drawn = Object.keys(ranges).filter((name) => name !== "x");
     for (const instance of instances) {
-      const { ranges } = template;
-      const { a, b, c } = instance.values;
       expect(within(instance.solution, ranges.x)).toBe(true);
-      expect(within(a, ranges.a) && a !== 0).toBe(true);
-      expect(within(b, ranges.b) && b !== 0).toBe(true);
-      if (instance.structure === "two-step") continue;
-      expect("c" in ranges && within(c, ranges.c) && c !== 0).toBe(true);
-      if (instance.structure === "both-sides") expect(a).not.toBe(c);
-      if (instance.structure === "distribution") expect(a + c).not.toBe(0);
+      const values: Record<string, number> = instance.values;
+      for (const name of drawn) {
+        expect(within(values[name], ranges[name]) && values[name] !== 0).toBe(true);
+      }
+      if (instance.structure === "one-step" && instance.form === "multiply") {
+        expect(instance.values.a).not.toBe(1);
+      }
+      if (instance.structure === "both-sides") {
+        expect(instance.values.a).not.toBe(instance.values.c);
+      }
+      if (instance.structure === "distribution") {
+        expect(instance.values.a + instance.values.c).not.toBe(0);
+      }
     }
   });
 
@@ -77,7 +88,7 @@ describe.each(FIXTURES)("generateInstance for $structure", (template) => {
 });
 
 describe("generateInstance performance", () => {
-  it("generates 1,000 instances across the three structures in under 50 ms", () => {
+  it("generates 1,000 instances across every structure in under 50 ms", () => {
     // Warm the JIT so the budget measures generation, not first-call compilation.
     for (let i = 0; i < 30; i += 1) generateInstance(FIXTURES[i % FIXTURES.length], i);
     const started = performance.now();

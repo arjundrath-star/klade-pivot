@@ -54,6 +54,7 @@ describe("renderProblem", () => {
 
   it("substitutes the instance values verbatim", () => {
     const instance = generateInstance(twoStepWord, 9);
+    if (instance.structure !== "two-step") throw new Error("expected a two-step instance");
     const { a, b, c } = instance.values;
     expect(renderProblem(twoStepWord, instance, ["music"], 0)).toEqual({
       kind: "word",

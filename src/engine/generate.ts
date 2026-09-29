@@ -1,11 +1,14 @@
 import { createRng, type Rng } from "@/engine/random";
-import type { IntRange, ProblemInstance, Structure, ValidTemplate } from "@/engine/types";
+import type { IntRange, ProblemInstance, ValidTemplate } from "@/engine/types";
+
+/** `ax = c` with `a = 1` is already solved, so the multiply form skips 1 as well as zero. */
+export const EXCLUDED_MULTIPLIERS: readonly number[] = [0, 1];
 
 /**
  * Values `c` may not take once `a` is drawn: zero, plus the value that would cancel the x-terms
  * (`a = c` for both-sides, `a + c = 0` for distribution) and leave no unique solution.
  */
-export function excludedC(structure: Exclude<Structure, "two-step">, a: number): number[] {
+export function excludedC(structure: "both-sides" | "distribution", a: number): number[] {
   return structure === "both-sides" ? [0, a] : [0, -a];
 }
 
@@ -29,16 +32,26 @@ function pick(rng: Rng, range: IntRange, excluded: readonly number[] = []): numb
 
 /**
  * Draws one instance. The solution and the coefficients come from the template's ranges and the
- * last constant is derived, so the solution is always an integer. `a` and `b` are never zero and
- * `c` avoids `excludedC`, so every equation has exactly one solution.
+ * last constant is derived, so the solution is always an integer. `a` and `b` are never zero (and
+ * a one-step `a` never 1) and `c` avoids `excludedC`, so every equation has exactly one solution
+ * and takes every step its structure names.
  */
 export function generateInstance(template: ValidTemplate, seed: number): ProblemInstance {
   const rng = createRng(seed);
-  const { ranges } = template;
-  const x = pick(rng, ranges.x);
-  const a = pick(rng, ranges.a, [0]);
-  const b = pick(rng, ranges.b, [0]);
+  const x = pick(rng, template.ranges.x);
   const base = { templateKey: template.key, seed, solution: x };
+
+  if (template.structure === "one-step") {
+    if (template.form === "multiply") {
+      const a = pick(rng, template.ranges.a, EXCLUDED_MULTIPLIERS);
+      return { ...base, structure: "one-step", form: "multiply", values: { a, c: a * x } };
+    }
+    const b = pick(rng, template.ranges.b, [0]);
+    return { ...base, structure: "one-step", form: "add", values: { b, c: x + b } };
+  }
+
+  const a = pick(rng, template.ranges.a, [0]);
+  const b = pick(rng, template.ranges.b, [0]);
 
   switch (template.structure) {
     case "two-step":

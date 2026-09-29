@@ -1,6 +1,38 @@
 import { defineTemplate } from "@/engine/template";
 
-// One example template per structure. Real curriculum lives in src/content/.
+// One example template per structure, plus the second one-step form. Real curriculum lives in
+// src/content/.
+
+export const oneStepAddSymbolic = defineTemplate({
+  key: "fixture-one-step-add-symbolic",
+  structure: "one-step",
+  form: "add",
+  ranges: { b: { min: -20, max: 20 }, x: { min: -20, max: 20 } },
+  kind: "symbolic",
+  variants: { neutral: "Solve for x." },
+});
+
+export const oneStepMultiplyWord = defineTemplate({
+  key: "fixture-one-step-multiply-word",
+  structure: "one-step",
+  form: "multiply",
+  ranges: { a: { min: 2, max: 6 }, x: { min: 2, max: 12 } },
+  kind: "word",
+  variants: {
+    sports:
+      "Your team scored {c} goals over {a} games, the same number in each game. How many goals did it score per game?",
+    music:
+      "You practiced piano for {c} minutes over {a} days, the same time each day. How many minutes did you practice each day?",
+    gaming:
+      "You earned {c} coins by beating {a} levels, the same number per level. How many coins did each level give you?",
+    food: "You split {c} strawberries evenly into {a} bowls. How many strawberries are in each bowl?",
+    creators:
+      "You posted {c} clips over {a} weeks, the same number each week. How many clips did you post per week?",
+    animals:
+      "A shelter split {c} dog treats evenly between {a} dogs. How many treats did each dog get?",
+    neutral: "You packed {c} pencils evenly into {a} boxes. How many pencils are in each box?",
+  },
+});
 
 export const twoStepWord = defineTemplate({
   key: "fixture-two-step-word",
@@ -64,4 +96,10 @@ export const distributionSymbolic = defineTemplate({
   variants: { neutral: "Solve for x." },
 });
 
-export const FIXTURES = [twoStepWord, bothSidesWord, distributionSymbolic] as const;
+export const FIXTURES = [
+  oneStepAddSymbolic,
+  oneStepMultiplyWord,
+  twoStepWord,
+  bothSidesWord,
+  distributionSymbolic,
+] as const;

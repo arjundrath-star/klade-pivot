@@ -18,6 +18,10 @@ function isolate(coefficient: number, solution: number): SolutionStep[] {
 export function solutionSteps(instance: ProblemInstance): SolutionStep[] {
   const x = instance.solution;
   switch (instance.structure) {
+    case "one-step":
+      return instance.form === "multiply"
+        ? isolate(instance.values.a, x)
+        : [{ description: undo(instance.values.b, String), equationAfter: `x = ${x}` }];
     case "two-step": {
       const { a, b, c } = instance.values;
       return [

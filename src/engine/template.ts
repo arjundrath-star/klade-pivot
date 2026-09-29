@@ -1,11 +1,18 @@
-import { allowedCount, excludedC } from "@/engine/generate";
-import type { IntRange, ProblemTemplate, Structure, ValidTemplate } from "@/engine/types";
+import { allowedCount, EXCLUDED_MULTIPLIERS, excludedC } from "@/engine/generate";
+import type { IntRange, ProblemTemplate, ValidTemplate } from "@/engine/types";
 
-const PLACEHOLDERS: Record<Structure, readonly string[]> = {
-  "two-step": ["a", "b", "c"],
-  "both-sides": ["a", "b", "c", "d"],
-  distribution: ["a", "b", "c", "d"],
-};
+/** The values a variant may name: every value in the equation, never the solution `x`. */
+function placeholders(template: ProblemTemplate): readonly string[] {
+  switch (template.structure) {
+    case "one-step":
+      return template.form === "multiply" ? ["a", "c"] : ["b", "c"];
+    case "two-step":
+      return ["a", "b", "c"];
+    case "both-sides":
+    case "distribution":
+      return ["a", "b", "c", "d"];
+  }
+}
 
 /** A `{name}` token. Not global: callers that scan a whole string copy it with the `g` flag. */
 export const PLACEHOLDER = /\{([^{}]*)\}/;
@@ -25,6 +32,14 @@ function rangeIssues(name: string, range: IntRange): string[] {
 }
 
 function drawIssues(template: ProblemTemplate): string[] {
+  if (template.structure === "one-step") {
+    if (template.form === "add") {
+      return allowedCount(template.ranges.b, [0]) === 0 ? ["range b has no nonzero value"] : [];
+    }
+    return allowedCount(template.ranges.a, EXCLUDED_MULTIPLIERS) === 0
+      ? ["range a has no value other than 0 and 1"]
+      : [];
+  }
   const { ranges } = template;
   const issues = (["a", "b"] as const)
     .filter((name) => allowedCount(ranges[name], [0]) === 0)
@@ -57,7 +72,7 @@ function wordIssues(template: ProblemTemplate): string[] {
 }
 
 function variantIssues(template: ProblemTemplate): string[] {
-  const allowed = PLACEHOLDERS[template.structure];
+  const allowed = placeholders(template);
   const tokens = new RegExp(PLACEHOLDER, "g");
   return Object.entries(template.variants).flatMap(([variant, text]) => {
     const issues = text.trim() === "" ? [`variant ${variant} is empty`] : [];

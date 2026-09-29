@@ -29,6 +29,10 @@ export function linear(coefficient: number, constant: number): string {
 /** The instance's equation as a student would see it, e.g. `3(x - 4) + 2x = 11`. */
 export function formatEquation(instance: ProblemInstance): string {
   switch (instance.structure) {
+    case "one-step":
+      return instance.form === "multiply"
+        ? `${xTerm(instance.values.a)} = ${instance.values.c}`
+        : `${linear(1, instance.values.b)} = ${instance.values.c}`;
     case "two-step": {
       const { a, b, c } = instance.values;
       return `${linear(a, b)} = ${c}`;
