@@ -52,6 +52,10 @@ This repository is the source of truth for Klade (Pivot), an education company, 
 
 ---
 
+# Session roles
+
+Two kinds of session run in this repo. **Builder** sessions build one milestone each and follow everything under Engineering below. The **control tower** session directs, tracks, verifies and plans, and never writes code; its role is in `docs/CONTROL-TOWER.md`. A session is a builder unless its first message says it is the control tower.
+
 # Engineering
 
 ## Role
