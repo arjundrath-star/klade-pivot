@@ -18,7 +18,7 @@ In:
 
 - `mastery` table or column set: per student per concept, `status` (`mastered | in_progress | repeat`), `updated_at`, `evidence` (session_log id, exit score, explain-back id).
 - Exit-check UI: one problem at a time, a visible countdown (90 s × 1 for standard, × 1.5 for extended, hidden and unlimited for untimed), auto-submit on expiry as incorrect, no coach button rendered in this block.
-- Session completion: computes the verdict server-side from persisted attempts and the explain-back verdict (never from client state), writes `mastery`, sets `session_logs.status` to `done` and records `mastered` or `repeat` on the log.
+- Session completion: computes the verdict server-side from persisted attempts and the explain-back verdict (never from client state), writes `mastery`, sets `session_logs.status` to `done` and records `mastered` or `repeat` on the log. A session is completed only when all three block-5 attempts are persisted with `hints_used = 0` and no coach call in block 5; otherwise `session_logs.status` stays `in_progress`. This is the completion definition every later count uses (D33).
 - Session planner: `src/db/queries/sessions.ts` picks the next session for a student; a `repeat` concept comes first; the student page says "Today: repeat two-step equations".
 - Unit tests: verdict rule (all combinations of exit score and explain-back pass), timer multiplier by mode, planner ordering.
 
@@ -30,7 +30,7 @@ Out:
 
 1. Failing the exit check marks the concept Repeat and the next session reflects it. AC 5.
 2. The extended-time setting changes the exit-check timers without changing the mastery rule. AC 11.
-3. The verdict cannot be forged from the client; a request to complete a session with fewer than three persisted exit attempts is rejected.
+3. The verdict cannot be forged from the client; a request to complete a session with fewer than three persisted exit attempts, or with any block-5 attempt where `hints_used > 0`, is rejected.
 4. `scripts/gate.sh` exits 0.
 
 ## Smoke path

@@ -4,12 +4,12 @@ This repository is the source of truth for Klade (Pivot), an education company, 
 
 ## The company in 6 lines
 
-- **What:** A mastery-paced learning platform that makes kids actually do the work and proves to parents they understood it.
+- **What:** A mastery-paced learning platform that makes kids actually do the work and shows parents what they can explain.
 - **Who:** Public-school families with a grade 6–10 student who is either catching up or getting ahead. Parent buys and enforces; student uses.
 - **Thesis:** Kids learn at different rates, but schools pace by age (retention at historic lows) and grades hide the gap (grade inflation), so parents find out too late. AI that hands out answers lowers learning; AI that forces the work raises it.
 - **One-liner:** "Every kid has an AI that does the work for them. We built one that makes them do it."
-- **Summary:** Mastery-paced platform for public-school kids grades 6–10, starting with Algebra 1. Short required sessions; AI coach that won't give answers; explain-back + timed checks; parents pay for enforceable accountability and proof of learning.
-- **Insight:** Content isn't scarce (Khan is free). Accountability and verified understanding are; that's what families pay Kumon/RSM for.
+- **Summary:** Mastery-paced platform for public-school kids grades 6–10, starting with Algebra 1. Short required sessions; AI coach that won't give answers; explain-back + timed checks; parents pay for enforceable accountability and a record of what their kid can explain.
+- **Insight:** Content isn't scarce (Khan is free). Accountability and evidence of understanding are; that's what families pay Kumon/RSM for.
 - **Product:** 30-min sessions (warm-up → learn → guided practice with an AI coach that never gives answers → explain-back graded by AI → timed exit check), pace chosen at signup, milestones, same-day parent alerts.
 - **Model:** Parent subscription, test range $19–39/mo core; hard-coded curriculum; small-model AI only for coaching, grading, weekly analysis (~$1–2 AI cost per student per month, estimate).
 
@@ -28,7 +28,7 @@ This repository is the source of truth for Klade (Pivot), an education company, 
 
 1. Kids don't complete sessions / parents stop enforcing.
 2. "Why not just Khan?" Willingness to pay for accountability.
-3. Math Academy ($49/mo, automated, math-only) adds parent accountability or cuts price.
+3. Wild Zebra ($48/mo, Socratic coach, interest framing, parent dashboard, about $8M raised) adds a required schedule and same-day alerts; Vimi ($19.99/mo) or Math Academy ($49/mo) adds a parent loop.
 4. Customer acquisition cost for middle- and lower-income families.
 5. Founder bandwidth.
 

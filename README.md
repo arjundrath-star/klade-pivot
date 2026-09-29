@@ -2,11 +2,11 @@
 
 **Every kid has an AI that does the work for them. We built one that makes them do it.**
 
-Klade is a mastery-paced learning platform for public-school students in grades 6 to 10, starting with Algebra 1. Students complete short, required sessions in which an AI coach makes them do the work instead of handing over answers, then prove they understood by explaining their reasoning out loud and passing a timed check. Parents get accountability they can enforce and proof of learning they can see.
+Klade is a mastery-paced learning platform for public-school students in grades 6 to 10, starting with Algebra 1. Students complete short, required sessions in which an AI coach makes them do the work instead of handing over answers, then explain their reasoning out loud, graded against a rubric, and pass a timed check. Parents get accountability they can enforce and a record of what their kid can explain.
 
-## What the MVP proves
+## What the MVP shows
 
-A student can sit down for 30 minutes, learn one Algebra 1 concept without the AI doing it for them, prove they understand it, and their parent can see that, and gets told if the student skips.
+A student can sit down for 30 minutes, learn one Algebra 1 concept without the AI doing it for them, explain it in their own words, and their parent can see exactly that, and gets told if the student skips.
 
 The first slice is Linear Equations in One Variable (Common Core HSA-REI.B.3): two-step equations, variables on both sides, and distribution with like terms.
 
