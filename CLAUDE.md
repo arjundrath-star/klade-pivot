@@ -106,9 +106,11 @@ A task is done when `scripts/gate.sh` exits 0, the change is committed, and CI i
 - Never force-push, never `git reset --hard`, never rewrite `main`. The guard hook blocks these.
 
 ## Model policy
+
 - The session that builds a milestone is the builder: one model, one working tree, no parallel implementation subagents. Two agents editing the same repo on a 2-core box produce conflicts and broken gates, not speed.
 - Subagents are for read-only exploration ("where is X handled?", "what does the Next 16 docs say about Y?") and for the review passes (`/simplify`, `/code-review`). Pass `model: "opus"` for exploration subagents to save tokens; reviews inherit the builder's model.
 - Never split one milestone across sessions. Finish it, gate it, commit it, then start the next.
+- Launch every builder from the repo root with `claude --model opus --effort high --dangerously-skip-permissions`. Milestone 04 (the coach) and any retry after a failed verification use `--model fable --effort xhigh` with the same permissions flag. Always skip permissions: a builder that stops on a prompt while Arjun is away wastes the session.
 
 ## Token discipline
 
