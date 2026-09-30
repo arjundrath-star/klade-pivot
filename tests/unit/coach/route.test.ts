@@ -7,7 +7,7 @@ import { getDb } from "@/db/client";
 import { DEMO_STUDENT_ID } from "@/db/demo";
 import { openTodaySession } from "@/db/queries/sessions";
 import { aiUsage, attempts, coachTurns } from "@/db/schema";
-import { answersFor } from "../../helpers/answers";
+import { answersFor, recordPass } from "../../helpers/answers";
 import { solve, withTempDatabase } from "../../helpers/database";
 
 // The model is mocked; the route, the filter and the database are real.
@@ -252,6 +252,7 @@ describe("coaching", () => {
       to: "explain",
     });
     await expectError(await post({ sessionId, index: 0, message: "hi" }), 409, "wrong-block");
+    await recordPass(sessionId, "Same thing to both sides keeps it balanced.");
     expect(await moveBlock({ sessionId, from: "explain", direction: "next" })).toMatchObject({
       to: "exit",
     });

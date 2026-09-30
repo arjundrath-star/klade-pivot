@@ -9,7 +9,7 @@ import { loadSession } from "@/session/load";
 import { getStudent } from "@/db/queries/students";
 import { attempts, students } from "@/db/schema";
 import { sessionProblems } from "@/session/problems";
-import { answersFor } from "../../helpers/answers";
+import { answersFor, recordPass } from "../../helpers/answers";
 import { solve, withTempDatabase } from "../../helpers/database";
 
 // Runs the session flow against a real libSQL file.
@@ -218,9 +218,16 @@ describe("session flow", () => {
       error: "incomplete",
     });
     await solve(sessionId, "guided", [1, 2, 3, 4]);
-    for (const from of ["guided", "explain"] as const) {
-      expect(await moveBlock({ sessionId, from, direction: "next" })).toMatchObject({ ok: true });
-    }
+    expect(await moveBlock({ sessionId, from: "guided", direction: "next" })).toMatchObject({
+      ok: true,
+    });
+    expect(await moveBlock({ sessionId, from: "explain", direction: "next" })).toMatchObject({
+      error: "incomplete",
+    });
+    await recordPass(sessionId, "Same thing to both sides keeps it balanced.");
+    expect(await moveBlock({ sessionId, from: "explain", direction: "next" })).toMatchObject({
+      ok: true,
+    });
     expect(await moveBlock({ sessionId, from: "exit", direction: "next" })).toEqual({
       ok: true,
       to: "done",

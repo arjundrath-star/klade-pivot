@@ -3,8 +3,10 @@
 import { createContext, use, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BlockTimer } from "./block-timer";
+import { loadExplainPanel } from "./explain-back";
 import { moveBlock } from "./actions";
 import { SessionComplete } from "./session-complete";
+import type { ExplainStatus } from "@/coach/rubric";
 import {
   BLOCK_IDS,
   BLOCKS,
@@ -19,6 +21,7 @@ import { blockBudgetSeconds, type TimerMode } from "@/session/timer";
 interface ProgressState extends SessionProgress {
   markSolved: (key: string) => void;
   markLessonRead: () => void;
+  setExplainBack: (status: ExplainStatus) => void;
 }
 
 const ProgressContext = createContext<ProgressState | null>(null);
@@ -34,9 +37,14 @@ export const RELOAD_MESSAGE = "Something went wrong. Reload the page.";
 
 /** What unlocks Next in a block that is not complete yet. */
 function lockedMessage(block: BlockId): string {
-  return block === "learn"
-    ? "Go through every step, then confirm you've read it, to unlock Next."
-    : "Solve every problem to unlock Next.";
+  switch (block) {
+    case "learn":
+      return "Go through every step, then confirm you've read it, to unlock Next.";
+    case "explain":
+      return "Get your explanation graded to unlock Next.";
+    default:
+      return "Solve every problem to unlock Next.";
+  }
 }
 
 // "moved" and "closed" have no message: the runner reloads the session from the server instead.
@@ -61,6 +69,7 @@ interface SessionRunnerProps {
   counts: ProblemCounts;
   initialSolved: readonly string[];
   initialLessonRead: boolean;
+  initialExplainBack: ExplainStatus;
   /** Each block's panel, rendered on the server. */
   panels: Readonly<Record<BlockId, ReactNode>>;
 }
@@ -74,6 +83,7 @@ export function SessionRunner({
   counts,
   initialSolved,
   initialLessonRead,
+  initialExplainBack,
   panels,
 }: SessionRunnerProps) {
   const router = useRouter();
@@ -84,6 +94,7 @@ export function SessionRunner({
   });
   const [solved, setSolved] = useState<ReadonlySet<string>>(() => new Set(initialSolved));
   const [lessonRead, setLessonRead] = useState(initialLessonRead);
+  const [explainBack, setExplainBack] = useState(initialExplainBack);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -93,7 +104,7 @@ export function SessionRunner({
   if (at.block === "done") return <SessionComplete title={title} />;
   const block = at.block;
   const position = BLOCK_IDS.indexOf(block);
-  const complete = isBlockComplete(block, counts, { solved, lessonRead });
+  const complete = isBlockComplete(block, counts, { solved, lessonRead, explainBack });
   const last = position === BLOCK_IDS.length - 1;
 
   const move = (direction: Direction) => {
@@ -106,11 +117,20 @@ export function SessionRunner({
         return;
       }
       setAt({ block: result.to, elapsedMs: result.elapsedMs });
+      // The page rendered block 4 before guided practice was finished, so it has no problem to
+      // explain yet; the refresh renders it now.
+      // The panel's code downloads while the refresh runs.
+      if (block === "guided" && result.to === "explain") {
+        void loadExplainPanel();
+        router.refresh();
+      }
     });
   };
 
   return (
-    <ProgressContext value={{ solved, lessonRead, markSolved, markLessonRead }}>
+    <ProgressContext
+      value={{ solved, lessonRead, explainBack, markSolved, markLessonRead, setExplainBack }}
+    >
       <div className="flex flex-col gap-8">
         <header className="flex flex-col gap-4">
           <div className="flex items-baseline justify-between gap-4">

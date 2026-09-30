@@ -25,5 +25,9 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false,
     timeout: 60_000,
+    // The smoke test never calls a model: with the key empty, the coach and the grader report
+    // themselves unavailable, and the test checks that state. A key in the shell or in .env.local
+    // does not reach the server.
+    env: { ANTHROPIC_API_KEY: "" },
   },
 });

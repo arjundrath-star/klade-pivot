@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { EXPLAIN_SOURCES, EXPLAIN_VERDICTS } from "@/coach/rubric";
 import type { Interest } from "@/engine/types";
 import { BLOCK_IDS, PROBLEM_BLOCK_IDS, type BlockId } from "@/session/blocks";
 import { TIMER_MODES } from "@/session/timer";
@@ -140,6 +141,11 @@ export const attempts = sqliteTable(
   ],
 );
 
+/**
+ * One graded explain-back: the student's explanation of a solved problem and the rubric scores
+ * (spec §5). A session holds at most `EXPLAIN_ATTEMPTS` rows. The integrity signals are for the
+ * parent's aggregate view and are never shown to the student.
+ */
 export const explainBacks = sqliteTable(
   "explain_backs",
   {
@@ -147,14 +153,27 @@ export const explainBacks = sqliteTable(
     sessionLogId: text("session_log_id")
       .notNull()
       .references(() => sessionLogs.id),
+    /** The solved problem the student explained. */
+    block: text("block", { enum: PROBLEM_BLOCK_IDS }).notNull(),
+    problemIndex: integer("problem_index").notNull(),
+    /** 1 for the first try, 2 for the retry after a failing first. */
+    attempt: integer("attempt").notNull(),
     text: text("text").notNull(),
-    source: text("source", { enum: ["voice", "typed"] }).notNull(),
-    scores: text("scores", { mode: "json" }).$type<Record<string, number>>().notNull(),
-    verdict: text("verdict", { enum: ["pass", "retry"] }).notNull(),
-    integrityFlags: text("integrity_flags", { mode: "json" }).$type<string[]>().notNull(),
+    source: text("source", { enum: EXPLAIN_SOURCES }).notNull(),
+    correctness: integer("correctness").notNull(),
+    justification: integer("justification").notNull(),
+    precision: integer("precision").notNull(),
+    feedback: text("feedback").notNull(),
+    verdict: text("verdict", { enum: EXPLAIN_VERDICTS }).notNull(),
+    /** A paste event fired in the explanation field. */
+    pasted: integer("pasted", { mode: "boolean" }).notNull(),
+    /** From the first edit of the field to submit. */
+    durationMs: integer("duration_ms").notNull(),
+    charsPerSecond: real("chars_per_second").notNull(),
     createdAt: createdAt(),
   },
-  (t) => [index("explain_backs_session_log_id_idx").on(t.sessionLogId)],
+  // One row per attempt: two tabs submitting at once cannot both record a first try.
+  (t) => [uniqueIndex("explain_backs_attempt_idx").on(t.sessionLogId, t.attempt)],
 );
 
 export const alerts = sqliteTable(
@@ -217,5 +236,5 @@ export const aiUsage = sqliteTable(
     sessionLogId: text("session_log_id").references(() => sessionLogs.id),
     createdAt: createdAt(),
   },
-  (t) => [index("ai_usage_session_log_id_idx").on(t.sessionLogId)],
+  (t) => [index("ai_usage_session_kind_idx").on(t.sessionLogId, t.kind)],
 );

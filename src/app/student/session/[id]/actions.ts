@@ -1,8 +1,22 @@
 "use server";
 
 import { z } from "zod";
+import { coachConfigured } from "@/coach/client";
+import { gradeExplanation, GRADER_CALLS_PER_SESSION, GRADER_MODEL } from "@/coach/grader";
+import { coachContext, untrustedText } from "@/coach/prompt";
+import {
+  EXPLAIN_SOURCES,
+  explainStatus,
+  isExplainFinal,
+  MAX_EXPLANATION_LENGTH,
+  passes,
+  type ExplainError,
+  type ExplainResult,
+  type ExplainStatus,
+} from "@/coach/rubric";
 import { recordAttempt } from "@/db/queries/attempts";
 import { DEMO_STUDENT_ID } from "@/db/demo";
+import { graderCalls, recordExplainBack, recordGraderCalls } from "@/db/queries/explain";
 import { markLessonRead, moveSession } from "@/db/queries/sessions";
 import { checkAnswer } from "@/engine/check";
 import { generateInstance } from "@/engine/generate";
@@ -18,18 +32,20 @@ import {
 import { loadSession, openProblem, type OpenProblemError } from "@/session/load";
 import { leaveBlock } from "@/session/timer";
 
-// Longer gaps (a tab left open overnight) are recorded as an hour rather than rejected.
 const MAX_ATTEMPT_MS = 60 * 60 * 1000;
+
+// Longer gaps (a tab left open overnight) are recorded as an hour rather than rejected.
+const elapsedMs = z
+  .int()
+  .nonnegative()
+  .transform((ms) => Math.min(ms, MAX_ATTEMPT_MS));
 
 const AnswerInput = z.object({
   sessionId: z.uuid(),
   block: z.enum(ANSWERED_BLOCK_IDS),
   index: z.int().nonnegative(),
   answer: z.string().max(40),
-  timeMs: z
-    .int()
-    .nonnegative()
-    .transform((ms) => Math.min(ms, MAX_ATTEMPT_MS)),
+  timeMs: elapsedMs,
 });
 
 type AnswerError = "invalid" | "closed" | "wrong-block" | "already-solved";
@@ -46,6 +62,17 @@ const ANSWER_ERRORS: Readonly<Record<OpenProblemError, AnswerError>> = {
   invalid: "invalid",
   solved: "already-solved",
 };
+
+const ExplainInput = z.object({
+  sessionId: z.uuid(),
+  text: untrustedText(MAX_EXPLANATION_LENGTH),
+  source: z.enum(EXPLAIN_SOURCES),
+  pasted: z.boolean(),
+  durationMs: elapsedMs,
+});
+
+export type ExplainSubmitResult =
+  { ok: true; result: ExplainResult; status: ExplainStatus } | { ok: false; error: ExplainError };
 
 const LessonInput = z.object({ sessionId: z.uuid() });
 
@@ -124,4 +151,71 @@ export async function moveBlock(input: z.input<typeof MoveInput>): Promise<MoveR
   const moved = await moveSession(sessionId, from, result.to, times);
   if (!moved) return { ok: false, error: "moved" };
   return { ok: true, to: result.to, elapsedMs: result.to === "done" ? 0 : (times[result.to] ?? 0) };
+}
+
+/** Characters per second of composing; anything faster than a second counts as one second. */
+function charsPerSecond(text: string, durationMs: number): number {
+  return (text.length * 1000) / Math.max(durationMs, 1000);
+}
+
+/**
+ * Grades the student's explain-back of their assigned problem and records it with its integrity
+ * signals. The server picks the problem, numbers the attempt, and applies the pass rule to the
+ * grader's scores; a grader that is unreachable or returns anything malformed is "unavailable",
+ * never a pass.
+ */
+export async function submitExplanation(
+  input: z.input<typeof ExplainInput>,
+): Promise<ExplainSubmitResult> {
+  const parsed = ExplainInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid" };
+  const { sessionId, text, source, pasted, durationMs } = parsed.data;
+
+  const [open, calls] = await Promise.all([loadOpenSession(sessionId), graderCalls(sessionId)]);
+  if (!open) return { ok: false, error: "closed" };
+  if (open.session.currentBlock !== "explain") return { ok: false, error: "wrong-block" };
+  if (isExplainFinal(open.progress.explainBack)) return { ok: false, error: "graded" };
+  if (!coachConfigured()) return { ok: false, error: "unavailable" };
+  if (calls >= GRADER_CALLS_PER_SESSION) return { ok: false, error: "rate-limited" };
+
+  const { problem, results } = open.explain;
+  const graded = await gradeExplanation(coachContext(problem, open.session.interests), text);
+  const usage = graded.calls.map((call) => ({
+    kind: "explain_back" as const,
+    model: GRADER_MODEL,
+    sessionLogId: sessionId,
+    ...call,
+  }));
+  if (!graded.ok) {
+    await recordGraderCalls(usage);
+    return { ok: false, error: "unavailable" };
+  }
+
+  const { scores, feedback } = graded.grade;
+  const result: ExplainResult = {
+    attempt: results.length + 1,
+    scores,
+    feedback,
+    verdict: passes(scores) ? "pass" : "fail",
+  };
+  const recorded = await recordExplainBack(
+    {
+      sessionLogId: sessionId,
+      block: problem.block,
+      problemIndex: problem.index,
+      attempt: result.attempt,
+      text,
+      source,
+      ...scores,
+      feedback,
+      verdict: result.verdict,
+      pasted,
+      durationMs,
+      charsPerSecond: charsPerSecond(text, durationMs),
+    },
+    usage,
+  );
+  if (!recorded) return { ok: false, error: "graded" };
+  const verdicts = [...results.map((r) => r.verdict), result.verdict];
+  return { ok: true, result, status: explainStatus(verdicts) };
 }

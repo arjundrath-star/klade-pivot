@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
 import { filterTarget, type FilterTarget } from "@/coach/policy";
 import type { CoachTurn, HintLevel } from "@/coach/turns";
 import type { SessionContent } from "@/content/types";
@@ -82,8 +83,25 @@ function lessonText(lesson: SessionContent["learn"]): string {
   ].join("\n");
 }
 
+/** The reference solution as numbered lines, the same for the coach and the grader. */
+export function referenceSteps(steps: readonly SolutionStep[]): string[] {
+  return steps.map((step, i) => `${i + 1}. ${step.description}: ${step.equationAfter}`);
+}
+
+/**
+ * Student text bound for a prompt, at most `max` characters and not blank. Control characters and
+ * angle brackets go, so the text cannot close the tag the prompt wraps it in.
+ */
+export function untrustedText(max: number) {
+  return z
+    .string()
+    .max(max)
+    .transform((text) => text.replace(/[\p{Cc}<>]/gu, " ").trim())
+    .refine((text) => text.length > 0);
+}
+
 function problemText({ problem, equation, steps }: CoachContext): string {
-  const reference = steps.map((step, i) => `${i + 1}. ${step.description}: ${step.equationAfter}`);
+  const reference = referenceSteps(steps);
   return [
     "The problem the student sees:",
     `<problem>${problem.text}</problem>`,

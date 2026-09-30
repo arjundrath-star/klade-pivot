@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { watchConsole } from "./console";
-import { answersFor, renderedFor } from "../helpers/answers";
+import { answersFor, recordPass, renderedFor } from "../helpers/answers";
 import type { AnsweredBlockId } from "@/session/blocks";
 
 async function expectBlock(page: Page, label: string, position: number) {
@@ -21,6 +21,7 @@ async function solveBlock(page: Page, sessionId: string, block: AnsweredBlockId)
 
 test("a student walks all five blocks of a session and it is saved as they go", async ({
   page,
+  browser,
 }) => {
   const errors = watchConsole(page);
   await page.goto("/student");
@@ -88,6 +89,70 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   await next.click();
 
   await expectBlock(page, "Explain-back", 4);
+  await expect(next).toBeDisabled();
+  const field = page.getByLabel("Explain why each step works");
+
+  // Voice: where the Web Speech API exists, speaking appends the transcript to the field. The
+  // recognizer is a stand-in that "hears" one sentence, since the test has no microphone.
+  await page.addInitScript(() => {
+    class HeardOneSentence {
+      continuous = false;
+      interimResults = false;
+      lang = "";
+      onresult: ((event: unknown) => void) | null = null;
+      onend: (() => void) | null = null;
+      onerror = null;
+      start() {
+        setTimeout(() => {
+          const result = Object.assign([{ transcript: "I took five away from both sides" }], {
+            isFinal: true,
+          });
+          this.onresult?.({ resultIndex: 0, results: [result] });
+          this.onend?.();
+        }, 50);
+      }
+      stop() {}
+      abort() {}
+    }
+    Object.defineProperty(window, "SpeechRecognition", { value: undefined, configurable: true });
+    Object.defineProperty(window, "webkitSpeechRecognition", {
+      value: HeardOneSentence,
+      configurable: true,
+    });
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "Speak" }).click();
+  await expect(field).toHaveValue("I took five away from both sides");
+
+  // Without the API there is no microphone button, and typing works.
+  const noSpeech = await browser.newContext();
+  await noSpeech.addInitScript(() => {
+    for (const name of ["SpeechRecognition", "webkitSpeechRecognition"]) {
+      Object.defineProperty(window, name, { value: undefined, configurable: true });
+    }
+  });
+  const typing = await noSpeech.newPage();
+  await typing.goto(page.url());
+  await expectBlock(typing, "Explain-back", 4);
+  await typing.getByLabel("Explain why each step works").fill("Typed instead.");
+  await expect(typing.getByLabel("Explain why each step works")).toHaveValue("Typed instead.");
+  await expect(typing.getByRole("button", { name: "Speak" })).toHaveCount(0);
+  await noSpeech.close();
+
+  const explanation = "I subtracted from both sides to keep the equation balanced, then divided.";
+  await field.fill(explanation);
+  await page.getByRole("button", { name: "Submit" }).click();
+  // Without an API key the grader is unavailable: a visible error, never a pass.
+  await expect(page.getByText(/grading unavailable/i)).toBeVisible();
+  await expect(field).toHaveValue(explanation);
+  await expect(next).toBeDisabled();
+
+  // A graded pass written to the database stands in for the model, so the rest of the session
+  // runs. The page reads it on reload like any stored result.
+  await recordPass(sessionId, explanation);
+  await page.reload();
+  await expectBlock(page, "Explain-back", 4);
+  await expect(page.getByText(/Passed\./)).toBeVisible();
   await next.click();
   await expectBlock(page, "Exit check", 5);
   await page.getByRole("button", { name: "Finish" }).click();

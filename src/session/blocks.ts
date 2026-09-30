@@ -1,3 +1,5 @@
+import { isExplainFinal, type ExplainStatus } from "@/coach/rubric";
+
 /** The five blocks of every session, in the order the student works through them. */
 export const BLOCK_IDS = ["warmup", "learn", "guided", "explain", "exit"] as const;
 
@@ -49,11 +51,14 @@ export interface SessionProgress {
   solved: ReadonlySet<string>;
   /** The student confirmed they read the lesson. */
   lessonRead: boolean;
+  /** Where the explain-back stands, from the graded attempts on the server. */
+  explainBack: ExplainStatus;
 }
 
 /**
  * A block is complete when its gate is met: the lesson confirmed as read for learn, every problem
- * solved for an answered block. The remaining blocks are stubs that never hold the student back.
+ * solved for an answered block, a final explain-back result (a pass, or the retry graded either
+ * way) for explain. The exit block is a stub that never holds the student back.
  */
 export function isBlockComplete(
   block: BlockId,
@@ -61,6 +66,7 @@ export function isBlockComplete(
   progress: SessionProgress,
 ): boolean {
   if (block === "learn") return progress.lessonRead;
+  if (block === "explain") return isExplainFinal(progress.explainBack);
   if (!isAnsweredBlock(block)) return true;
   for (let index = 0; index < counts[block]; index += 1) {
     if (!progress.solved.has(problemKey(block, index))) return false;

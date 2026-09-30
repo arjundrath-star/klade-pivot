@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { ExplainStatus } from "@/coach/rubric";
 import {
   BLOCK_IDS,
   isBlockComplete,
@@ -11,8 +12,12 @@ import {
 
 const counts: ProblemCounts = { warmup: 2, guided: 3 };
 
-function progress(solvedKeys: Iterable<string>, lessonRead = false): SessionProgress {
-  return { solved: new Set(solvedKeys), lessonRead };
+function progress(
+  solvedKeys: Iterable<string>,
+  lessonRead = false,
+  explainBack: ExplainStatus = "pending",
+): SessionProgress {
+  return { solved: new Set(solvedKeys), lessonRead, explainBack };
 }
 
 describe("block order", () => {
@@ -64,10 +69,18 @@ describe("gating", () => {
     expect(isBlockComplete("learn", counts, progress([], true))).toBe(true);
   });
 
-  it("never holds the student in a block that is still a stub", () => {
-    for (const block of ["explain", "exit"] as const) {
-      expect(isBlockComplete(block, counts, progress([]))).toBe(true);
-    }
+  it("holds the student in explain-back until the result is final", () => {
+    const at = (status: ExplainStatus) =>
+      isBlockComplete("explain", counts, progress([], true, status));
+    expect(at("pending")).toBe(false);
+    expect(at("retry")).toBe(false);
+    expect(at("passed")).toBe(true);
+    // A failed retry stands and moves the student on; the exit check reads it as not passed.
+    expect(at("failed")).toBe(true);
+  });
+
+  it("never holds the student in the exit check while it is a stub", () => {
+    expect(isBlockComplete("exit", counts, progress([]))).toBe(true);
   });
 });
 

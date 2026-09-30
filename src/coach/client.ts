@@ -31,8 +31,7 @@ async function* textDeltas(stream: MessageStream): AsyncGenerator<string> {
   }
 }
 
-async function finalUsage(stream: MessageStream): Promise<CoachUsage> {
-  const { usage } = await stream.finalMessage();
+function usageOf({ usage }: Anthropic.Message): CoachUsage {
   return {
     inputTokens: usage.input_tokens,
     outputTokens: usage.output_tokens,
@@ -52,5 +51,29 @@ export function streamCoachReply(prompt: CoachPrompt): CoachReply {
     system: prompt.system,
     messages: prompt.messages,
   });
-  return { deltas: textDeltas(stream), usage: () => finalUsage(stream) };
+  return { deltas: textDeltas(stream), usage: async () => usageOf(await stream.finalMessage()) };
+}
+
+export interface GradeReply {
+  text: string;
+  /** Anything but "end_turn" means the reply may be cut short. */
+  stopReason: Anthropic.StopReason | null;
+  usage: CoachUsage;
+}
+
+// Grading has to answer within five seconds, so a slow call gives up instead of retrying: the
+// student sees "grading unavailable" and can submit again.
+const GRADE_REQUEST = { timeout: 5000, maxRetries: 0 } as const;
+
+/** One complete grading call. Throws the SDK's typed error when the API cannot be reached. */
+export async function requestGrade(
+  params: Anthropic.MessageCreateParamsNonStreaming,
+): Promise<GradeReply> {
+  client ??= new Anthropic();
+  const message = await client.messages.create(params, GRADE_REQUEST);
+  const text = message.content
+    .filter((block) => block.type === "text")
+    .map((block) => block.text)
+    .join("");
+  return { text, stopReason: message.stop_reason, usage: usageOf(message) };
 }

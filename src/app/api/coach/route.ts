@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { coachConfigured, streamCoachReply } from "@/coach/client";
 import { createRedactingStream } from "@/coach/policy";
-import { buildCoachPrompt, coachContext, COACH_MODEL } from "@/coach/prompt";
+import { buildCoachPrompt, coachContext, COACH_MODEL, untrustedText } from "@/coach/prompt";
 import { COACH_CALLS_PER_SESSION, hintLevel, type CoachError } from "@/coach/turns";
 import { DEMO_STUDENT_ID } from "@/db/demo";
 import { recordCoachTurn } from "@/db/queries/coach";
@@ -14,12 +14,7 @@ const Body = z.object({
   sessionId: z.uuid(),
   block: z.enum(COACHED_BLOCK_IDS),
   index: z.int().nonnegative(),
-  // Control characters go, and so do angle brackets: the prompt wraps the message in a tag.
-  message: z
-    .string()
-    .max(MAX_MESSAGE_LENGTH)
-    .transform((text) => text.replace(/[\p{Cc}<>]/gu, " ").trim())
-    .refine((text) => text.length > 0),
+  message: untrustedText(MAX_MESSAGE_LENGTH),
 });
 
 const STATUS: Readonly<Record<CoachError, number>> = {
