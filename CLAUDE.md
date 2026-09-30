@@ -94,9 +94,11 @@ A task is done when `scripts/gate.sh` exits 0, the change is committed, and CI i
 1. Read the milestone in `docs/milestones/` the prompt names, plus the spec sections it cites. Read only the files it lists plus what you must touch.
 2. Build the milestone end to end, including unit tests and the smoke path it defines. Add the new route(s) to `ROUTES` in `scripts/lighthouse.mjs`.
 3. Run `npm run gate`.
-4. Run `/simplify`, then `/code-review high`. Fix what they find. Run the gate again.
+4. Run `/simplify`, then `/code-review high`, then `/security-review` if the milestone touches auth, data access, API routes, or server actions. Fix what they find. Run the gate again. These are steps, not stopping points: after each review prints its output, continue at once to the next step without waiting for input.
 5. Commit (rules below). Push. Confirm CI passed with `gh run watch`.
 6. Fill in the milestone's "Notes for the next milestone". Report in six lines or fewer: what shipped, what the gate verified, what is left.
+
+The session ends only after step 6's report is written. Do not end a turn while the tree has uncommitted changes or unpushed commits; the Stop hook enforces this.
 
 ## Commit rules
 
@@ -138,7 +140,7 @@ A task is done when `scripts/gate.sh` exits 0, the change is committed, and CI i
 - The users are minors. Store the minimum: no email, no birthdate, no free-text profile beyond first name and interest tags. Parent-created accounts only.
 - Validate every input at the boundary with zod. Trust nothing from the client. Auth checks in the server layer, never only in the UI.
 - No secrets in code, logs, or error messages.
-- Run `/security-review` before any push that changes auth, data access, or API routes.
+- Run `/security-review` before any push that changes auth, data access, or API routes (protocol step 4).
 
 ## When stuck
 
