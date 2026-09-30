@@ -137,7 +137,7 @@ export function SessionRunner({
               type="button"
               onClick={() => move("back")}
               disabled={position === 0 || pending}
-              className="rounded-md border border-zinc-300 px-4 py-2 font-medium disabled:opacity-40 dark:border-zinc-700"
+              className="btn-secondary"
             >
               Back
             </button>

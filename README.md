@@ -54,6 +54,7 @@ npm run dev
 ```bash
 npm run gate                 # the full check
 scripts/gate.sh --quick      # typecheck, lint, and unit tests only
+npm run coach:redteam        # pressure-tests the coach against the real model; needs the API key
 ```
 
 ## Layout

@@ -45,6 +45,15 @@ export function sessionProblems(content: SessionContent, sessionSeed: number): S
   );
 }
 
+/** The problem at `index` in `block`, if the session has one. */
+export function findProblem(
+  problems: readonly SessionProblem[],
+  block: ProblemBlockId,
+  index: number,
+): SessionProblem | undefined {
+  return problems.find((p) => p.block === block && p.index === index);
+}
+
 /** A session problem as its student sees it, framed by their interests. */
 export function renderSessionProblem(
   problem: SessionProblem,

@@ -26,6 +26,15 @@ function isAnsweredBlock(block: BlockId): block is AnsweredBlockId {
   return (ANSWERED_BLOCK_IDS as readonly BlockId[]).includes(block);
 }
 
+/** Answered blocks where the coach can open. The exit check never gets one (decision D33). */
+export const COACHED_BLOCK_IDS = ["guided"] as const satisfies readonly AnsweredBlockId[];
+
+export type CoachedBlockId = (typeof COACHED_BLOCK_IDS)[number];
+
+export function isCoachedBlock(block: BlockId): block is CoachedBlockId {
+  return (COACHED_BLOCK_IDS as readonly BlockId[]).includes(block);
+}
+
 /** Identifies one problem within a session. */
 export function problemKey(block: ProblemBlockId, index: number): string {
   return `${block}:${index}`;

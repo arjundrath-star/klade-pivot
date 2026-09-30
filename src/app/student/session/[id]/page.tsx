@@ -5,7 +5,8 @@ import { ProblemCard } from "./problem-card";
 import { SessionComplete } from "./session-complete";
 import { SessionRunner } from "./session-runner";
 import { WorkedExample } from "./worked-example";
-import type { AnsweredBlockId, BlockId } from "@/session/blocks";
+import { exampleFor } from "@/coach/example";
+import { isCoachedBlock, problemKey, type AnsweredBlockId, type BlockId } from "@/session/blocks";
 import { DEMO_STUDENT_ID } from "@/db/demo";
 import { loadSession } from "@/session/load";
 import { renderSessionProblem } from "@/session/problems";
@@ -26,17 +27,19 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
   // Sign-in is not built yet, so the page acts as the demo student.
   const loaded = await loadSession(id, DEMO_STUDENT_ID);
   if (!loaded) notFound();
-  const { session, content, problems, counts, progress } = loaded;
+  const { session, content, problems, counts, progress, coach } = loaded;
   if (session.status === "done") return <SessionComplete title={session.title} />;
   if (session.status !== "in_progress") notFound();
 
-  // Problems render on the server so the answers never reach the browser.
+  // Problems render on the server so the answers never reach the browser. The coach's worked
+  // example is a different instance, so its numbers can.
   const problemPanel = (block: AnsweredBlockId) => (
     <div className="flex flex-col gap-4">
       {problems
         .filter((p) => p.block === block)
         .map((p) => {
           const rendered = renderSessionProblem(p, session.interests);
+          const key = problemKey(block, p.index);
           return (
             <ProblemCard
               key={p.index}
@@ -45,6 +48,14 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
               index={p.index}
               text={rendered.text}
               equation={rendered.kind === "symbolic" ? rendered.equation : undefined}
+              coach={
+                isCoachedBlock(block) && !progress.solved.has(key)
+                  ? {
+                      example: exampleFor(p, session.interests),
+                      initialTurns: coach.turns.get(key) ?? [],
+                    }
+                  : undefined
+              }
             />
           );
         })}

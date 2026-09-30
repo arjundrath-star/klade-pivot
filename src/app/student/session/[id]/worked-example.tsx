@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { confirmLesson } from "./actions";
 import { RELOAD_MESSAGE, useProgress } from "./session-runner";
+import { StepList } from "./step-list";
 import type { LessonStep } from "@/content/lesson";
 
 interface WorkedExampleProps {
@@ -36,20 +37,7 @@ export function WorkedExample({ sessionId, equation, steps }: WorkedExampleProps
     <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
       <h3 className="font-semibold">Worked example</h3>
       <p className="font-mono text-xl">{equation}</p>
-      <ol aria-label="Steps" aria-live="polite" className="flex flex-col gap-4">
-        {steps.slice(0, revealed).map((step, i) => (
-          <li
-            key={step.label}
-            className="flex flex-col gap-1 border-l-2 border-zinc-300 pl-4 dark:border-zinc-700"
-          >
-            <p className="text-sm font-semibold">
-              Step {i + 1}. {step.label}
-            </p>
-            <p className="font-mono text-lg">{step.equation}</p>
-            <p className="text-zinc-600 dark:text-zinc-400">{step.reason}</p>
-          </li>
-        ))}
-      </ol>
+      <StepList label="Steps" live steps={steps.slice(0, revealed)} />
       {lessonRead ? (
         <p className="font-medium text-emerald-700 dark:text-emerald-400">
           Got it. Press Next to start practice.

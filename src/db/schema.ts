@@ -177,6 +177,31 @@ export const alerts = sqliteTable(
   ],
 );
 
+/** One coach exchange: what the student said and what the coach answered, at one hint level. */
+export const coachTurns = sqliteTable(
+  "coach_turns",
+  {
+    id: id(),
+    sessionLogId: text("session_log_id")
+      .notNull()
+      .references(() => sessionLogs.id),
+    block: text("block", { enum: PROBLEM_BLOCK_IDS }).notNull(),
+    problemIndex: integer("problem_index").notNull(),
+    /** Which hint this turn gave, 1 to 3. */
+    level: integer("level").notNull(),
+    studentText: text("student_text").notNull(),
+    /** The reply as the student saw it, after the output filter. */
+    coachText: text("coach_text").notNull(),
+    /** The output filter hid a leaked final value before the reply reached the student. */
+    redacted: integer("redacted", { mode: "boolean" }).notNull().default(false),
+    createdAt: createdAt(),
+  },
+  // One row per hint level: two tabs asking at once cannot both record the same hint.
+  (t) => [
+    uniqueIndex("coach_turns_level_idx").on(t.sessionLogId, t.block, t.problemIndex, t.level),
+  ],
+);
+
 export const aiUsage = sqliteTable(
   "ai_usage",
   {
@@ -185,7 +210,10 @@ export const aiUsage = sqliteTable(
     model: text("model").notNull(),
     inputTokens: integer("input_tokens").notNull(),
     outputTokens: integer("output_tokens").notNull(),
-    cachedTokens: integer("cached_tokens").notNull().default(0),
+    /** Prompt tokens served from the cache, at about a tenth of the input price. */
+    cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
+    /** Prompt tokens written to the cache, at about 1.25 times the input price. */
+    cacheWriteTokens: integer("cache_write_tokens").notNull().default(0),
     sessionLogId: text("session_log_id").references(() => sessionLogs.id),
     createdAt: createdAt(),
   },

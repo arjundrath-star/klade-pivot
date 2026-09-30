@@ -70,3 +70,8 @@ export function generateInstance(template: ValidTemplate, seed: number): Problem
     }
   }
 }
+
+/** The drawn values by placeholder name, whatever the structure. */
+export function instanceValues(instance: ProblemInstance): Readonly<Record<string, number>> {
+  return instance.values;
+}

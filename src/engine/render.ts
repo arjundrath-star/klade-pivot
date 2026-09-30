@@ -1,4 +1,5 @@
 import { formatEquation } from "@/engine/format";
+import { instanceValues } from "@/engine/generate";
 import { PLACEHOLDER } from "@/engine/template";
 import type { Interest, ProblemInstance, ValidTemplate } from "@/engine/types";
 
@@ -35,7 +36,7 @@ export function renderProblem(
   if (instance.templateKey !== template.key) {
     throw new Error(`Instance of "${instance.templateKey}" rendered with "${template.key}"`);
   }
-  const values: Readonly<Record<string, number>> = instance.values;
+  const values = instanceValues(instance);
   if (template.kind === "symbolic") {
     return {
       kind: "symbolic",

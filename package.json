@@ -19,7 +19,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
-    "db:reset": "tsx scripts/seed.ts --fresh"
+    "db:reset": "tsx scripts/seed.ts --fresh",
+    "coach:redteam": "tsx scripts/coach-redteam.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",

@@ -1,9 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useActionState, useEffect, useId, useRef } from "react";
 import { submitAnswer, type AnswerResult } from "./actions";
 import { useProgress } from "./session-runner";
+import { useCoach } from "./use-coach";
+import type { SimilarExample } from "@/coach/example";
+import type { CoachTurn } from "@/coach/turns";
 import { problemKey, type AnsweredBlockId } from "@/session/blocks";
+
+// The panel's code loads the first time a coach opens, so it stays out of the route's first load.
+const CoachPanel = dynamic(() => import("./coach-panel").then((m) => m.CoachPanel), {
+  ssr: false,
+  loading: () => <p className="text-sm text-zinc-600 dark:text-zinc-400">Getting your coach…</p>,
+});
+
+interface CoachProps {
+  example: SimilarExample;
+  initialTurns: readonly CoachTurn[];
+}
 
 interface ProblemCardProps {
   sessionId: string;
@@ -12,6 +27,8 @@ interface ProblemCardProps {
   text: string;
   /** Shown under the prompt for symbolic problems. */
   equation?: string;
+  /** Coached blocks only: the coach opens on a wrong answer or "I'm stuck". */
+  coach?: CoachProps;
 }
 
 type Feedback = { tone: "good" | "bad" | "info"; message: string };
@@ -38,25 +55,28 @@ const TONES = {
   info: "text-zinc-600 dark:text-zinc-400",
 } as const;
 
-export function ProblemCard({ sessionId, block, index, text, equation }: ProblemCardProps) {
+export function ProblemCard({ sessionId, block, index, text, equation, coach }: ProblemCardProps) {
   const { solved, markSolved } = useProgress();
   const key = problemKey(block, index);
   const isSolved = solved.has(key);
   const inputId = useId();
+  const answerField = useRef<HTMLInputElement>(null);
   // Start of the current attempt: when the problem appeared, then each recorded attempt.
   const attemptStart = useRef(0);
   useEffect(() => {
     attemptStart.current = Date.now();
   }, []);
+  const coachState = useCoach(sessionId, block, index, coach?.initialTurns ?? []);
 
   const [feedback, submit, pending] = useActionState(
     async (_prev: Feedback | null, form: FormData): Promise<Feedback | null> => {
       const now = Date.now();
+      const answer = String(form.get("answer") ?? "").trim();
       const result = await submitAnswer({
         sessionId,
         block,
         index,
-        answer: String(form.get("answer") ?? ""),
+        answer,
         timeMs: now - attemptStart.current,
       });
       if (result.ok && result.verdict !== "not-a-number") attemptStart.current = now;
@@ -64,6 +84,7 @@ export function ProblemCard({ sessionId, block, index, text, equation }: Problem
       if (result.ok ? result.verdict === "correct" : result.error === "already-solved") {
         markSolved(key);
       }
+      if (coach && result.ok && result.verdict === "incorrect") coachState.askForHelp(answer);
       return feedbackFor(result);
     },
     null,
@@ -82,6 +103,7 @@ export function ProblemCard({ sessionId, block, index, text, equation }: Problem
               Your answer
             </label>
             <input
+              ref={answerField}
               id={inputId}
               name="answer"
               required
@@ -93,6 +115,15 @@ export function ProblemCard({ sessionId, block, index, text, equation }: Problem
           <button type="submit" disabled={pending} className="btn-primary">
             Check
           </button>
+          {coach && !coachState.started && (
+            <button
+              type="button"
+              onClick={() => coachState.askForHelp(null)}
+              className="btn-secondary"
+            >
+              I&apos;m stuck
+            </button>
+          )}
         </form>
       )}
       <p
@@ -101,6 +132,13 @@ export function ProblemCard({ sessionId, block, index, text, equation }: Problem
       >
         {shown?.message}
       </p>
+      {coach && coachState.started && !isSolved && (
+        <CoachPanel
+          coach={coachState}
+          example={coach.example}
+          onTryAgain={() => answerField.current?.focus()}
+        />
+      )}
     </article>
   );
 }

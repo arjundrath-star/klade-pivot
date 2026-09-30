@@ -15,7 +15,7 @@ import {
   step,
   type BlockId,
 } from "@/session/blocks";
-import { loadSession } from "@/session/load";
+import { loadSession, openProblem, type OpenProblemError } from "@/session/load";
 import { leaveBlock } from "@/session/timer";
 
 // Longer gaps (a tab left open overnight) are recorded as an hour rather than rejected.
@@ -32,9 +32,20 @@ const AnswerInput = z.object({
     .transform((ms) => Math.min(ms, MAX_ATTEMPT_MS)),
 });
 
+type AnswerError = "invalid" | "closed" | "wrong-block" | "already-solved";
+
 export type AnswerResult =
   | { ok: true; verdict: "correct" | "incorrect" | "not-a-number" }
-  | { ok: false; error: "invalid" | "closed" | "wrong-block" | "already-solved" };
+  | { ok: false; error: AnswerError };
+
+// A session that is not the student's reads as closed: the answer form never says which.
+const ANSWER_ERRORS: Readonly<Record<OpenProblemError, AnswerError>> = {
+  "not-found": "closed",
+  closed: "closed",
+  "wrong-block": "wrong-block",
+  invalid: "invalid",
+  solved: "already-solved",
+};
 
 const LessonInput = z.object({ sessionId: z.uuid() });
 
@@ -63,21 +74,16 @@ export async function submitAnswer(input: z.input<typeof AnswerInput>): Promise<
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { sessionId, block, index, answer, timeMs } = parsed.data;
 
-  const open = await loadOpenSession(sessionId);
-  if (!open) return { ok: false, error: "closed" };
-  if (open.session.currentBlock !== block) return { ok: false, error: "wrong-block" };
-  const problem = open.problems.find((p) => p.block === block && p.index === index);
-  if (!problem) return { ok: false, error: "invalid" };
-  if (open.progress.solved.has(problemKey(block, index))) {
-    return { ok: false, error: "already-solved" };
-  }
+  const opened = await openProblem(sessionId, DEMO_STUDENT_ID, block, index);
+  if (!opened.ok) return { ok: false, error: ANSWER_ERRORS[opened.error] };
+  const { loaded, problem } = opened;
 
   const instance = generateInstance(problem.template, problem.seed);
   const check = checkAnswer(answer, rational(instance.solution));
   if (check.normalized === null) return { ok: true, verdict: "not-a-number" };
 
   await recordAttempt({
-    studentId: open.session.studentId,
+    studentId: loaded.session.studentId,
     sessionLogId: sessionId,
     block,
     problemIndex: index,
@@ -86,6 +92,7 @@ export async function submitAnswer(input: z.input<typeof AnswerInput>): Promise<
     answer: answer.trim(),
     correct: check.correct,
     timeMs,
+    hintsUsed: loaded.coach.turns.get(problemKey(block, index))?.length ?? 0,
   });
   return { ok: true, verdict: check.correct ? "correct" : "incorrect" };
 }

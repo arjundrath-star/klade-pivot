@@ -1,8 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { and, eq } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { confirmLesson, moveBlock, submitAnswer } from "@/app/student/session/[id]/actions";
 import { s1 } from "@/content/algebra1/linear-equations/s1";
 import { getDb } from "@/db/client";
@@ -11,38 +8,16 @@ import { findTodaySession, getSession, openTodaySession } from "@/db/queries/ses
 import { loadSession } from "@/session/load";
 import { getStudent } from "@/db/queries/students";
 import { attempts, students } from "@/db/schema";
-import type { AnsweredBlockId } from "@/session/blocks";
 import { sessionProblems } from "@/session/problems";
 import { answersFor } from "../../helpers/answers";
+import { solve, withTempDatabase } from "../../helpers/database";
 
-// Runs the session flow against a real libSQL file, migrated from drizzle/ on first connection.
-const dir = mkdtempSync(path.join(tmpdir(), "klade-db-"));
-
-beforeAll(async () => {
-  vi.stubEnv("DATABASE_URL", `file:${path.join(dir, "test.db")}`);
-  await seedDemo(new Date("2026-09-29T12:00:00Z"));
-});
-
-/** Answers the problems at `indexes` in `block` correctly. */
-async function solve(sessionId: string, block: AnsweredBlockId, indexes: readonly number[]) {
-  const answers = await answersFor(sessionId, block);
-  for (const index of indexes) {
-    const answer = String(answers[index]);
-    expect(await submitAnswer({ sessionId, block, index, answer, timeMs: 1000 })).toEqual({
-      ok: true,
-      verdict: "correct",
-    });
-  }
-}
+// Runs the session flow against a real libSQL file.
+withTempDatabase("klade-db-", new Date("2026-09-29T12:00:00Z"));
 
 async function lessonReadAt(sessionId: string) {
   return (await getSession(sessionId, DEMO_STUDENT_ID))?.lessonReadAt;
 }
-
-afterAll(() => {
-  vi.unstubAllEnvs();
-  rmSync(dir, { recursive: true, force: true });
-});
 
 describe("seed", () => {
   it("seeds Maya once, however many times it runs", async () => {
