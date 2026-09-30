@@ -1,6 +1,6 @@
 # Milestone 03: Session 1 content with interest variants
 
-Status: not started
+Status: done
 Session: one shot
 
 ## Goal
@@ -43,4 +43,13 @@ Out:
 
 ## Notes for the next milestone
 
-Filled in at the end of the session.
+- Engine: a fourth structure, `one-step`, with `form: "multiply"` (`ax = c`, placeholders `a`, `c`) or `form: "add"` (`x + b = c`, placeholders `b`, `c`). The multiply form never draws `a` = 0 or 1 (`EXCLUDED_MULTIPLIERS` in `generate.ts`), so every one-step instance takes exactly one step. Draw order for the other three structures is unchanged, so stored `(template_key, seed)` pairs still replay.
+- S1 content (`src/content/algebra1/linear-equations/s1.ts`): warm-up is 3 symbolic one-step problems with negative ranges (integer operations); guided is 5 two-step problems at indexes 0 to 4, word problems at 1, 2 and 4; exit is 3, word problems at 1 and 2. Every sports variant is soccer. Template keys are stored on attempts, so never rename one; add a new key instead.
+- Interest rotation is `selectVariant(interests, index)` by position in the block, so for Maya (sports, music) index 1 is music and 2 and 4 are sports. Reordering a block changes who sees which framing.
+- Realism: `tests/unit/content/s1.test.ts` holds a `REALISM` table of limits per word template (a, b, x, and the derived c from the range ends). Widening a range past it fails the test on purpose; reread all seven variants before moving the limit. The same file checks 7 variants, no unreplaced placeholders, every variant naming `{a}`, `{b}`, `{c}`, exit and guided sharing no key, and no `anthropic` in `src/content` or `src/engine`. S2 content should copy this test file.
+- Worked example: `defineWorkedExample` in `src/content/lesson.ts` builds and validates it at module load (reasons must match `solutionSteps`, and a check step is appended). S1's example template pins every range to one value (3x + 5 = 20), so hand-written reasons cannot drift. `SessionContent.learn.example` is now the built `WorkedExample`, not `{ template, seed }`.
+- Lesson gate: `session_logs.lesson_read_at` (migration `0001_lesson_read`). `confirmLesson` sets it only for the student's open session on the learn block, and keeps the first time. `isBlockComplete(block, counts, progress)` now takes `SessionProgress { solved, lessonRead }`; 05's explain-back pass and 06's exit rule belong there as new fields. The client runner exposes them through `useProgress()` (renamed from `useSolved`). The step reveal is a client reading aid: revealed steps reset if the student leaves the block before confirming, and the server does not check reveals.
+- `loadSession` now also returns `content`. `renderSessionProblem(problem, interests)` in `src/session/problems.ts` is the one render path for the page, the smoke helper (`renderedFor` in `tests/helpers/answers.ts`) and the content tests; 06's exit panel should use it.
+- The exit block is still a stub panel. Its three problems exist in content and render through `renderSessionProblem`, but answering, the 90-second server-side timer and the mastery verdict are 06's. `exit` is still not in `ANSWERED_BLOCK_IDS`.
+- Lighthouse: the gate now fails any route over 150 KB of script transfer (`FIRST_LOAD_JS_BUDGET`, from the report's `resource-summary`), and runs performance up to 3 times per route, passing on the best; accessibility and best-practices run once. Each route is fetched once before its audit. Current first-load JS: `/` 136.0 KB, `/student` 136.0 KB, `/student/session/[id]` 143.3 KB. The session route has about 7 KB of headroom, so the coach (04) must keep its client code small or load it on demand.
+- `docs/content-review.md` has the teacher checklist; S1 is "drafted, not yet reviewed".
