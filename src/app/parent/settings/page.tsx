@@ -4,8 +4,8 @@ import { connection } from "next/server";
 import { z } from "zod";
 import { saveRule, switchRule, unlockTonight } from "./actions";
 import { SETTINGS_NOTICE_KEYS, SETTINGS_NOTICES } from "./notices";
-import { DEMO_FAMILY_ID, DEMO_STUDENT_ID } from "@/db/demo";
 import { lockSettings } from "@/db/queries/lock";
+import { gatedFamily } from "@/gate/server";
 import { ruleSummary } from "@/parent/phone-rule";
 import { RuleFields } from "@/phone/rule-fields";
 import { defaultRule, overrideActive } from "@/session/lock";
@@ -22,10 +22,8 @@ const NoticeParam = z.enum(SETTINGS_NOTICE_KEYS);
 export default async function PhoneRuleSettings({ searchParams }: PageProps<"/parent/settings">) {
   // Reads the database, so it renders per request.
   await connection();
-  const [params, settings] = await Promise.all([
-    searchParams,
-    lockSettings(DEMO_FAMILY_ID, DEMO_STUDENT_ID),
-  ]);
+  const { familyId, studentId } = await gatedFamily("/parent/settings");
+  const [params, settings] = await Promise.all([searchParams, lockSettings(familyId, studentId)]);
   if (!settings) return <p>No student yet. Run npm run db:seed to add the demo student.</p>;
 
   const notice = NoticeParam.safeParse(params.notice);

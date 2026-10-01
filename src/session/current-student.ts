@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { DEMO_STUDENT_ID } from "@/db/demo";
+import { httpOnlyCookie } from "@/session/cookies";
 
 /**
  * Sign-in is not built yet. Onboarding sets this cookie to the new student's id, and the student
@@ -22,11 +23,14 @@ export async function currentStudentId(): Promise<string> {
 
 /** Makes this browser act as `studentId` from the next request on. Server actions only. */
 export async function rememberStudent(studentId: string): Promise<void> {
-  (await cookies()).set(STUDENT_COOKIE, StudentId.parse(studentId), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: STUDENT_COOKIE_MAX_AGE,
-  });
+  (await cookies()).set(
+    STUDENT_COOKIE,
+    StudentId.parse(studentId),
+    httpOnlyCookie(STUDENT_COOKIE_MAX_AGE),
+  );
+}
+
+/** Makes this browser act as the demo student again. Server actions only. */
+export async function forgetStudent(): Promise<void> {
+  (await cookies()).delete(STUDENT_COOKIE);
 }

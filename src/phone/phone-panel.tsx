@@ -44,10 +44,17 @@ function openMessage({ reason, rule }: LockView): string {
   }
 }
 
-/** The lock state; with `reward`, what the session that unlocked the phone earned. */
-async function fetchLockView(viewer: LockViewer, reward: boolean): Promise<LockView | null> {
+/**
+ * The lock state; with `reward`, what the session that unlocked the phone earned. Null when the
+ * poll failed; "signed-out" when the gate no longer lets this browser read the parent's view.
+ */
+async function fetchLockView(
+  viewer: LockViewer,
+  reward: boolean,
+): Promise<LockView | null | "signed-out"> {
   const query = `view=${viewer}${reward ? "&reward=1" : ""}`;
   const response = await fetch(`/api/lock-state?${query}`, { cache: "no-store" });
+  if (response.status === 401) return "signed-out";
   return response.ok ? ((await response.json()) as LockView) : null;
 }
 
@@ -74,9 +81,10 @@ export function PhonePanel({ viewer, initial, sessionHref }: PhonePanelProps) {
     // Each poll waits for the one before it, so a slow answer can never land after a newer one.
     const poll = async () => {
       if (!document.hidden) {
-        // A failed poll leaves the last state on screen; the next one tries again.
+        // A failed poll leaves the last state on screen; the next one tries again. Once the
+        // gate has closed on this browser, polling stops: a reload takes the parent to sign in.
         const next = await fetchLockView(viewer, last.current.locked).catch(() => null);
-        if (!live) return;
+        if (!live || next === "signed-out") return;
         if (next) {
           if (last.current.locked && !next.locked) setToast(toastFor(next));
           if (next.locked) setToast(null);

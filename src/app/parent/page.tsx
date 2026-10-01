@@ -10,7 +10,6 @@ import {
 } from "@/coach/rubric";
 import { rewardBoard } from "@/content/rewards";
 import { sessionContent } from "@/content/sessions";
-import { DEMO_FAMILY_ID, DEMO_STUDENT_ID } from "@/db/demo";
 import { familyAlerts } from "@/db/queries/alerts";
 import { coachTurnsFor } from "@/db/queries/coach";
 import { mentorFor } from "@/db/queries/mentor";
@@ -21,6 +20,7 @@ import {
   sessionHistory,
 } from "@/db/queries/parent";
 import { rewardRows } from "@/db/queries/reward-progress";
+import { gatedFamily } from "@/gate/server";
 import { getStudent } from "@/db/queries/students";
 import {
   calendarDay,
@@ -78,8 +78,8 @@ function rubricLine(verdict: "pass" | "fail", scores: RubricScores): string {
 }
 
 /** The latest decided explanation and the coach conversation from the same session. */
-async function latestWithTranscript() {
-  const explanation = await latestExplanation(DEMO_STUDENT_ID);
+async function latestWithTranscript(studentId: string) {
+  const explanation = await latestExplanation(studentId);
   const transcript = explanation ? await coachTurnsFor(explanation.sessionLogId) : [];
   return { explanation, transcript };
 }
@@ -87,6 +87,7 @@ async function latestWithTranscript() {
 export default async function ParentView() {
   // Reads the database, so it renders per request and shows a session the moment it ends.
   await connection();
+  const { familyId, studentId } = await gatedFamily("/parent");
   const now = new Date();
   const [
     student,
@@ -100,16 +101,16 @@ export default async function ParentView() {
     rewardProgress,
     mentor,
   ] = await Promise.all([
-    getStudent(DEMO_STUDENT_ID),
-    studentStanding(DEMO_STUDENT_ID, now),
-    sessionHistory(DEMO_STUDENT_ID),
-    masteryGrid(DEMO_STUDENT_ID),
-    latestWithTranscript(),
-    explainIntegrity(DEMO_STUDENT_ID),
-    familyAlerts(DEMO_FAMILY_ID),
-    lockView(DEMO_STUDENT_ID, now),
-    rewardRows(DEMO_STUDENT_ID),
-    mentorFor(DEMO_STUDENT_ID),
+    getStudent(studentId),
+    studentStanding(studentId, now),
+    sessionHistory(studentId),
+    masteryGrid(studentId),
+    latestWithTranscript(studentId),
+    explainIntegrity(studentId),
+    familyAlerts(familyId),
+    lockView(studentId, now),
+    rewardRows(studentId),
+    mentorFor(studentId),
   ]);
 
   if (!student) return <p>No student yet. Run npm run db:seed to add the demo student.</p>;

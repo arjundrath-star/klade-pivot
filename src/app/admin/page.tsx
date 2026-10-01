@@ -11,10 +11,10 @@ import {
 } from "./actions";
 import { ADMIN_NOTICES, NOTICE_KEYS } from "./notices";
 import { costCents, type TokenUsage } from "@/coach/pricing";
-import { DEMO_FAMILY_ID, DEMO_STUDENT_ID } from "@/db/demo";
 import { lockSettings } from "@/db/queries/lock";
 import { getStudent } from "@/db/queries/students";
 import { usageBySession } from "@/db/queries/usage";
+import { gatedFamily } from "@/gate/server";
 import { INTERESTS } from "@/engine/types";
 import { timeLabel } from "@/parent/phone-rule";
 import { calendarDay, formatDay } from "@/parent/progress";
@@ -71,12 +71,13 @@ const COLUMNS = ["Calls", "Tokens in", "Out", "Cache read", "Cache write", "Cost
 
 export default async function AdminPanel({ searchParams }: PageProps<"/admin">) {
   await connection();
+  const { familyId, studentId } = await gatedFamily("/admin");
   const [params, student, usage, override, phone] = await Promise.all([
     searchParams,
-    getStudent(DEMO_STUDENT_ID),
-    usageBySession(DEMO_STUDENT_ID),
-    overrideTarget(DEMO_STUDENT_ID),
-    lockSettings(DEMO_FAMILY_ID, DEMO_STUDENT_ID),
+    getStudent(studentId),
+    usageBySession(studentId),
+    overrideTarget(studentId),
+    lockSettings(familyId, studentId),
   ]);
   const notice = NoticeParam.safeParse(params.notice);
   const costs = sessionCosts(usage);
@@ -136,22 +137,31 @@ export default async function AdminPanel({ searchParams }: PageProps<"/admin">) 
         <p className={MUTED}>
           Moves the phone&apos;s clock to {formatDay(demoClock.day)} at {timeLabel(demoClock.time)},
           a session day just after the lock starts, so the phone panel locks whatever the real time.
-          Finishing today&apos;s session unlocks it. Reset demo puts the real clock back and drops
-          tonight&apos;s unlock.
+          Finishing today&apos;s session unlocks it.
           {!phone.rule && " There is no phone rule yet: set one in the parent's settings first."}
         </p>
-        <div className="flex flex-wrap gap-3">
-          <form action={simulateSessionDay}>
-            <button type="submit" className="btn-primary">
-              Simulate: session day, {timeLabel(demoClock.time)}
-            </button>
-          </form>
-          <form action={resetDemo}>
-            <button type="submit" className="btn-secondary">
-              Reset demo
-            </button>
-          </form>
-        </div>
+        <form action={simulateSessionDay}>
+          <button type="submit" className="btn-primary">
+            Simulate: session day, {timeLabel(demoClock.time)}
+          </button>
+        </form>
+      </section>
+
+      <section aria-labelledby="reset-heading" className={SECTION}>
+        <h2 id="reset-heading" className={HEADING}>
+          Reset demo
+        </h2>
+        <p className={MUTED}>
+          Puts everything back to the seeded state: {student.name} with no sessions, today on her
+          schedule, her phone rule on, the real clock, no unlock, and every family added during a
+          run gone. This browser acts as {student.name} again. Run it between demo runs, before
+          Simulate.
+        </p>
+        <form action={resetDemo}>
+          <button type="submit" className="btn-secondary">
+            Reset demo
+          </button>
+        </form>
       </section>
 
       <section aria-labelledby="interest-heading" className={SECTION}>
