@@ -47,7 +47,7 @@ The same script runs in GitHub Actions on every push.
 
 ```bash
 npm ci
-cp .env.example .env.local   # add ANTHROPIC_API_KEY
+cp .env.example .env.local   # add ANTHROPIC_API_KEY and a password for ADMIN_PASSWORD
 npm run dev
 ```
 
@@ -55,6 +55,8 @@ npm run dev
 npm run gate                 # the full check
 scripts/gate.sh --quick      # typecheck, lint, and unit tests only
 npm run coach:redteam        # pressure-tests the coach against the real model; needs the API key
+npm run db:reset -- --demo   # a fresh local database in the demo's starting state
+npm run lighthouse -- --base https://klade.rathworkspace.cloud   # the budgets against the deployed app
 ```
 
 ## Layout
@@ -67,10 +69,20 @@ src/coach/       the guardrailed coach and the explain-back grader
 src/db/          schema, client, queries
 tests/unit/      vitest
 tests/smoke/     playwright
-scripts/         gate, guard, lighthouse
+scripts/         gate, guard, lighthouse, deploy
 docs/milestones/ the build plan, one spec per milestone
 ```
 
 ## Status
 
-Pre-product. The MVP is being built milestone by milestone; see `docs/milestones/`.
+Pre-product. The MVP demo runs at **https://klade.rathworkspace.cloud**: the production build on a
+VPS behind a Cloudflare tunnel, seeded with the demo family. The student pages and onboarding are
+open; the parent and admin views sit behind a shared password. The build plan is in
+`docs/milestones/`, and `docs/demo-runbook.md` has the demo script, the rehearsal order and the
+offline fallback.
+
+In demo order:
+
+| The phone, locked at 5 PM on a session day                 | The session: a word problem in Maya's world, and the coach      | The parent view after the session                  |
+| ---------------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------- |
+| ![Phone panel locked](docs/screenshots/1-phone-locked.png) | ![Session with the coach](docs/screenshots/2-session-coach.png) | ![Parent view](docs/screenshots/3-parent-view.png) |
