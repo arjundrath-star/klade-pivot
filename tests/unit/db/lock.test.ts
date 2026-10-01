@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { resetDemo, simulateSessionDay } from "@/app/admin/actions";
 import { GET } from "@/app/api/lock-state/route";
 import { saveRule, switchRule, unlockTonight } from "@/app/parent/settings/actions";
-import { DEMO_FAMILY_ID, DEMO_STUDENT_ID } from "@/db/demo";
+import { DEMO_FAMILY_ID, DEMO_LOCK_RULE, DEMO_STUDENT_ID } from "@/db/demo";
 import {
   lockSettings,
   saveLockRule,
@@ -182,11 +182,13 @@ describe("the phone", () => {
     expect((await lockView(DEMO_STUDENT_ID)).reason).toBe("session-done");
   });
 
-  it("follows the real clock again after a reset", async () => {
+  it("follows the real clock again after a reset, with the seeded rule and no session", async () => {
     expect(await redirectOf(resetDemo)).toBe("/admin?notice=reset");
     const now = new Date();
     const view = await lockView(DEMO_STUDENT_ID, now);
     expect(view.time).toBe(phoneClock(now).time);
-    expect(view.locked).toBe(false);
+    expect(view.rule).toEqual({ enabled: true, ...DEMO_LOCK_RULE });
+    // Today's session is gone and so is the unlock; whether it locks now is up to the real clock.
+    expect(["session-done", "override"]).not.toContain(view.reason);
   });
 });

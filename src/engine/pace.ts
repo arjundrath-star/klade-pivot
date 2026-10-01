@@ -131,6 +131,14 @@ export function weekdayOf(day: string): Weekday {
   return WEEKDAYS[(new Date(dayTime(day)).getUTCDay() + 6) % 7];
 }
 
+/** How many days of schedule rows a new schedule starts with; the weekdays carry it on after. */
+export const SCHEDULE_DAYS_AHEAD = 14;
+
+/** The first `SCHEDULE_DAYS_AHEAD` days of a schedule starting on `first`, on `weekdays`. */
+export function firstScheduleDays(first: string, weekdays: readonly Weekday[]): string[] {
+  return scheduleDays(first, addDays(first, SCHEDULE_DAYS_AHEAD - 1), weekdays);
+}
+
 /** The days from `from` through `to`, both included, that fall on one of `weekdays`. */
 export function scheduleDays(from: string, to: string, weekdays: readonly Weekday[]): string[] {
   const days: string[] = [];

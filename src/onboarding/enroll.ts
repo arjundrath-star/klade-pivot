@@ -1,13 +1,11 @@
-import { randomInt, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { firstConcept } from "@/db/queries/schedule";
 import { createFamily } from "@/db/queries/students";
-import { addDays, scheduleDays } from "@/engine/pace";
+import { addDays, firstScheduleDays } from "@/engine/pace";
 import { planAlgebra1 } from "@/onboarding/plan";
 import type { OnboardingInput } from "@/onboarding/schema";
 import { calendarDay, clockTime } from "@/parent/progress";
-
-/** Onboarding writes this many days of schedule rows; the plan's weekdays carry it on after. */
-const SCHEDULE_DAYS_AHEAD = 14;
+import { randomSeed } from "@/session/random-seed";
 
 export type EnrollError = "target-too-soon" | "target-too-far" | "misses-target";
 
@@ -29,7 +27,7 @@ export async function enrollStudent(input: OnboardingInput, now: Date): Promise<
   const studentId = randomUUID();
   // Past today's start time, today's session is not owed: the schedule starts tomorrow.
   const first = clockTime(now) < input.sessionTime ? today : addDays(today, 1);
-  const days = scheduleDays(first, addDays(first, SCHEDULE_DAYS_AHEAD - 1), input.sessionDays);
+  const days = firstScheduleDays(first, input.sessionDays);
   await createFamily(
     input.parentName,
     {
@@ -46,7 +44,7 @@ export async function enrollStudent(input: OnboardingInput, now: Date): Promise<
       interests: input.interests,
       favorites: input.favorites,
     },
-    days.map((day) => ({ day, sessionTemplateId, seed: randomInt(0, 2 ** 32) })),
+    days.map((day) => ({ day, sessionTemplateId, seed: randomSeed() })),
     input.lockRule,
   );
   return { ok: true, studentId };

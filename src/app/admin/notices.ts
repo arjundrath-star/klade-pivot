@@ -13,8 +13,9 @@ export const ADMIN_NOTICES = {
   clock:
     "Demo clock set. The phone panel locks until today's session is done or a parent unlocks it.",
   "clock-done":
-    "Demo clock set, but today's session is already done, so the phone stays open. Run npm run db:reset to rehearse the lock again.",
-  reset: "Demo reset. The phone follows the real clock and tonight's unlock is gone.",
+    "Demo clock set, but today's session is already done, so the phone stays open. Reset demo to rehearse the lock again.",
+  reset:
+    "Demo reset. Maya has no history, today is on her schedule, her phone rule is on, the clock is real and this browser is Maya again.",
   invalid: "That request was not valid.",
 } as const;
 

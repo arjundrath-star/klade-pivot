@@ -1,4 +1,3 @@
-import { randomInt } from "node:crypto";
 import { recordAlert } from "@/db/queries/alerts";
 import { lastConcept, markDayMissed, sessionActivity } from "@/db/queries/schedule";
 import { findTodaySession } from "@/db/queries/sessions";
@@ -6,6 +5,7 @@ import { getStudent } from "@/db/queries/students";
 import { missedSessionMessage } from "@/parent/alerts";
 import { calendarDay } from "@/parent/progress";
 import { studentPace } from "@/session/pace";
+import { randomSeed } from "@/session/random-seed";
 
 /** The concept today's session is for: the one the planner would open, else the course's last. */
 async function todaysConcept(studentId: string): Promise<string> {
@@ -38,7 +38,7 @@ export async function markTodayMissed(studentId: string, now = new Date()): Prom
     studentId,
     day: today,
     sessionTemplateId: concept,
-    seed: randomInt(0, 2 ** 32),
+    seed: randomSeed(),
   });
   if (missedId === null) return { ok: false, error: "already-missed" };
   const behind = await studentPace(studentId, now);

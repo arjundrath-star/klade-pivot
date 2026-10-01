@@ -43,6 +43,17 @@ export interface ScheduledDay {
   seed: number;
 }
 
+/** The schedule rows for a student's planned days, as `session_logs` stores them. */
+export function scheduleRows(studentId: string, schedule: readonly ScheduledDay[]) {
+  return schedule.map(({ day, sessionTemplateId, seed }) => ({
+    studentId,
+    sessionTemplateId,
+    status: "scheduled" as const,
+    seed,
+    scheduledFor: day,
+  }));
+}
+
 /**
  * Writes a new family, its student, the student's first schedule days and the phone rule when the
  * parent set one, in one batch, so a failure leaves none of them behind.
@@ -54,13 +65,7 @@ export async function createFamily(
   lockRule: LockRuleFields | null,
 ): Promise<void> {
   const db = await getDb();
-  const rows = schedule.map(({ day, sessionTemplateId, seed }) => ({
-    studentId: student.id,
-    sessionTemplateId,
-    status: "scheduled" as const,
-    seed,
-    scheduledFor: day,
-  }));
+  const rows = scheduleRows(student.id, schedule);
   const rule =
     lockRule && db.insert(lockRules).values({ studentId: student.id, enabled: true, ...lockRule });
   await db.batch([
