@@ -6,7 +6,7 @@ import { DEMO_STUDENT_ID, S1_TEMPLATE_ID } from "@/db/demo";
 import { familyAlerts } from "@/db/queries/alerts";
 import { findTodaySession, openTodaySession } from "@/db/queries/sessions";
 import { getStudent } from "@/db/queries/students";
-import { families, sessionLogs, students } from "@/db/schema";
+import { families, lockRules, sessionLogs, students } from "@/db/schema";
 import { addDays } from "@/engine/pace";
 import { enrollStudent } from "@/onboarding/enroll";
 import type { OnboardingInput } from "@/onboarding/schema";
@@ -16,7 +16,7 @@ import { currentStudentId } from "@/session/current-student";
 import { loadSession } from "@/session/load";
 import { studentPace } from "@/session/pace";
 import { renderSessionProblem } from "@/session/problems";
-import { withTempDatabase } from "../../helpers/database";
+import { redirectOf, withTempDatabase } from "../../helpers/database";
 
 // Onboarding against a real libSQL file. Oct 1, 2026 is a Thursday; noon in New York.
 const NOW = new Date("2026-10-01T16:00:00Z");
@@ -34,6 +34,7 @@ const AVA: OnboardingInput = {
   timerMode: "extended",
   interests: ["gaming", "animals"],
   favorites: { animals: "Dogs" },
+  lockRule: null,
 };
 
 async function enroll(input: OnboardingInput = AVA): Promise<string> {
@@ -43,17 +44,6 @@ async function enroll(input: OnboardingInput = AVA): Promise<string> {
 }
 
 const at = (iso: string) => new Date(`${iso}T16:00:00Z`);
-
-/** Server actions that end in a redirect throw Next's redirect error; this reads its target. */
-async function redirectOf(action: () => Promise<unknown>): Promise<string> {
-  try {
-    await action();
-  } catch (error) {
-    const digest = (error as { digest?: string }).digest ?? "";
-    return digest.split(";")[2] ?? digest;
-  }
-  throw new Error("expected a redirect");
-}
 
 describe("enrollStudent", () => {
   let studentId: string;
@@ -76,6 +66,28 @@ describe("enrollStudent", () => {
     });
     const [family] = await db.select().from(families).where(eq(families.id, student.familyId));
     expect(family.parentName).toBe("Sam");
+  });
+
+  it("stores no phone rule when the parent skipped the step", async () => {
+    const db = await getDb();
+    expect(await db.select().from(lockRules).where(eq(lockRules.studentId, studentId))).toEqual([]);
+  });
+
+  it("stores the phone rule, switched on, when the parent set one", async () => {
+    const rule = {
+      days: ["mon", "tue", "thu", "sun"] as const,
+      startTime: "16:30",
+      categories: ["games", "social"] as const,
+      weekendOff: true,
+    };
+    const ruled = await enroll({
+      ...AVA,
+      studentName: "Rae",
+      lockRule: { ...rule, days: [...rule.days], categories: [...rule.categories] },
+    });
+    const db = await getDb();
+    const [row] = await db.select().from(lockRules).where(eq(lockRules.studentId, ruled));
+    expect(row).toMatchObject({ ...rule, enabled: true, overrideUntil: null });
   });
 
   it("schedules the first two weeks on the chosen weekdays, starting today", async () => {
@@ -110,7 +122,10 @@ describe("enrollStudent", () => {
   });
 
   it("frames the first session's word problems in the student's interests", async () => {
-    expect(await findTodaySession(studentId)).toMatchObject({ kind: "next", templateId: S1_TEMPLATE_ID });
+    expect(await findTodaySession(studentId)).toMatchObject({
+      kind: "next",
+      templateId: S1_TEMPLATE_ID,
+    });
     const sessionId = await openTodaySession(studentId, 1357);
     if (!sessionId) throw new Error("no session to open");
     const loaded = await loadSession(sessionId, studentId);
@@ -141,7 +156,9 @@ describe("enrollStudent", () => {
     const late = new Date("2026-10-02T01:30:00Z");
     const result = await enrollStudent({ ...AVA, studentName: "Lee", sessionTime: "17:00" }, late);
     if (!result.ok) throw new Error(result.error);
-    const rows = await (await getDb())
+    const rows = await (
+      await getDb()
+    )
       .select({ day: sessionLogs.scheduledFor })
       .from(sessionLogs)
       .where(eq(sessionLogs.studentId, result.studentId))
@@ -171,7 +188,9 @@ describe("enrollStudent", () => {
 
 describe("completeOnboarding", () => {
   it("refuses input the schema refuses and leaves the browser as the demo student", async () => {
-    expect(await completeOnboarding({ ...AVA, email: "sam@example.com" } as OnboardingInput)).toEqual({
+    expect(
+      await completeOnboarding({ ...AVA, email: "sam@example.com" } as OnboardingInput),
+    ).toEqual({
       ok: false,
       error: "invalid",
     });

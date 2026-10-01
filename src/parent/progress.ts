@@ -32,6 +32,44 @@ export function clockTime(at: Date): string {
   return timeFormat.format(at);
 }
 
+const phoneTime = new Intl.DateTimeFormat("en-US", {
+  timeZone: SCHEDULE_TIME_ZONE,
+  hour: "numeric",
+  minute: "2-digit",
+  hourCycle: "h12",
+});
+
+const phoneDate = new Intl.DateTimeFormat("en-US", {
+  timeZone: SCHEDULE_TIME_ZONE,
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+});
+
+/** The family's clock at `at` the way a phone's lock screen shows it: "5:05", "Thursday, October 1". */
+export function phoneClock(at: Date): { time: string; date: string } {
+  const time = phoneTime
+    .formatToParts(at)
+    .filter((part) => part.type === "hour" || part.type === "minute" || part.type === "literal")
+    .map((part) => part.value)
+    .join("")
+    .trim();
+  return { time, date: phoneDate.format(at) };
+}
+
+/** The moment the family's clock reads `time` (24-hour HH:MM) on `day` (YYYY-MM-DD). */
+export function familyMoment(day: string, time: string): Date {
+  const wall = Date.parse(`${day}T${time}:00Z`);
+  // The zone's offset is the wall time it shows less the moment itself. A second pass settles a
+  // first guess that landed on the other side of a daylight-saving change.
+  let at = wall;
+  for (let pass = 0; pass < 2; pass++) {
+    const shown = new Date(at);
+    at = wall - (Date.parse(`${calendarDay(shown)}T${clockTime(shown)}:00Z`) - at);
+  }
+  return new Date(at);
+}
+
 function firstDay(slots: readonly ScheduleSlot[]): string {
   return slots.reduce((first, slot) => (slot.day < first ? slot.day : first), slots[0].day);
 }

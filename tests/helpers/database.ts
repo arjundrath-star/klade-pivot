@@ -55,3 +55,14 @@ export async function answerExit(sessionId: string, correct: readonly boolean[])
     });
   }
 }
+
+/** Server actions that end in a redirect throw Next's redirect error; this reads its target. */
+export async function redirectOf(action: () => Promise<unknown>): Promise<string> {
+  try {
+    await action();
+  } catch (error) {
+    const digest = (error as { digest?: string }).digest ?? "";
+    return digest.split(";")[2] ?? digest;
+  }
+  throw new Error("expected a redirect");
+}

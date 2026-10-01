@@ -6,6 +6,7 @@ import { FAVORITES, INTEREST_LABELS } from "@/content/interests";
 import {
   addDays,
   ALGEBRA1_SESSION_ESTIMATE,
+  CLOCK_TIME_PATTERN,
   DEFAULT_SESSION_TIME,
   formatWeeklyTime,
   isCalendarDay,
@@ -14,6 +15,7 @@ import {
   PRESET_SESSIONS,
   proposedDays,
   SESSION_MINUTES,
+  WEEKDAY_LABELS,
   WEEKDAYS,
   type PacePreset,
   type Weekday,
@@ -23,9 +25,18 @@ import { cleanName, GRADES, NAME_MAX } from "@/onboarding/fields";
 import { MAX_TARGET_DAYS, planAlgebra1, type Algebra1Plan } from "@/onboarding/plan";
 import { formatDate, sessionCount } from "@/parent/progress";
 import type { Pronoun } from "@/parent/pronouns";
+import { RuleFields, ruleFromForm } from "@/phone/rule-fields";
+import { defaultRule, WEEKEND, type LockRuleFields } from "@/session/lock";
 import type { TimerMode } from "@/session/timer";
 
-const STEPS = ["About you", "Your child", "The plan", "Extra time", "Interests"] as const;
+const STEPS = [
+  "About you",
+  "Your child",
+  "The plan",
+  "Extra time",
+  "Interests",
+  "Phone rule",
+] as const;
 
 const MUTED = "text-zinc-600 dark:text-zinc-400";
 const FIELD = "rounded-md border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700";
@@ -36,16 +47,6 @@ const PACE_LABELS: Readonly<Record<PacePreset, string>> = {
   standard: "Standard",
   "on-track": "On track",
   intensive: "Intensive",
-};
-
-const WEEKDAY_LABELS: Readonly<Record<Weekday, string>> = {
-  mon: "Mon",
-  tue: "Tue",
-  wed: "Wed",
-  thu: "Thu",
-  fri: "Fri",
-  sat: "Sat",
-  sun: "Sun",
 };
 
 const PRONOUN_OPTIONS: readonly { value: Pronoun; label: string }[] = [
@@ -60,7 +61,10 @@ const TIMER_OPTIONS: readonly { value: TimerMode; label: string }[] = [
   { value: "untimed", label: "Yes, no time limit" },
 ];
 
-const ERROR_MESSAGES: Readonly<Record<OnboardingError, string>> = {
+type FormError = OnboardingError | "rule";
+
+const ERROR_MESSAGES: Readonly<Record<FormError, string>> = {
+  rule: "Pick at least one day, a start time and one kind of app (with weekends off, a weekday), or skip this step.",
   invalid: "Something in the form didn't check out. Go back and look over each step.",
   "target-too-soon": "That finish date is too soon for any pace. Pick a later date.",
   "target-too-far": "Pick a finish date within two years.",
@@ -124,7 +128,7 @@ interface OnboardingFormProps {
   defaultTarget: string;
 }
 
-/** The parent's five-step setup. The server checks everything again before it stores a thing. */
+/** The parent's six-step setup. The server checks everything again before it stores a thing. */
 export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
   const [step, setStep] = useState(0);
   const [parentName, setParentName] = useState("");
@@ -140,7 +144,7 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
   const [timerMode, setTimerMode] = useState<TimerMode>("standard");
   const [interests, setInterests] = useState<Interest[]>([]);
   const [favorites, setFavorites] = useState<Partial<Record<Interest, string>>>({});
-  const [error, setError] = useState<OnboardingError | null>(null);
+  const [error, setError] = useState<FormError | null>(null);
   const [pending, startTransition] = useTransition();
   const heading = useRef<HTMLHeadingElement>(null);
   const moved = useRef(false);
@@ -163,6 +167,7 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
       sessionTime !== "",
     true,
     interests.length >= 1 && interests.length <= 2,
+    true,
   ][step];
   const last = step === STEPS.length - 1;
 
@@ -199,13 +204,8 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
     if (!on) setFavorite(interest, "");
   }
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!valid || pending) return;
-    if (!last) {
-      go(step + 1);
-      return;
-    }
+  /** Stores everything, with the phone rule or without it when the parent skipped it. */
+  function finish(lockRule: LockRuleFields | null) {
     startTransition(async () => {
       const result = await completeOnboarding({
         parentName,
@@ -219,9 +219,30 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
         timerMode,
         interests,
         favorites,
+        lockRule,
       });
       setError(result.error);
     });
+  }
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!valid || pending) return;
+    if (!last) {
+      go(step + 1);
+      return;
+    }
+    const rule = ruleFromForm(new FormData(event.currentTarget));
+    if (
+      rule.days.length === 0 ||
+      rule.categories.length === 0 ||
+      !CLOCK_TIME_PATTERN.test(rule.startTime) ||
+      (rule.weekendOff && rule.days.every((day) => WEEKEND.includes(day)))
+    ) {
+      setError("rule");
+      return;
+    }
+    finish(rule);
   }
 
   return (
@@ -313,10 +334,9 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
             <legend className={LEGEND}>Pace</legend>
             {PACE_PRESETS.map((preset) => {
               const option = planFor(today, targetDate, preset);
-              const finish =
-                option?.ok
-                  ? `${option.plan.onTime ? "Done" : "Too slow: done"} by ${formatDate(option.plan.finishDate)}`
-                  : null;
+              const finish = option?.ok
+                ? `${option.plan.onTime ? "Done" : "Too slow: done"} by ${formatDate(option.plan.finishDate)}`
+                : null;
               return (
                 <label key={preset} className={CHOICE}>
                   <input
@@ -498,6 +518,21 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
         </div>
       )}
 
+      {step === 5 && (
+        <div className="flex flex-col gap-6">
+          <p className={MUTED}>
+            Back to you. Lock {name}&apos;s apps on session days until the session is done. This is
+            a prototype: it runs a phone shown in this app, not a real phone yet. Change it any time
+            in settings, or skip it.
+          </p>
+          <RuleFields
+            id={`${ids}-rule`}
+            name={name}
+            defaults={defaultRule({ sessionDays, sessionTime })}
+          />
+        </div>
+      )}
+
       {error && (
         <p role="alert" className="text-red-700 dark:text-red-400">
           {ERROR_MESSAGES[error]}
@@ -508,6 +543,16 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
         {step > 0 && (
           <button type="button" className="btn-secondary" onClick={() => go(step - 1)}>
             Back
+          </button>
+        )}
+        {last && (
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={pending}
+            onClick={() => finish(null)}
+          >
+            Skip for now
           </button>
         )}
         <button type="submit" className="btn-primary" disabled={!valid || pending}>

@@ -29,6 +29,9 @@ import {
   sessionCount,
   streakLabel,
 } from "@/parent/progress";
+import { ruleSummary } from "@/parent/phone-rule";
+import { PhoneSection } from "@/phone/phone-section";
+import { lockView } from "@/session/lock-status";
 import type { MasteryStatus } from "@/session/mastery";
 import { studentStanding } from "@/session/pace";
 
@@ -88,6 +91,7 @@ export default async function ParentView() {
     { explanation, transcript },
     integrity,
     alerts,
+    phone,
   ] = await Promise.all([
     getStudent(DEMO_STUDENT_ID),
     studentStanding(DEMO_STUDENT_ID, now),
@@ -96,10 +100,12 @@ export default async function ParentView() {
     latestWithTranscript(),
     explainIntegrity(DEMO_STUDENT_ID),
     familyAlerts(DEMO_FAMILY_ID),
+    lockView(DEMO_STUDENT_ID, now),
   ]);
 
   if (!student) return <p>No student yet. Run npm run db:seed to add the demo student.</p>;
   const { name } = student;
+  const { rule } = phone;
   const rows = history
     .map((row) => ({ row, day: historyDay(row) }))
     .sort((a, b) => b.day.localeCompare(a.day));
@@ -117,6 +123,28 @@ export default async function ParentView() {
           Target: {formatDate(student.targetDate)}. {sessionCount(student.pacePerWeek)} a week.
         </p>
       </header>
+
+      <PhoneSection
+        heading={`${name}'s phone`}
+        viewer="parent"
+        initial={phone}
+        sessionHref="/student"
+      >
+        <p>
+          {rule
+            ? `${ruleSummary(rule, name)}${rule.enabled ? "" : " The rule is off right now."}`
+            : `No phone rule yet. Set one and ${name}'s apps lock on session days until the session is done.`}
+        </p>
+        <p className={MUTED}>
+          Prototype: this phone runs inside the app. It shows what {name} would see, and unlocks the
+          moment the session is done.
+        </p>
+        <p>
+          <Link href="/parent/settings" className="underline underline-offset-2">
+            {rule ? "Change the phone rule" : "Set a phone rule"}
+          </Link>
+        </p>
+      </PhoneSection>
 
       <section aria-labelledby="alerts-heading" className={SECTION}>
         <h2 id="alerts-heading" className={HEADING}>

@@ -17,7 +17,7 @@ import { completeSession } from "@/session/complete";
 import { loadSession } from "@/session/load";
 import { overrideExplainBack, overrideTarget } from "@/session/override";
 import { recordPass, sessionAt, sessionAtExit } from "../../helpers/answers";
-import { answerExit, withTempDatabase } from "../../helpers/database";
+import { answerExit, redirectOf, withTempDatabase } from "../../helpers/database";
 
 // The parent view's data, the missed-session alert and the admin controls against a real libSQL file.
 withTempDatabase("klade-parent-", new Date("2026-10-01T12:00:00Z"));
@@ -26,17 +26,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 // The seed puts Maya on the On track days.
 const MAYA_DAYS = proposedDays(4);
-
-/** Server actions that end in a redirect throw Next's redirect error; this reads its target. */
-async function redirectOf(action: () => Promise<void>): Promise<string> {
-  try {
-    await action();
-  } catch (error) {
-    const digest = (error as { digest?: string }).digest ?? "";
-    return digest.split(";")[2] ?? digest;
-  }
-  throw new Error("expected a redirect");
-}
 
 describe("the missed-session alert", () => {
   const now = new Date();

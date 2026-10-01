@@ -13,6 +13,7 @@ const VALID = {
   timerMode: "extended",
   interests: ["gaming", "animals"],
   favorites: { animals: "Dogs" },
+  lockRule: null,
 };
 
 const accepts = (input: unknown) => OnboardingInput.safeParse(input).success;
@@ -50,6 +51,27 @@ describe("OnboardingInput", () => {
     expect(accepts({ ...VALID, pronoun: "xe" })).toBe(false);
   });
 
+  it("takes a phone rule or none, and nothing beyond the rule's fields", () => {
+    const rule = {
+      days: ["mon", "thu"],
+      startTime: "17:00",
+      categories: ["games", "social"],
+      weekendOff: false,
+    };
+    expect(accepts({ ...VALID, lockRule: rule })).toBe(true);
+    expect(accepts({ ...VALID, lockRule: { ...rule, days: [] } })).toBe(false);
+    expect(accepts({ ...VALID, lockRule: { ...rule, days: ["mon", "mon"] } })).toBe(false);
+    expect(accepts({ ...VALID, lockRule: { ...rule, categories: [] } })).toBe(false);
+    expect(accepts({ ...VALID, lockRule: { ...rule, categories: ["browser"] } })).toBe(false);
+    expect(accepts({ ...VALID, lockRule: { ...rule, startTime: "5:00" } })).toBe(false);
+    expect(accepts({ ...VALID, lockRule: { ...rule, enabled: false } })).toBe(false);
+    // Weekends off with only weekend days could never lock.
+    const weekend = { ...rule, days: ["sat", "sun"], weekendOff: true };
+    expect(accepts({ ...VALID, lockRule: weekend })).toBe(false);
+    expect(accepts({ ...VALID, lockRule: { ...weekend, days: ["fri", "sat"] } })).toBe(true);
+    expect(accepts({ ...VALID, lockRule: undefined })).toBe(false);
+  });
+
   it("needs a real target date and a 24-hour start time", () => {
     expect(accepts({ ...VALID, targetDate: "2027-02-30" })).toBe(false);
     expect(accepts({ ...VALID, targetDate: "May 2027" })).toBe(false);
@@ -75,7 +97,9 @@ describe("OnboardingInput", () => {
   });
 
   it("takes a favorite only from its interest's list, for an interest that was picked", () => {
-    expect(accepts({ ...VALID, favorites: { gaming: "Racing games", animals: "Dogs" } })).toBe(true);
+    expect(accepts({ ...VALID, favorites: { gaming: "Racing games", animals: "Dogs" } })).toBe(
+      true,
+    );
     expect(accepts({ ...VALID, favorites: { animals: "My dog Rex" } })).toBe(false);
     expect(accepts({ ...VALID, favorites: { sports: "Soccer" } })).toBe(false);
     expect(accepts({ ...VALID, favorites: { gaming: "Dogs" } })).toBe(false);

@@ -27,6 +27,16 @@ export const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as con
 
 export type Weekday = (typeof WEEKDAYS)[number];
 
+export const WEEKDAY_LABELS: Readonly<Record<Weekday, string>> = {
+  mon: "Mon",
+  tue: "Tue",
+  wed: "Wed",
+  thu: "Thu",
+  fri: "Fri",
+  sat: "Sat",
+  sun: "Sun",
+};
+
 // The presets' days come from the milestone; the rest spread the sessions across the week.
 const PROPOSED_DAYS: Readonly<Record<number, readonly Weekday[]>> = {
   1: ["mon"],
@@ -39,6 +49,9 @@ const PROPOSED_DAYS: Readonly<Record<number, readonly Weekday[]>> = {
 
 /** Sessions start at 5:00 PM unless the family picks another time. 24-hour "HH:MM". */
 export const DEFAULT_SESSION_TIME = "17:00";
+
+/** A 24-hour "HH:MM" clock time, as a time input sends it. */
+export const CLOCK_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** One day the schedule holds a session on. */
 export interface ScheduleSlot {

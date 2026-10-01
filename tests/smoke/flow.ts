@@ -19,3 +19,16 @@ export async function solveBlock(page: Page, sessionId: string, block: AnsweredB
     await expect(cards.nth(i).getByText("Correct.")).toBeVisible();
   }
 }
+
+/** Answers the three exit-check problems one at a time, right where `correct` is true. */
+export async function answerExitCheck(page: Page, sessionId: string, correct: readonly boolean[]) {
+  const answers = await answersFor(sessionId, "exit");
+  for (const [i, right] of correct.entries()) {
+    const card = page.getByRole("article");
+    await expect(card).toContainText(`Problem ${i + 1} of 3`);
+    await expect(card.getByRole("button", { name: "I'm stuck" })).toHaveCount(0);
+    await card.getByLabel("Your answer").fill(String(right ? answers[i] : answers[i] + 1));
+    await card.getByRole("button", { name: "Submit" }).click();
+  }
+  await expect(page.getByText("You answered all 3 problems.")).toBeVisible();
+}

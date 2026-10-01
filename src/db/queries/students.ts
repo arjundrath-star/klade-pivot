@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { families, sessionLogs, students } from "@/db/schema";
+import { families, lockRules, sessionLogs, students } from "@/db/schema";
 import type { Interest } from "@/engine/types";
+import type { LockRuleFields } from "@/session/lock";
 
 export async function getStudent(id: string) {
   const db = await getDb();
@@ -43,13 +44,14 @@ export interface ScheduledDay {
 }
 
 /**
- * Writes a new family, its student and the student's first schedule days in one batch, so a
- * failure leaves none of them behind.
+ * Writes a new family, its student, the student's first schedule days and the phone rule when the
+ * parent set one, in one batch, so a failure leaves none of them behind.
  */
 export async function createFamily(
   parentName: string,
   student: NewStudent,
   schedule: readonly ScheduledDay[],
+  lockRule: LockRuleFields | null,
 ): Promise<void> {
   const db = await getDb();
   const rows = schedule.map(({ day, sessionTemplateId, seed }) => ({
@@ -59,9 +61,12 @@ export async function createFamily(
     seed,
     scheduledFor: day,
   }));
+  const rule =
+    lockRule && db.insert(lockRules).values({ studentId: student.id, enabled: true, ...lockRule });
   await db.batch([
     db.insert(families).values({ id: student.familyId, parentName }),
     db.insert(students).values(student),
     db.insert(sessionLogs).values(rows),
+    ...(rule ? [rule] : []),
   ]);
 }

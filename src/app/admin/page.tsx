@@ -2,14 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { z } from "zod";
-import { overrideExplanation, simulateMissedSession, switchInterest } from "./actions";
+import {
+  overrideExplanation,
+  resetDemo,
+  simulateMissedSession,
+  simulateSessionDay,
+  switchInterest,
+} from "./actions";
 import { ADMIN_NOTICES, NOTICE_KEYS } from "./notices";
 import { costCents, type TokenUsage } from "@/coach/pricing";
-import { DEMO_STUDENT_ID } from "@/db/demo";
+import { DEMO_FAMILY_ID, DEMO_STUDENT_ID } from "@/db/demo";
+import { lockSettings } from "@/db/queries/lock";
 import { getStudent } from "@/db/queries/students";
 import { usageBySession } from "@/db/queries/usage";
 import { INTERESTS } from "@/engine/types";
+import { timeLabel } from "@/parent/phone-rule";
 import { calendarDay, formatDay } from "@/parent/progress";
+import { demoClockFor } from "@/session/lock";
 import { overrideTarget } from "@/session/override";
 
 export const metadata: Metadata = { title: "Admin · Klade" };
@@ -62,11 +71,12 @@ const COLUMNS = ["Calls", "Tokens in", "Out", "Cache read", "Cache write", "Cost
 
 export default async function AdminPanel({ searchParams }: PageProps<"/admin">) {
   await connection();
-  const [params, student, usage, override] = await Promise.all([
+  const [params, student, usage, override, phone] = await Promise.all([
     searchParams,
     getStudent(DEMO_STUDENT_ID),
     usageBySession(DEMO_STUDENT_ID),
     overrideTarget(DEMO_STUDENT_ID),
+    lockSettings(DEMO_FAMILY_ID, DEMO_STUDENT_ID),
   ]);
   const notice = NoticeParam.safeParse(params.notice);
   const costs = sessionCosts(usage);
@@ -78,7 +88,10 @@ export default async function AdminPanel({ searchParams }: PageProps<"/admin">) 
     { calls: 0, cents: 0 as number | null },
   );
 
-  if (!student) return <p>No student yet. Run npm run db:seed to add the demo student.</p>;
+  if (!student || !phone) {
+    return <p>No student yet. Run npm run db:seed to add the demo student.</p>;
+  }
+  const demoClock = demoClockFor(phone.rule, phone, calendarDay(new Date()));
 
   return (
     <div className="flex flex-col gap-8">
@@ -114,6 +127,31 @@ export default async function AdminPanel({ searchParams }: PageProps<"/admin">) 
             Simulate missed session
           </button>
         </form>
+      </section>
+
+      <section aria-labelledby="phone-heading" className={SECTION}>
+        <h2 id="phone-heading" className={HEADING}>
+          Phone lock
+        </h2>
+        <p className={MUTED}>
+          Moves the phone&apos;s clock to {formatDay(demoClock.day)} at {timeLabel(demoClock.time)},
+          a session day just after the lock starts, so the phone panel locks whatever the real time.
+          Finishing today&apos;s session unlocks it. Reset demo puts the real clock back and drops
+          tonight&apos;s unlock.
+          {!phone.rule && " There is no phone rule yet: set one in the parent's settings first."}
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <form action={simulateSessionDay}>
+            <button type="submit" className="btn-primary">
+              Simulate: session day, {timeLabel(demoClock.time)}
+            </button>
+          </form>
+          <form action={resetDemo}>
+            <button type="submit" className="btn-secondary">
+              Reset demo
+            </button>
+          </form>
+        </div>
       </section>
 
       <section aria-labelledby="interest-heading" className={SECTION}>

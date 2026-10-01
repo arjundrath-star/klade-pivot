@@ -32,3 +32,15 @@ body {
 @utility btn-secondary {
   @apply rounded-md border border-zinc-300 px-4 py-2 font-medium disabled:opacity-40 dark:border-zinc-700;
 }
+
+/* The phone panel's notification banner drops in from the top of the screen. */
+@keyframes phone-toast {
+  from {
+    transform: translateY(-140%);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}

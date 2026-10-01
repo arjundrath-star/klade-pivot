@@ -1,6 +1,6 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { watchConsole } from "./console";
-import { expectBlock, solveBlock } from "./flow";
+import { answerExitCheck, expectBlock, solveBlock } from "./flow";
 import {
   answersFor,
   recordPass,
@@ -10,19 +10,6 @@ import {
   setTimerMode,
 } from "../helpers/answers";
 import { XP_TABLE } from "@/engine/progress";
-
-/** Answers the three exit-check problems one at a time, right where `correct` is true. */
-async function answerExitCheck(page: Page, sessionId: string, correct: readonly boolean[]) {
-  const answers = await answersFor(sessionId, "exit");
-  for (const [i, right] of correct.entries()) {
-    const card = page.getByRole("article");
-    await expect(card).toContainText(`Problem ${i + 1} of 3`);
-    await expect(card.getByRole("button", { name: "I'm stuck" })).toHaveCount(0);
-    await card.getByLabel("Your answer").fill(String(right ? answers[i] : answers[i] + 1));
-    await card.getByRole("button", { name: "Submit" }).click();
-  }
-  await expect(page.getByText("You answered all 3 problems.")).toBeVisible();
-}
 
 test("a student walks all five blocks of a session and it is saved as they go", async ({
   page,

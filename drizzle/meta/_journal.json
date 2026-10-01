@@ -57,6 +57,13 @@
       "when": 1790879311623,
       "tag": "0007_xp_streaks_badges",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790882857832,
+      "tag": "0008_screen_time_gate",
+      "breakpoints": true
     }
   ]
 }

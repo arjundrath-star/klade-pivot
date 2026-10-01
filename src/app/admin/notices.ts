@@ -10,6 +10,11 @@ export const ADMIN_NOTICES = {
   "no-session": "No session is open.",
   "wrong-block": "The open session is not on explain-back.",
   graded: "This session's explain-back is already final.",
+  clock:
+    "Demo clock set. The phone panel locks until today's session is done or a parent unlocks it.",
+  "clock-done":
+    "Demo clock set, but today's session is already done, so the phone stays open. Run npm run db:reset to rehearse the lock again.",
+  reset: "Demo reset. The phone follows the real clock and tonight's unlock is gone.",
   invalid: "That request was not valid.",
 } as const;
 

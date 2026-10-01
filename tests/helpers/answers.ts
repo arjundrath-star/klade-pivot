@@ -56,7 +56,7 @@ export async function recordPass(
   text: string,
   scores: RubricScores = { correctness: 3, justification: 2, precision: 2 },
 ): Promise<void> {
-  const loaded = await loadSession(sessionId, DEMO_STUDENT_ID);
+  const loaded = await sessionOf(sessionId);
   if (!loaded) throw new Error(`session ${sessionId} not found`);
   const { problem } = loaded.explain;
   const db = await getDb();
@@ -96,26 +96,31 @@ export async function scheduleToday(): Promise<void> {
     .onConflictDoNothing();
 }
 
-/** Closes the demo student's open session, if any. */
-export async function closeOpenSession(): Promise<void> {
+/** Closes the student's open session, if any. */
+export async function closeOpenSession(studentId = DEMO_STUDENT_ID): Promise<void> {
   const db = await getDb();
   await db
     .update(sessionLogs)
     .set({ status: "done", completedAt: new Date() })
-    .where(and(eq(sessionLogs.studentId, DEMO_STUDENT_ID), eq(sessionLogs.status, "in_progress")));
+    .where(and(eq(sessionLogs.studentId, studentId), eq(sessionLogs.status, "in_progress")));
 }
 
 /**
- * Closes the demo student's open session, if any, and opens a new session 1 already on `block`.
+ * Closes the student's open session, if any, and opens a new session 1 already on `block`. The
+ * demo student unless another is given.
  */
-export async function sessionAt(block: BlockId, seed = 4242): Promise<string> {
-  await closeOpenSession();
+export async function sessionAt(
+  block: BlockId,
+  seed = 4242,
+  studentId = DEMO_STUDENT_ID,
+): Promise<string> {
+  await closeOpenSession(studentId);
   const db = await getDb();
   const now = new Date();
   const [created] = await db
     .insert(sessionLogs)
     .values({
-      studentId: DEMO_STUDENT_ID,
+      studentId,
       sessionTemplateId: S1_TEMPLATE_ID,
       status: "in_progress",
       seed,
@@ -128,11 +133,15 @@ export async function sessionAt(block: BlockId, seed = 4242): Promise<string> {
 }
 
 /**
- * Closes the demo student's open session, if any, and opens a new session 1 already on the exit
- * check, with the explain-back graded: passed, or failed on both attempts.
+ * Closes the student's open session, if any, and opens a new session 1 already on the exit check,
+ * with the explain-back graded: passed, or failed on both attempts. The demo student unless
+ * another is given.
  */
-export async function sessionAtExit(explain: "pass" | "fail" = "pass"): Promise<string> {
-  const sessionId = await sessionAt("exit");
+export async function sessionAtExit(
+  explain: "pass" | "fail" = "pass",
+  studentId = DEMO_STUDENT_ID,
+): Promise<string> {
+  const sessionId = await sessionAt("exit", 4242, studentId);
   await recordPass(sessionId, "Same thing to both sides keeps it balanced.");
   if (explain === "fail") {
     const db = await getDb();

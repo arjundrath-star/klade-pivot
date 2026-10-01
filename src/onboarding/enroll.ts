@@ -47,6 +47,7 @@ export async function enrollStudent(input: OnboardingInput, now: Date): Promise<
       favorites: input.favorites,
     },
     days.map((day) => ({ day, sessionTemplateId, seed: randomInt(0, 2 ** 32) })),
+    input.lockRule,
   );
   return { ok: true, studentId };
 }

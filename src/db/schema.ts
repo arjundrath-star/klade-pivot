@@ -5,6 +5,7 @@ import { DEFAULT_SESSION_TIME, type Weekday } from "@/engine/pace";
 import { XP_KINDS } from "@/engine/progress";
 import type { Interest } from "@/engine/types";
 import { BLOCK_IDS, PROBLEM_BLOCK_IDS, type BlockId } from "@/session/blocks";
+import type { LockCategory } from "@/session/lock";
 import { MASTERY_STATUSES, SESSION_OUTCOMES } from "@/session/mastery";
 import { ALERT_TYPES } from "@/parent/alerts";
 import { PRONOUNS } from "@/parent/pronouns";
@@ -29,6 +30,11 @@ const SESSION_STATUSES = ["scheduled", "in_progress", "done", "missed", "repeat"
 export const families = sqliteTable("families", {
   id: id(),
   parentName: text("parent_name").notNull(),
+  /**
+   * Demo only: the moment the phone lock reads as "now" while set, so a demo can run at 5 PM on a
+   * session day whatever the real day and hour. Set and cleared from /admin; only the lock reads it.
+   */
+  demoClock: integer("demo_clock", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
 });
 
@@ -129,6 +135,8 @@ export const sessionLogs = sqliteTable(
   },
   (t) => [
     index("session_logs_student_started_idx").on(t.studentId, t.startedAt),
+    // The phone lock's poll reads the student's latest finished session.
+    index("session_logs_student_completed_idx").on(t.studentId, t.status, t.completedAt),
     index("session_logs_template_id_idx").on(t.sessionTemplateId),
     // A student has at most one session open at a time.
     uniqueIndex("session_logs_one_open_idx")
@@ -329,6 +337,31 @@ export const badges = sqliteTable(
     index("badges_session_log_idx").on(t.sessionLogId),
   ],
 );
+
+/**
+ * The parent's phone rule for one student (steering §3.1): on `days`, lock the apps in
+ * `categories` from `start_time` until the day's session is done. The phone is a mock; nothing
+ * here touches a real device, and nothing the student can do changes the rule.
+ */
+export const lockRules = sqliteTable("lock_rules", {
+  id: id(),
+  studentId: text("student_id")
+    .notNull()
+    .unique()
+    .references(() => students.id),
+  enabled: integer("enabled", { mode: "boolean" }).notNull(),
+  days: text("days", { mode: "json" }).$type<Weekday[]>().notNull(),
+  /** 24-hour "HH:MM" in the family's time zone. */
+  startTime: text("start_time").notNull().default(DEFAULT_SESSION_TIME),
+  categories: text("categories", { mode: "json" }).$type<LockCategory[]>().notNull(),
+  /** Saturdays and Sundays never lock, whatever `days` says. */
+  weekendOff: integer("weekend_off", { mode: "boolean" }).notNull().default(false),
+  /** The parent's "Unlock tonight": no lock before this moment. */
+  overrideUntil: integer("override_until", { mode: "timestamp_ms" }),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
 
 /** One coach exchange: what the student said and what the coach answered, at one hint level. */
 export const coachTurns = sqliteTable(

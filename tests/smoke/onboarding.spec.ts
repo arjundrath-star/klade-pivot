@@ -30,10 +30,10 @@ test("a parent onboards a new student, whose first session is framed in their in
   await expect(plan).toContainText("4 sessions a week, 2 hours a week");
   await expect(plan).toContainText("Linear equations in one variable");
   for (const day of ["Mon", "Tue", "Thu", "Sun"]) {
-    await expect(page.getByRole("checkbox", { name: day })).toBeChecked();
+    await expect(page.getByRole("checkbox", { name: day, exact: true })).toBeChecked();
   }
   for (const day of ["Wed", "Fri", "Sat"]) {
-    await expect(page.getByRole("checkbox", { name: day })).not.toBeChecked();
+    await expect(page.getByRole("checkbox", { name: day, exact: true })).not.toBeChecked();
   }
   await expect(page.getByLabel("Session starts at")).toHaveValue("17:00");
   // Standard pace cannot finish by May, so the plan says so and Next waits.
@@ -50,10 +50,23 @@ test("a parent onboards a new student, whose first session is framed in their in
   await page.getByRole("checkbox", { name: "Animals" }).check();
   await expect(page.getByRole("checkbox", { name: "Music" })).toBeDisabled();
   await page.getByLabel("Favorite in animals (optional)").selectOption("Dogs");
-  await page.getByRole("button", { name: "Finish setup" }).click();
+  await next.click();
+
+  // The phone rule starts from the plan: its days, its start time, games and social.
+  await expect(page.getByRole("heading", { name: "Phone rule" })).toBeFocused();
+  for (const day of ["Mon", "Tue", "Thu", "Sun"]) {
+    await expect(page.getByRole("checkbox", { name: day, exact: true })).toBeChecked();
+  }
+  await expect(page.getByLabel("From")).toHaveValue("17:00");
+  await expect(page.getByRole("checkbox", { name: "Games" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Social" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Video" })).not.toBeChecked();
+  // Skipped: no rule, so no phone on the student's view and nothing between Ava and her session.
+  await page.getByRole("button", { name: "Skip for now" }).click();
 
   await expect(page).toHaveURL(/\/student$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hi, Ava");
+  await expect(page.getByRole("heading", { name: "Your phone" })).toHaveCount(0);
   // AC 1: the whole setup takes well under a minute; the automation does it in under 20 s.
   expect(Date.now() - started).toBeLessThan(20_000);
 
