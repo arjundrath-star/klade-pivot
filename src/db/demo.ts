@@ -1,6 +1,7 @@
 import { S1_KEY } from "@/content/sessions";
 import { getDb } from "@/db/client";
 import { courses, families, sessionTemplates, students, units } from "@/db/schema";
+import { DEFAULT_SESSION_TIME, PRESET_SESSIONS, proposedDays } from "@/engine/pace";
 
 /** There is no sign-in yet, so the student pages act as this seeded student. */
 export const DEMO_STUDENT_ID = "demo-student-maya";
@@ -18,7 +19,7 @@ export function nextMay(now: Date): string {
 }
 
 /**
- * Seeds the curriculum rows and the demo family: a parent and Maya, grade 6. Safe to run again: it
+ * Seeds the curriculum rows and the demo family: a parent and Maya, grade 6, on track for May. Safe to run again: it
  * restores the demo profile and the curriculum rows and leaves session history alone.
  */
 export async function seedDemo(now = new Date()): Promise<void> {
@@ -30,7 +31,10 @@ export async function seedDemo(now = new Date()): Promise<void> {
     name: "Maya",
     grade: 6,
     targetDate: nextMay(now),
-    pacePerWeek: 4,
+    pacePerWeek: PRESET_SESSIONS["on-track"],
+    sessionDays: proposedDays(PRESET_SESSIONS["on-track"]),
+    sessionTime: DEFAULT_SESSION_TIME,
+    pronoun: "she" as const,
     timerMode: "standard" as const,
     interests: ["sports" as const, "music" as const],
   };

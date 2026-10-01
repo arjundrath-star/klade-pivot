@@ -1,6 +1,7 @@
 /** Alert copy and the alert email. Parent-facing text: see the wording rule in tests/unit/parent. */
 import { inSentence } from "@/content/title";
 import { sessionCount, targetMonth } from "@/parent/progress";
+import { PRONOUN_FORMS, type Pronoun } from "@/parent/pronouns";
 
 export const ALERT_TYPES = ["missed", "behind", "milestone"] as const;
 
@@ -10,12 +11,18 @@ type AlertType = (typeof ALERT_TYPES)[number];
  * The same-day missed-session alert. With one session behind it reads exactly as the pitch does:
  * "Maya missed today's Algebra session. She's 1 session behind her May target."
  */
-export function missedSessionMessage(name: string, behind: number, targetDate: string): string {
+export function missedSessionMessage(
+  name: string,
+  pronoun: Pronoun,
+  behind: number,
+  targetDate: string,
+): string {
   const month = targetMonth(targetDate);
+  const { is, possessive } = PRONOUN_FORMS[pronoun];
   const standing =
     behind === 0
-      ? `She's still on track for her ${month} target.`
-      : `She's ${sessionCount(behind)} behind her ${month} target.`;
+      ? `${is} still on track for ${possessive} ${month} target.`
+      : `${is} ${sessionCount(behind)} behind ${possessive} ${month} target.`;
   return `${name} missed today's Algebra session. ${standing}`;
 }
 

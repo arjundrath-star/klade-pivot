@@ -30,7 +30,12 @@ export async function sessionHistory(studentId: string, limit = 30) {
         inArray(sessionLogs.status, ["in_progress", "done", "missed"]),
       ),
     )
-    .orderBy(desc(sessionLogs.createdAt))
+    // A schedule row is written ahead of time, so it sorts by its day; a session by when it started.
+    .orderBy(
+      desc(
+        sql`coalesce(${sessionLogs.startedAt}, unixepoch(${sessionLogs.scheduledFor}) * 1000, ${sessionLogs.createdAt})`,
+      ),
+    )
     .limit(limit);
 }
 

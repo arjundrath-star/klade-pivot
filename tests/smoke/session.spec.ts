@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { watchConsole } from "./console";
+import { expectBlock, solveBlock } from "./flow";
 import {
   answersFor,
   recordPass,
@@ -7,12 +8,6 @@ import {
   sessionAtExit,
   setTimerMode,
 } from "../helpers/answers";
-import type { AnsweredBlockId } from "@/session/blocks";
-
-async function expectBlock(page: Page, label: string, position: number) {
-  await expect(page.getByRole("heading", { level: 2, name: label })).toBeVisible();
-  await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(position));
-}
 
 /** Answers the three exit-check problems one at a time, right where `correct` is true. */
 async function answerExitCheck(page: Page, sessionId: string, correct: readonly boolean[]) {
@@ -25,17 +20,6 @@ async function answerExitCheck(page: Page, sessionId: string, correct: readonly 
     await card.getByRole("button", { name: "Submit" }).click();
   }
   await expect(page.getByText("You answered all 3 problems.")).toBeVisible();
-}
-
-async function solveBlock(page: Page, sessionId: string, block: AnsweredBlockId) {
-  const answers = await answersFor(sessionId, block);
-  const cards = page.getByRole("article");
-  await expect(cards).toHaveCount(answers.length);
-  for (const [i, answer] of answers.entries()) {
-    await cards.nth(i).getByLabel("Your answer").fill(String(answer));
-    await cards.nth(i).getByRole("button", { name: "Check" }).click();
-    await expect(cards.nth(i).getByText("Correct.")).toBeVisible();
-  }
 }
 
 test("a student walks all five blocks of a session and it is saved as they go", async ({

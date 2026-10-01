@@ -1,4 +1,5 @@
 /** Where a student stands against their schedule. Pure: the parent view and the admin panel share it. */
+import { scheduleDays, type Weekday } from "@/engine/pace";
 
 /**
  * The demo family's time zone. "Today" for the schedule is the family's calendar day, not the
@@ -18,11 +19,45 @@ export function calendarDay(at: Date): string {
   return dayFormat.format(at);
 }
 
+const timeFormat = new Intl.DateTimeFormat("en-GB", {
+  timeZone: SCHEDULE_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** The family's clock time at `at`, as 24-hour HH:MM. */
+export function clockTime(at: Date): string {
+  return timeFormat.format(at);
+}
+
 /** One day the schedule holds a session on. */
 export interface ScheduleSlot {
   /** YYYY-MM-DD */
   day: string;
   status: "scheduled" | "missed";
+}
+
+function firstDay(slots: readonly ScheduleSlot[]): string {
+  return slots.reduce((first, slot) => (slot.day < first ? slot.day : first), slots[0].day);
+}
+
+/**
+ * The stored schedule rows plus a `scheduled` slot for every day on the student's weekdays from
+ * the first row through `today` that has no row. Onboarding writes the first two weeks of rows;
+ * the weekdays carry the schedule on past them. No rows means no schedule yet.
+ */
+export function plannedSlots(
+  slots: readonly ScheduleSlot[],
+  weekdays: readonly Weekday[],
+  today: string,
+): ScheduleSlot[] {
+  if (slots.length === 0) return [];
+  const stored = new Set(slots.map((slot) => slot.day));
+  const planned = scheduleDays(firstDay(slots), today, weekdays)
+    .filter((day) => !stored.has(day))
+    .map((day) => ({ day, status: "scheduled" as const }));
+  return [...slots, ...planned];
 }
 
 /**
@@ -37,7 +72,7 @@ export function sessionsBehind(
   today: string,
 ): number {
   if (slots.length === 0) return 0;
-  const start = slots.reduce((first, slot) => (slot.day < first ? slot.day : first), slots[0].day);
+  const start = firstDay(slots);
   const due = slots.filter(
     (slot) => slot.day < today || (slot.day === today && slot.status === "missed"),
   ).length;

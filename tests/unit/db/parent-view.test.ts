@@ -9,6 +9,7 @@ import { getSession } from "@/db/queries/sessions";
 import { usageBySession } from "@/db/queries/usage";
 import { aiUsage, explainBacks, sessionLogs } from "@/db/schema";
 import { COACH_MODEL } from "@/coach/prompt";
+import { proposedDays, weekdayOf } from "@/engine/pace";
 import { calendarDay } from "@/parent/progress";
 import { markTodayMissed } from "@/session/alerts";
 import { studentPace } from "@/session/pace";
@@ -22,6 +23,9 @@ import { answerExit, withTempDatabase } from "../../helpers/database";
 withTempDatabase("klade-parent-", new Date("2026-10-01T12:00:00Z"));
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// The seed puts Maya on the On track days.
+const MAYA_DAYS = proposedDays(4);
 
 /** Server actions that end in a redirect throw Next's redirect error; this reads its target. */
 async function redirectOf(action: () => Promise<void>): Promise<string> {
@@ -76,7 +80,7 @@ describe("the missed-session alert", () => {
     expect(await familyAlerts(DEMO_FAMILY_ID)).toHaveLength(1);
   });
 
-  it("counts an earlier schedule day that was never made up", async () => {
+  it("counts an earlier schedule day that was never made up, and Maya's days since", async () => {
     const db = await getDb();
     await db.insert(sessionLogs).values({
       studentId: DEMO_STUDENT_ID,
@@ -85,7 +89,10 @@ describe("the missed-session alert", () => {
       seed: 1,
       scheduledFor: calendarDay(new Date(now.getTime() - 2 * DAY_MS)),
     });
-    expect(await studentPace(DEMO_STUDENT_ID, now)).toBe(2);
+    // Today, missed; the row two days back; yesterday too when it is one of Maya's session days.
+    const yesterday = calendarDay(new Date(now.getTime() - DAY_MS));
+    const yesterdayDue = MAYA_DAYS.includes(weekdayOf(yesterday)) ? 1 : 0;
+    expect(await studentPace(DEMO_STUDENT_ID, now)).toBe(2 + yesterdayDue);
   });
 });
 

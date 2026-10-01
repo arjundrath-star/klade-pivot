@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calendarDay,
   formatDay,
+  plannedSlots,
   progressLine,
   sessionsBehind,
   targetMonth,
@@ -9,6 +10,34 @@ import {
 } from "@/parent/progress";
 
 const TODAY = "2026-10-01";
+
+describe("plannedSlots", () => {
+  const MON_THU = ["mon", "thu"] as const;
+
+  it("is empty until the schedule has a row", () => {
+    expect(plannedSlots([], MON_THU, TODAY)).toEqual([]);
+  });
+
+  it("carries the schedule on past its rows on the plan's weekdays, through today", () => {
+    const slots: ScheduleSlot[] = [{ day: "2026-09-21", status: "missed" }];
+    expect(plannedSlots(slots, MON_THU, TODAY)).toEqual([
+      { day: "2026-09-21", status: "missed" },
+      { day: "2026-09-24", status: "scheduled" },
+      { day: "2026-09-28", status: "scheduled" },
+      { day: TODAY, status: "scheduled" },
+    ]);
+  });
+
+  it("keeps a stored row's status on a planned day and adds a row on any other day", () => {
+    const slots: ScheduleSlot[] = [
+      { day: "2026-09-28", status: "scheduled" },
+      { day: "2026-09-30", status: "missed" },
+      { day: TODAY, status: "missed" },
+    ];
+    expect(plannedSlots(slots, MON_THU, TODAY)).toEqual(slots);
+    expect(sessionsBehind(plannedSlots(slots, MON_THU, TODAY), [], TODAY)).toBe(3);
+  });
+});
 
 describe("sessionsBehind", () => {
   it("is zero with no schedule", () => {

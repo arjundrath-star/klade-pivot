@@ -3,20 +3,29 @@ import { alertEmailHtml, masteryMessage, missedSessionMessage } from "@/parent/a
 
 describe("missed-session alert copy", () => {
   it("matches the pitch wording at one session behind", () => {
-    expect(missedSessionMessage("Maya", 1, "2027-05-31")).toBe(
+    expect(missedSessionMessage("Maya", "she", 1, "2027-05-31")).toBe(
       "Maya missed today's Algebra session. She's 1 session behind her May target.",
     );
   });
 
   it("counts more than one session in the plural", () => {
-    expect(missedSessionMessage("Maya", 2, "2027-05-31")).toBe(
+    expect(missedSessionMessage("Maya", "she", 2, "2027-05-31")).toBe(
       "Maya missed today's Algebra session. She's 2 sessions behind her May target.",
     );
   });
 
   it("says so when a make-up already covers the missed day", () => {
-    expect(missedSessionMessage("Maya", 0, "2027-05-31")).toBe(
+    expect(missedSessionMessage("Maya", "she", 0, "2027-05-31")).toBe(
       "Maya missed today's Algebra session. She's still on track for her May target.",
+    );
+  });
+
+  it("uses the pronoun the parent picked", () => {
+    expect(missedSessionMessage("Sam", "they", 1, "2027-06-30")).toBe(
+      "Sam missed today's Algebra session. They're 1 session behind their June target.",
+    );
+    expect(missedSessionMessage("Leo", "he", 0, "2027-05-31")).toBe(
+      "Leo missed today's Algebra session. He's still on track for his May target.",
     );
   });
 });
@@ -39,7 +48,7 @@ describe("alertEmailHtml", () => {
     });
 
   it("is a full document carrying the message, the subject and one link", () => {
-    const html = email("Maya", missedSessionMessage("Maya", 1, "2027-05-31"));
+    const html = email("Maya", missedSessionMessage("Maya", "she", 1, "2027-05-31"));
     expect(html.startsWith("<!doctype html>")).toBe(true);
     expect(html).toContain("<title>Maya missed today&#39;s session</title>");
     expect(html).toContain(

@@ -15,7 +15,6 @@ import {
   type ExplainStatus,
 } from "@/coach/rubric";
 import { recordAttempt, recordExitAttempt } from "@/db/queries/attempts";
-import { DEMO_STUDENT_ID } from "@/db/demo";
 import { exitShownAt } from "@/db/queries/exit";
 import { graderCalls, recordExplainBack, recordGraderCalls } from "@/db/queries/explain";
 import { markLessonRead, moveSession } from "@/db/queries/sessions";
@@ -31,6 +30,7 @@ import {
   type BlockId,
 } from "@/session/blocks";
 import { completeSession, type CompleteError } from "@/session/complete";
+import { currentStudentId } from "@/session/current-student";
 import { loadSession, openProblem, type OpenProblemError } from "@/session/load";
 import type { SessionSummary } from "@/session/mastery";
 import { findProblem } from "@/session/problems";
@@ -112,9 +112,8 @@ const COMPLETE_ERRORS: Readonly<Record<CompleteError, MoveError>> = {
   aided: "invalid",
 };
 
-// Sign-in is not built yet, so every session action acts as the demo student.
 async function loadOpenSession(sessionId: string) {
-  const loaded = await loadSession(sessionId, DEMO_STUDENT_ID);
+  const loaded = await loadSession(sessionId, await currentStudentId());
   return loaded?.session.status === "in_progress" ? loaded : undefined;
 }
 
@@ -124,7 +123,7 @@ export async function submitAnswer(input: z.input<typeof AnswerInput>): Promise<
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { sessionId, block, index, answer, timeMs } = parsed.data;
 
-  const opened = await openProblem(sessionId, DEMO_STUDENT_ID, block, index);
+  const opened = await openProblem(sessionId, await currentStudentId(), block, index);
   if (!opened.ok) return { ok: false, error: ANSWER_ERRORS[opened.error] };
   const { loaded, problem } = opened;
 
@@ -198,7 +197,7 @@ export async function submitExitAnswer(
 export async function confirmLesson(input: z.input<typeof LessonInput>): Promise<LessonResult> {
   const parsed = LessonInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid" };
-  const marked = await markLessonRead(parsed.data.sessionId, DEMO_STUDENT_ID);
+  const marked = await markLessonRead(parsed.data.sessionId, await currentStudentId());
   return marked ? { ok: true } : { ok: false, error: "closed" };
 }
 
@@ -218,7 +217,7 @@ export async function moveBlock(input: z.input<typeof MoveInput>): Promise<MoveR
   const result = step(from, direction, isBlockComplete(from, open.counts, open.progress));
   if (!result.ok) return result;
   if (result.to === "done") {
-    const completed = await completeSession(sessionId, DEMO_STUDENT_ID);
+    const completed = await completeSession(sessionId, open.session.studentId);
     if (!completed.ok) return { ok: false, error: COMPLETE_ERRORS[completed.error] };
     return { ok: true, to: "done", summary: completed.summary };
   }

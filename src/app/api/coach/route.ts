@@ -3,9 +3,9 @@ import { coachConfigured, streamCoachReply } from "@/coach/client";
 import { createRedactingStream } from "@/coach/policy";
 import { buildCoachPrompt, coachContext, COACH_MODEL, untrustedText } from "@/coach/prompt";
 import { COACH_CALLS_PER_SESSION, hintLevel, type CoachError } from "@/coach/turns";
-import { DEMO_STUDENT_ID } from "@/db/demo";
 import { recordCoachTurn } from "@/db/queries/coach";
 import { COACHED_BLOCK_IDS, problemKey } from "@/session/blocks";
+import { currentStudentId } from "@/session/current-student";
 import { openProblem } from "@/session/load";
 
 const MAX_MESSAGE_LENGTH = 300;
@@ -60,8 +60,8 @@ export async function POST(request: Request): Promise<Response> {
   if (!body) return reject("invalid");
   if (!coachConfigured()) return reject("unavailable");
 
-  // Sign-in is not built yet, so the route acts as the demo student.
-  const opened = await openProblem(body.sessionId, DEMO_STUDENT_ID, body.block, body.index);
+  const studentId = await currentStudentId();
+  const opened = await openProblem(body.sessionId, studentId, body.block, body.index);
   if (!opened.ok) return reject(opened.error);
   const { loaded, problem } = opened;
   if (loaded.coach.calls >= COACH_CALLS_PER_SESSION) return reject("rate-limited");

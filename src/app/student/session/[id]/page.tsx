@@ -16,9 +16,9 @@ import {
   type AnsweredBlockId,
   type BlockId,
 } from "@/session/blocks";
-import { DEMO_STUDENT_ID } from "@/db/demo";
 import { markExitShown } from "@/db/queries/exit";
 import { sessionSummary } from "@/session/complete";
+import { currentStudentId } from "@/session/current-student";
 import { loadSession, type LoadedSession } from "@/session/load";
 import { findProblem, renderSessionProblem } from "@/session/problems";
 import { exitProblemSeconds, exitRemainingMs, formatClock, timeInBlock } from "@/session/timer";
@@ -72,8 +72,7 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
 
-  // Sign-in is not built yet, so the page acts as the demo student.
-  const loaded = await loadSession(id, DEMO_STUDENT_ID);
+  const loaded = await loadSession(id, await currentStudentId());
   if (!loaded) notFound();
   const { session, content, problems, counts, progress, coach, explain } = loaded;
   if (session.status === "done") {

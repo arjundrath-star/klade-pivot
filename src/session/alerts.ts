@@ -7,15 +7,15 @@ import { missedSessionMessage } from "@/parent/alerts";
 import { calendarDay } from "@/parent/progress";
 import { studentPace } from "@/session/pace";
 
-type MissedResult =
-  | { ok: true; behind: number }
-  | { ok: false; error: "not-found" | "done-today" | "open-today" | "already-missed" };
-
 /** The concept today's session is for: the one the planner would open, else the course's last. */
 async function todaysConcept(studentId: string): Promise<string> {
   const today = await findTodaySession(studentId);
   return today.kind === "complete" ? lastConcept() : today.templateId;
 }
+
+type MissedResult =
+  | { ok: true; behind: number }
+  | { ok: false; error: "not-found" | "done-today" | "open-today" | "already-missed" };
 
 /**
  * Marks the student's scheduled session for today missed and raises the same-day alert with the
@@ -47,7 +47,7 @@ export async function markTodayMissed(studentId: string, now = new Date()): Prom
     studentId,
     type: "missed",
     sessionLogId: missedId,
-    message: missedSessionMessage(student.name, behind, student.targetDate),
+    message: missedSessionMessage(student.name, student.pronoun, behind, student.targetDate),
   });
   return { ok: true, behind };
 }

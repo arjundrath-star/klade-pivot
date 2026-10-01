@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { sessionLogs, sessionTemplates, units } from "@/db/schema";
 import type { ScheduleSlot } from "@/parent/progress";
@@ -48,17 +48,27 @@ export async function sessionActivity(studentId: string) {
   };
 }
 
-/** The course's last concept, for a schedule row once every concept is mastered. */
-export async function lastConcept(): Promise<string> {
+async function endConcept(end: "first" | "last"): Promise<string> {
+  const order = end === "first" ? asc : desc;
   const db = await getDb();
   const [concept] = await db
     .select({ id: sessionTemplates.id })
     .from(sessionTemplates)
     .innerJoin(units, eq(units.id, sessionTemplates.unitId))
-    .orderBy(desc(units.position), desc(sessionTemplates.position))
+    .orderBy(order(units.position), order(sessionTemplates.position))
     .limit(1);
   if (!concept) throw new Error("The curriculum has no sessions");
   return concept.id;
+}
+
+/** The course's first concept, where a new student's schedule starts. */
+export function firstConcept(): Promise<string> {
+  return endConcept("first");
+}
+
+/** The course's last concept, for a schedule row once every concept is mastered. */
+export function lastConcept(): Promise<string> {
+  return endConcept("last");
 }
 
 interface MissedDay {
@@ -71,7 +81,8 @@ interface MissedDay {
 
 /**
  * Marks the student's schedule row for `day` missed, adding the row first when the schedule has
- * none for that day. Returns the row's id, or null when the day was already marked missed.
+ * none for that day. A row written ahead of time takes `sessionTemplateId`, the concept the student
+ * is on now. Returns the row's id, or null when the day was already marked missed.
  */
 export async function markDayMissed({
   studentId,
@@ -87,7 +98,7 @@ export async function markDayMissed({
       .onConflictDoNothing(),
     db
       .update(sessionLogs)
-      .set({ status: "missed" })
+      .set({ status: "missed", sessionTemplateId })
       .where(
         and(
           eq(sessionLogs.studentId, studentId),

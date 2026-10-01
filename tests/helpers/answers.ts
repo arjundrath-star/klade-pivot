@@ -10,8 +10,18 @@ import { loadSession } from "@/session/load";
 import { renderSessionProblem } from "@/session/problems";
 import type { TimerMode } from "@/session/timer";
 
+/** The session as its own student loads it, whichever student that is. */
+async function sessionOf(sessionId: string) {
+  const db = await getDb();
+  const [log] = await db
+    .select({ studentId: sessionLogs.studentId })
+    .from(sessionLogs)
+    .where(eq(sessionLogs.id, sessionId));
+  return log ? loadSession(sessionId, log.studentId) : undefined;
+}
+
 async function blockProblems(sessionId: string, block: ProblemBlockId) {
-  const loaded = await loadSession(sessionId, DEMO_STUDENT_ID);
+  const loaded = await sessionOf(sessionId);
   if (!loaded) throw new Error(`session ${sessionId} not found`);
   return {
     interests: loaded.session.interests,

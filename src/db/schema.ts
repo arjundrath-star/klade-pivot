@@ -1,10 +1,12 @@
 import { sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { EXPLAIN_RECORD_SOURCES, EXPLAIN_VERDICTS } from "@/coach/rubric";
+import { DEFAULT_SESSION_TIME, type Weekday } from "@/engine/pace";
 import type { Interest } from "@/engine/types";
 import { BLOCK_IDS, PROBLEM_BLOCK_IDS, type BlockId } from "@/session/blocks";
 import { MASTERY_STATUSES, SESSION_OUTCOMES } from "@/session/mastery";
 import { ALERT_TYPES } from "@/parent/alerts";
+import { PRONOUNS } from "@/parent/pronouns";
 import { TIMER_MODES } from "@/session/timer";
 
 const id = () =>
@@ -19,7 +21,8 @@ const createdAt = () =>
 
 const SESSION_STATUSES = ["scheduled", "in_progress", "done", "missed", "repeat"] as const;
 
-// Minors' data: first names and interest tags only. No email, no birthdate, no free text.
+// Minors' data: first name, grade, pronoun, interest tags (with a favorite picked from a fixed list)
+// and the plan. No email, no birthdate, no free text.
 
 /** The parent's account. Parents create and own every student account. */
 export const families = sqliteTable("families", {
@@ -40,8 +43,18 @@ export const students = sqliteTable(
     /** ISO date (YYYY-MM-DD) the family wants the course finished by. */
     targetDate: text("target_date").notNull(),
     pacePerWeek: integer("pace_per_week").notNull(),
+    /** The weekdays the plan puts a session on, one per session a week. */
+    sessionDays: text("session_days", { mode: "json" }).$type<Weekday[]>().notNull().default([]),
+    /** When a session day's session starts, 24-hour "HH:MM" in the family's time zone. */
+    sessionTime: text("session_time").notNull().default(DEFAULT_SESSION_TIME),
+    pronoun: text("pronoun", { enum: PRONOUNS }).notNull().default("they"),
     timerMode: text("timer_mode", { enum: TIMER_MODES }).notNull().default("standard"),
     interests: text("interests", { mode: "json" }).$type<Interest[]>().notNull(),
+    /** An optional favorite for each picked interest, from `FAVORITES` in src/content/interests. */
+    favorites: text("favorites", { mode: "json" })
+      .$type<Partial<Record<Interest, string>>>()
+      .notNull()
+      .default({}),
     createdAt: createdAt(),
   },
   (t) => [index("students_family_id_idx").on(t.familyId)],

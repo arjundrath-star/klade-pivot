@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
 import { startTodaySession } from "./actions";
 import { inSentence } from "@/content/title";
-import { DEMO_STUDENT_ID } from "@/db/demo";
 import { findTodaySession } from "@/db/queries/sessions";
 import { getStudent } from "@/db/queries/students";
+import { currentStudentId } from "@/session/current-student";
 
 export const metadata: Metadata = { title: "Today · Klade" };
 
 export default async function StudentHome() {
   // Reads the database, so it renders per request, never at build time.
   await connection();
+  const studentId = await currentStudentId();
   const [student, today] = await Promise.all([
-    getStudent(DEMO_STUDENT_ID),
-    findTodaySession(DEMO_STUDENT_ID),
+    getStudent(studentId),
+    findTodaySession(studentId),
   ]);
 
   return (
@@ -57,7 +59,13 @@ export default async function StudentHome() {
           </section>
         </>
       ) : (
-        <p>No student yet. Run npm run db:seed to add the demo student.</p>
+        <p>
+          No student yet.{" "}
+          <Link href="/onboarding" className="underline">
+            Set one up
+          </Link>
+          , or run npm run db:seed to add the demo student.
+        </p>
       )}
     </div>
   );
