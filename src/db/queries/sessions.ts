@@ -6,7 +6,7 @@ import type { SessionOutcome } from "@/session/mastery";
 import type { BlockTimes } from "@/session/timer";
 
 type TodaySession =
-  | { kind: "open"; sessionId: string; title: string; repeat: boolean }
+  | { kind: "open"; sessionId: string; templateId: string; title: string; repeat: boolean }
   | { kind: "next"; templateId: string; title: string; repeat: boolean }
   | { kind: "complete" };
 
@@ -23,7 +23,12 @@ export async function findTodaySession(studentId: string): Promise<TodaySession>
   const isRepeat = sql<boolean>`${mastery.status} is 'repeat'`.mapWith(Boolean);
   const [[open], [next]] = await Promise.all([
     db
-      .select({ id: sessionLogs.id, title: sessionTemplates.title, repeat: isRepeat })
+      .select({
+        id: sessionLogs.id,
+        templateId: sessionLogs.sessionTemplateId,
+        title: sessionTemplates.title,
+        repeat: isRepeat,
+      })
       .from(sessionLogs)
       .innerJoin(sessionTemplates, eq(sessionTemplates.id, sessionLogs.sessionTemplateId))
       .leftJoin(mastery, studentMastery)
@@ -37,7 +42,10 @@ export async function findTodaySession(studentId: string): Promise<TodaySession>
       .orderBy(desc(isRepeat), asc(units.position), asc(sessionTemplates.position))
       .limit(1),
   ]);
-  if (open) return { kind: "open", sessionId: open.id, title: open.title, repeat: open.repeat };
+  if (open) {
+    const { id: sessionId, templateId, title, repeat } = open;
+    return { kind: "open", sessionId, templateId, title, repeat };
+  }
   if (next) return { kind: "next", templateId: next.id, title: next.title, repeat: next.repeat };
   return { kind: "complete" };
 }
@@ -98,6 +106,8 @@ export async function getSession(id: string, studentId: string) {
       contentKey: sessionTemplates.contentKey,
       interests: students.interests,
       timerMode: students.timerMode,
+      familyId: students.familyId,
+      studentName: students.name,
     })
     .from(sessionLogs)
     .innerJoin(sessionTemplates, eq(sessionTemplates.id, sessionLogs.sessionTemplateId))

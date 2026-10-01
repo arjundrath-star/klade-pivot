@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs";
 
 const PORT = 3101;
 const BASE = `http://localhost:${PORT}`;
-const ROUTES = ["/", "/student"];
+const ROUTES = ["/", "/student", "/parent", "/admin"];
 const THRESHOLDS = { performance: 0.9, accessibility: 0.9, "best-practices": 0.9 };
 // The performance score is timing-based and swings on a busy 2-core host, so a
 // route gets up to this many performance runs and passes if any one meets the

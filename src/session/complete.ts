@@ -1,4 +1,6 @@
+import { recordAlert } from "@/db/queries/alerts";
 import { finishSession } from "@/db/queries/sessions";
+import { masteryMessage } from "@/parent/alerts";
 import { isBlockComplete, problemKey } from "@/session/blocks";
 import { loadSession, type LoadedSession } from "@/session/load";
 import { masteryVerdict, type SessionOutcome, type SessionSummary } from "@/session/mastery";
@@ -69,5 +71,15 @@ export async function completeSession(
     blockElapsedMs: leaveBlock(session.blockElapsedMs, "exit", session.blockStartedAt),
   });
   if (!finished) return { ok: false, error: "moved" };
-  return { ok: true, summary: sessionSummary(loaded, outcome) };
+  const summary = sessionSummary(loaded, outcome);
+  if (outcome === "mastered") {
+    await recordAlert({
+      familyId: session.familyId,
+      studentId: session.studentId,
+      type: "milestone",
+      sessionLogId: session.id,
+      message: masteryMessage(session.studentName, session.title, score, summary.exitTotal),
+    });
+  }
+  return { ok: true, summary };
 }

@@ -10,6 +10,7 @@ export async function coachTurnsFor(sessionLogId: string) {
   const db = await getDb();
   return db
     .select({
+      id: coachTurns.id,
       block: coachTurns.block,
       problemIndex: coachTurns.problemIndex,
       level: coachTurns.level,

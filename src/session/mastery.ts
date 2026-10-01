@@ -2,11 +2,10 @@ import type { ExplainStatus } from "@/coach/rubric";
 
 export const MASTERY_STATUSES = ["mastered", "in_progress", "repeat"] as const;
 
+export type MasteryStatus = (typeof MASTERY_STATUSES)[number];
+
 /** How a finished session ends for its concept. */
-export const SESSION_OUTCOMES = [
-  "mastered",
-  "repeat",
-] as const satisfies readonly (typeof MASTERY_STATUSES)[number][];
+export const SESSION_OUTCOMES = ["mastered", "repeat"] as const satisfies readonly MasteryStatus[];
 
 export type SessionOutcome = (typeof SESSION_OUTCOMES)[number];
 

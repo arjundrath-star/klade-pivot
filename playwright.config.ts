@@ -13,6 +13,8 @@ export default defineConfig({
   outputDir: "./test-results",
   timeout: 60_000,
   fullyParallel: false,
+  // Every spec acts as the one demo student in one database, so spec files never run side by side.
+  workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"]],
   use: {

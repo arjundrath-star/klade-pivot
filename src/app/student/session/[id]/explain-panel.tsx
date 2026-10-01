@@ -9,6 +9,7 @@ import {
   CRITERION_LABELS,
   EXPLAIN_ATTEMPTS,
   MAX_CRITERION_SCORE,
+  MAX_TOTAL_SCORE,
   MAX_EXPLANATION_LENGTH,
   totalScore,
   type ExplainError,
@@ -281,8 +282,7 @@ function ResultCard({ result }: { result: ExplainResult }) {
       <p
         className={`font-semibold ${passed ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}
       >
-        Score {totalScore(result.scores)} of {CRITERIA.length * MAX_CRITERION_SCORE}.{" "}
-        {verdictText(result)}
+        Score {totalScore(result.scores)} of {MAX_TOTAL_SCORE}. {verdictText(result)}
       </p>
       <dl className="grid grid-cols-3 gap-2 text-sm">
         {CRITERIA.map((criterion) => (

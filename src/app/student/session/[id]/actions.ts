@@ -268,7 +268,7 @@ export async function submitExplanation(
 
   const { scores, feedback } = graded.grade;
   const result: ExplainResult = {
-    attempt: results.length + 1,
+    attempt: open.explain.attempts + 1,
     scores,
     feedback,
     verdict: passes(scores) ? "pass" : "fail",

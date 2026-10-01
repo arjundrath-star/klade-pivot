@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { inSentence } from "../../title";
+import { inSentence } from "@/content/title";
 import { EXIT_PASS_MARK, type SessionSummary } from "@/session/mastery";
 
 interface SessionCompleteProps {

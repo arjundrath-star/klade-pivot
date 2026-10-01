@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { startTodaySession } from "./actions";
-import { inSentence } from "./title";
+import { inSentence } from "@/content/title";
 import { DEMO_STUDENT_ID } from "@/db/demo";
 import { findTodaySession } from "@/db/queries/sessions";
 import { getStudent } from "@/db/queries/students";

@@ -19,6 +19,7 @@ export async function explainBacksFor(sessionLogId: string) {
       precision: explainBacks.precision,
       feedback: explainBacks.feedback,
       verdict: explainBacks.verdict,
+      source: explainBacks.source,
     })
     .from(explainBacks)
     .where(eq(explainBacks.sessionLogId, sessionLogId))
@@ -60,4 +61,38 @@ export async function recordGraderCalls(calls: readonly NewAiUsage[]): Promise<v
   if (calls.length === 0) return;
   const db = await getDb();
   await db.insert(aiUsage).values([...calls]);
+}
+
+interface Override {
+  sessionLogId: string;
+  block: NewExplainBack["block"];
+  problemIndex: number;
+  attempt: number;
+}
+
+/**
+ * Records a passing explain-back that no grader saw, for a live demo the grader cannot stall. It
+ * carries no text and zero scores, and its source says it was an override. False when another
+ * request already recorded this attempt.
+ */
+export async function recordOverride(override: Override): Promise<boolean> {
+  const db = await getDb();
+  const inserted = await db
+    .insert(explainBacks)
+    .values({
+      ...override,
+      text: "",
+      source: "override",
+      correctness: 0,
+      justification: 0,
+      precision: 0,
+      feedback: "",
+      verdict: "pass",
+      pasted: false,
+      durationMs: 0,
+      charsPerSecond: 0,
+    })
+    .onConflictDoNothing()
+    .returning({ id: explainBacks.id });
+  return inserted.length > 0;
 }

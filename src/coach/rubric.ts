@@ -15,6 +15,9 @@ export const MAX_CRITERION_SCORE = 3;
 
 export type RubricScores = Readonly<Record<Criterion, number>>;
 
+/** The best total: every criterion at full marks. */
+export const MAX_TOTAL_SCORE = CRITERIA.length * MAX_CRITERION_SCORE;
+
 /** Pass: at least 5 of 9 in total and no zero on correctness. */
 export const PASS_TOTAL = 5;
 
@@ -32,7 +35,11 @@ export const EXPLAIN_ATTEMPTS = 2;
 /** Long enough for a spoken walk through two steps, short enough to keep grading cheap. */
 export const MAX_EXPLANATION_LENGTH = 1500;
 
+/** How a student can give an explanation. */
 export const EXPLAIN_SOURCES = ["voice", "typed"] as const;
+
+/** How an explain-back row came to be: a student's graded explanation, or an admin override. */
+export const EXPLAIN_RECORD_SOURCES = [...EXPLAIN_SOURCES, "override"] as const;
 
 export const EXPLAIN_VERDICTS = ["pass", "fail"] as const;
 

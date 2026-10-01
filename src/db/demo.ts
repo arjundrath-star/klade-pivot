@@ -5,7 +5,8 @@ import { courses, families, sessionTemplates, students, units } from "@/db/schem
 /** There is no sign-in yet, so the student pages act as this seeded student. */
 export const DEMO_STUDENT_ID = "demo-student-maya";
 
-const DEMO_FAMILY_ID = "demo-family";
+/** The demo student's family: the parent pages and the admin panel act for it. */
+export const DEMO_FAMILY_ID = "demo-family";
 
 /** Session 1 of the seeded curriculum: two-step equations. */
 export const S1_TEMPLATE_ID = "algebra-1-linear-equations-s1";

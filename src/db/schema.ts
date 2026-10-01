@@ -1,9 +1,10 @@
 import { sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { EXPLAIN_SOURCES, EXPLAIN_VERDICTS } from "@/coach/rubric";
+import { EXPLAIN_RECORD_SOURCES, EXPLAIN_VERDICTS } from "@/coach/rubric";
 import type { Interest } from "@/engine/types";
 import { BLOCK_IDS, PROBLEM_BLOCK_IDS, type BlockId } from "@/session/blocks";
 import { MASTERY_STATUSES, SESSION_OUTCOMES } from "@/session/mastery";
+import { ALERT_TYPES } from "@/parent/alerts";
 import { TIMER_MODES } from "@/session/timer";
 
 const id = () =>
@@ -103,6 +104,11 @@ export const sessionLogs = sqliteTable(
     lessonReadAt: integer("lesson_read_at", { mode: "timestamp_ms" }),
     /** The mastery verdict, set when the session is done. */
     outcome: text("outcome", { enum: SESSION_OUTCOMES }),
+    /**
+     * The family's calendar day (YYYY-MM-DD) this row holds a place on the schedule for. Set only on
+     * schedule rows, whose status is `scheduled` or `missed`; sessions the student opens leave it null.
+     */
+    scheduledFor: text("scheduled_for"),
     startedAt: integer("started_at", { mode: "timestamp_ms" }),
     completedAt: integer("completed_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
@@ -114,6 +120,10 @@ export const sessionLogs = sqliteTable(
     uniqueIndex("session_logs_one_open_idx")
       .on(t.studentId)
       .where(sql`${t.status} = 'in_progress'`),
+    // One schedule row per student per day.
+    uniqueIndex("session_logs_scheduled_idx")
+      .on(t.studentId, t.scheduledFor)
+      .where(sql`${t.scheduledFor} is not null`),
   ],
 );
 
@@ -183,7 +193,8 @@ export const explainBacks = sqliteTable(
     /** 1 for the first try, 2 for the retry after a failing first. */
     attempt: integer("attempt").notNull(),
     text: text("text").notNull(),
-    source: text("source", { enum: EXPLAIN_SOURCES }).notNull(),
+    /** `override`: an admin passed the explain-back without grading; the scores are zero. */
+    source: text("source", { enum: EXPLAIN_RECORD_SOURCES }).notNull(),
     correctness: integer("correctness").notNull(),
     justification: integer("justification").notNull(),
     precision: integer("precision").notNull(),
@@ -227,6 +238,10 @@ export const mastery = sqliteTable(
   (t) => [uniqueIndex("mastery_student_concept_idx").on(t.studentId, t.sessionTemplateId)],
 );
 
+/**
+ * A notice to the family about one session: a missed scheduled session or a mastered concept. The
+ * message is written when the alert is raised, so it keeps the numbers that were true then.
+ */
 export const alerts = sqliteTable(
   "alerts",
   {
@@ -237,13 +252,20 @@ export const alerts = sqliteTable(
     studentId: text("student_id")
       .notNull()
       .references(() => students.id),
-    type: text("type", { enum: ["missed", "behind", "milestone"] }).notNull(),
+    type: text("type", { enum: ALERT_TYPES }).notNull(),
+    /** The schedule row that was missed, or the session that decided the concept. */
+    sessionLogId: text("session_log_id")
+      .notNull()
+      .references(() => sessionLogs.id),
+    message: text("message").notNull(),
+    /** When an email went out. No email is sent yet, so this stays null. */
     deliveredAt: integer("delivered_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
   },
   (t) => [
-    index("alerts_family_id_idx").on(t.familyId),
-    index("alerts_student_id_idx").on(t.studentId),
+    index("alerts_family_created_idx").on(t.familyId, t.createdAt),
+    // A session raises each kind of alert once, even when two requests raise it together.
+    uniqueIndex("alerts_session_type_idx").on(t.sessionLogId, t.type),
   ],
 );
 

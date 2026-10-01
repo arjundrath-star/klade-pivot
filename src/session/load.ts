@@ -91,8 +91,16 @@ export async function loadSession(id: string, studentId: string) {
     },
     explain: {
       problem: explainProblem(problems, coachTurns, explained),
-      /** Graded attempts, first attempt first. */
-      results: explained.map(explainResult),
+      /**
+       * Graded attempts, first attempt first. After an admin override the student sees none: the
+       * override is never shown to them, and a lone failing card beside an unlocked Next would
+       * contradict it.
+       */
+      results: explained.some((row) => row.source === "override")
+        ? []
+        : explained.map(explainResult),
+      /** Every recorded attempt, an override included, for numbering the next one. */
+      attempts: explained.length,
       /** The row of the latest graded attempt, which is the final one once the status is final. */
       latestId: explained.at(-1)?.id,
     },

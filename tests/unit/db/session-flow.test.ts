@@ -33,7 +33,7 @@ describe("seed", () => {
       timerMode: "standard",
       interests: ["sports", "music"],
     });
-    expect(await getStudent(DEMO_STUDENT_ID)).toEqual({ id: DEMO_STUDENT_ID, name: "Maya" });
+    expect(await getStudent(DEMO_STUDENT_ID)).toMatchObject({ id: DEMO_STUDENT_ID, name: "Maya" });
   });
 
   it("targets the next May that has not started", () => {
