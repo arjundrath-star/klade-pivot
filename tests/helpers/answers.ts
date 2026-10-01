@@ -4,6 +4,7 @@ import { getDb } from "@/db/client";
 import { DEMO_STUDENT_ID, S1_TEMPLATE_ID } from "@/db/demo";
 import {
   explainBacks,
+  lockRules,
   mentorAssignments,
   rewardProgress,
   rewardUnlocks,
@@ -103,8 +104,14 @@ export async function scheduleToday(): Promise<void> {
     .onConflictDoNothing();
 }
 
+/** Removes the demo student's phone rule, so a spec can watch a parent create one. */
+export async function removeLockRule(): Promise<void> {
+  const db = await getDb();
+  await db.delete(lockRules).where(eq(lockRules.studentId, DEMO_STUDENT_ID));
+}
+
 /** Closes the student's open session, if any. */
-export async function closeOpenSession(studentId = DEMO_STUDENT_ID): Promise<void> {
+async function closeOpenSession(studentId: string): Promise<void> {
   const db = await getDb();
   await db
     .update(sessionLogs)

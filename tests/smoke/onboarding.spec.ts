@@ -1,9 +1,7 @@
-import { test, expect } from "@playwright/test";
 import { watchConsole } from "./console";
-import { expectBlock, solveBlock } from "./flow";
+import { expect, test } from "./fixtures";
+import { reachGuidedPractice, startSession, targetNextMay } from "./flow";
 import { renderedFor } from "../helpers/answers";
-import { addDays } from "@/engine/pace";
-import { calendarDay } from "@/parent/progress";
 
 test("a parent onboards a new student, whose first session is framed in their interests", async ({
   page,
@@ -22,9 +20,9 @@ test("a parent onboards a new student, whose first session is framed in their in
   await expect(page.getByLabel("Pronoun")).toHaveValue("they");
   await next.click();
 
-  // AC 2: next May is 34 whole weeks from Oct 1, which needs 4 a week. The test sets a target 34
-  // weeks from whatever today is, so it holds on any day (the exact dates are unit-tested).
-  await page.getByLabel("Finish Algebra 1 by").fill(addDays(calendarDay(new Date()), 34 * 7 - 1));
+  // AC 2: next May is 34 whole weeks from Oct 1, which needs 4 a week (the exact dates are
+  // unit-tested).
+  await page.getByLabel("Finish Algebra 1 by").fill(targetNextMay());
   await page.getByRole("radio", { name: /On track: 4 a week/ }).check();
   const plan = page.getByRole("region", { name: "Your plan" });
   await expect(plan).toContainText("4 sessions a week, 2 hours a week");
@@ -71,25 +69,8 @@ test("a parent onboards a new student, whose first session is framed in their in
   expect(Date.now() - started).toBeLessThan(20_000);
 
   await expect(page.getByText("Two-step equations", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Start" }).click();
-  await expect(page).toHaveURL(/\/student\/session\/[0-9a-f-]{36}$/);
-  const sessionId = page.url().split("/").pop() ?? "";
-
-  await expectBlock(page, "Warm-up", 1);
-  await solveBlock(page, sessionId, "warmup");
-  await next.click();
-  await expectBlock(page, "Learn", 2);
-  const steps = page.getByRole("list", { name: "Steps" }).getByRole("listitem");
-  await page.getByRole("button", { name: "Show the first step" }).click();
-  const more = page.getByRole("button", { name: "Show the next step" });
-  while (await more.isVisible()) {
-    const shown = await steps.count();
-    await more.click();
-    await expect(steps).toHaveCount(shown + 1);
-  }
-  await page.getByRole("button", { name: "I've read this" }).click();
-  await next.click();
-  await expectBlock(page, "Guided practice", 3);
+  const sessionId = await startSession(page);
+  await reachGuidedPractice(page, sessionId);
 
   // The first word problem is framed in gaming or animals, the way the server renders it for Ava.
   const guided = await renderedFor(sessionId, "guided");

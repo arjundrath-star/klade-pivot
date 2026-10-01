@@ -1,10 +1,8 @@
-import { test, expect } from "@playwright/test";
 import { watchConsole } from "./console";
+import { expect, test } from "./fixtures";
 import { removePrototypeRows } from "../helpers/answers";
-import { seedDemo } from "@/db/demo";
 
-// Runs before parent.spec, whose cleanup closes a session on today's schedule and so starts Maya's
-// streak: here she still has none, and her seeded 4-week streak reads 3 of 4.
+// From the demo seed: Maya has no session yet, so her seeded 4-week streak reads 3 of 4.
 
 test("the rewards panel and the mentor card show on both views, and Join opens the waiting room", async ({
   page,
@@ -46,21 +44,17 @@ test("the rewards panel and the mentor card show on both views, and Join opens t
 test("with the prototype rows missing, the core pages render without them", async ({ page }) => {
   const errors = watchConsole(page);
   await removePrototypeRows();
-  try {
-    await page.goto("/student");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hi, Maya");
-    await expect(page.getByRole("heading", { name: "Today's session" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /^(Start|Resume)$/ })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Your rewards" })).toHaveCount(0);
-    await expect(page.getByRole("region", { name: /mentor/ })).toHaveCount(0);
+  await page.goto("/student");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hi, Maya");
+  await expect(page.getByRole("heading", { name: "Today's session" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^(Start|Resume)$/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Your rewards" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: /mentor/ })).toHaveCount(0);
 
-    await page.goto("/parent");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Maya's progress");
-    await expect(page.getByRole("heading", { name: "Mastery" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Maya's rewards" })).toHaveCount(0);
-    await expect(page.getByRole("region", { name: /mentor/ })).toHaveCount(0);
-  } finally {
-    await seedDemo();
-  }
+  await page.goto("/parent");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Maya's progress");
+  await expect(page.getByRole("heading", { name: "Mastery" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Maya's rewards" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: /mentor/ })).toHaveCount(0);
   expect(errors).toEqual([]);
 });

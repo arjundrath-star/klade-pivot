@@ -1,5 +1,5 @@
-import { test, expect } from "@playwright/test";
 import { watchConsole } from "./console";
+import { expect, test } from "./fixtures";
 
 test("home page renders without console errors", async ({ page }) => {
   const errors = watchConsole(page);

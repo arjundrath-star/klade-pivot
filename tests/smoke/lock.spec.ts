@@ -1,10 +1,9 @@
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { watchConsole } from "./console";
-import { answerExitCheck, expectBlock } from "./flow";
-import { sessionAtExit } from "../helpers/answers";
+import { expect, test } from "./fixtures";
+import { answerExitCheck, expectBlock, LOCKED } from "./flow";
+import { removeLockRule, sessionAtExit } from "../helpers/answers";
 import { XP_TABLE } from "@/engine/progress";
-
-const LOCKED = "Locked. Finish today's 30-minute session to unlock.";
 
 async function settingsNotice(page: Page, notice: string | RegExp) {
   await expect(page.getByRole("status")).toHaveText(notice);
@@ -15,6 +14,8 @@ test("a parent sets the phone rule, the demo clock locks the phone, and Unlock t
   context,
 }) => {
   const errors = watchConsole(page);
+  // The seed has a rule; this is the parent making one.
+  await removeLockRule();
   await page.goto("/parent");
   const phone = page.getByRole("region", { name: "Maya's phone" });
   await expect(phone.getByText("No phone rule yet.", { exact: true })).toBeVisible();
@@ -86,12 +87,9 @@ test("a parent sets the phone rule, the demo clock locks the phone, and Unlock t
   const state = await page.request.get("/api/lock-state?view=parent");
   expect(await state.json()).toMatchObject({ locked: false, reason: "override" });
 
-  // The rule off and the real clock back: the core loop runs with a rule that locks nothing.
+  // With the rule off, the core loop runs with a rule that locks nothing (AC 21).
   await settings.getByRole("button", { name: "Turn the rule off" }).click();
   await settingsNotice(settings, /Phone rule off/);
-  await settings.goto("/admin");
-  await settings.getByRole("button", { name: "Reset demo" }).click();
-  await expect(settings.getByRole("status")).toHaveText(/Demo reset/);
   await page.goto("/student");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hi, Maya");
   await expect(page.getByText("The phone rule is off.")).toBeVisible();

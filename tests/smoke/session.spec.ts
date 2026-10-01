@@ -1,31 +1,28 @@
-import { test, expect } from "@playwright/test";
 import { watchConsole } from "./console";
-import { answerExitCheck, expectBlock, solveBlock } from "./flow";
+import { expect, test } from "./fixtures";
 import {
-  answersFor,
-  recordPass,
-  renderedFor,
-  scheduleToday,
-  sessionAtExit,
-  setTimerMode,
-} from "../helpers/answers";
-import { XP_TABLE } from "@/engine/progress";
+  answerExitCheck,
+  expectBlock,
+  passExplainBack,
+  sessionXp,
+  solveBlock,
+  startSession,
+} from "./flow";
+import { answersFor, renderedFor, sessionAtExit, setTimerMode } from "../helpers/answers";
+
+// From the demo seed: today is on Maya's schedule, so finishing the session counts toward her
+// streak, and she has no XP, badges or sessions yet.
 
 test("a student walks all five blocks of a session and it is saved as they go", async ({
   page,
   browser,
 }) => {
   const errors = watchConsole(page);
-  // Today is on Maya's schedule, so finishing the session counts toward her streak.
-  await scheduleToday();
   await page.goto("/student");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hi, Maya");
   await expect(page.getByText("Level 1")).toBeVisible();
   await expect(page.getByText("Badges: 0 of 4")).toBeVisible();
-  await page.getByRole("button", { name: "Start" }).click();
-
-  await expect(page).toHaveURL(/\/student\/session\/[0-9a-f-]{36}$/);
-  const sessionId = page.url().split("/").pop() ?? "";
+  const sessionId = await startSession(page);
 
   await expectBlock(page, "Warm-up", 1);
   const timer = page.getByRole("timer");
@@ -135,20 +132,10 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   await expect(typing.getByRole("button", { name: "Speak" })).toHaveCount(0);
   await noSpeech.close();
 
+  // Without an API key the grader is unavailable: a visible error, never a pass. A stored pass
+  // then stands in for the model, so the rest of the session runs.
   const explanation = "I subtracted from both sides to keep the equation balanced, then divided.";
-  await field.fill(explanation);
-  await page.getByRole("button", { name: "Submit" }).click();
-  // Without an API key the grader is unavailable: a visible error, never a pass.
-  await expect(page.getByText(/grading unavailable/i)).toBeVisible();
-  await expect(field).toHaveValue(explanation);
-  await expect(next).toBeDisabled();
-
-  // A graded pass written to the database stands in for the model, so the rest of the session
-  // runs. The page reads it on reload like any stored result.
-  await recordPass(sessionId, explanation);
-  await page.reload();
-  await expectBlock(page, "Explain-back", 4);
-  await expect(page.getByText(/Passed\./)).toBeVisible();
+  await passExplainBack(page, sessionId, explanation);
   await next.click();
   await expectBlock(page, "Exit check", 5);
 
@@ -163,7 +150,7 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   await finish.click();
 
   // XP for the warm-up, every guided problem, the explain-back pass and the exit-check pass.
-  const xp = XP_TABLE.warmup + XP_TABLE.guided * guided.length + XP_TABLE.explain + XP_TABLE.exit;
+  const xp = sessionXp(guided.length);
   const expectEarned = async () => {
     await expect(page.getByRole("heading", { level: 1, name: "Mastered" })).toBeVisible();
     await expect(page.getByText("You got 3 of 3 on the exit check")).toBeVisible();

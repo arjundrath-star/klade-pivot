@@ -1,14 +1,8 @@
-import { test, expect } from "@playwright/test";
 import { watchConsole } from "./console";
-import { closeOpenSession, renderedFor, sessionAt } from "../helpers/answers";
-import { DEMO_STUDENT_ID } from "@/db/demo";
-import { setInterests } from "@/db/queries/students";
+import { expect, test } from "./fixtures";
+import { renderedFor, sessionAt } from "../helpers/answers";
 
-// Puts Maya back the way the seed left her for the specs that follow.
-test.afterAll(async () => {
-  await setInterests(DEMO_STUDENT_ID, ["sports", "music"]);
-  await closeOpenSession();
-});
+// From the demo seed: today is on Maya's schedule and nothing is done, so it can be missed.
 
 test("the parent sees a missed session and the admin switches the interest live", async ({
   page,
