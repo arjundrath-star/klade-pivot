@@ -77,10 +77,16 @@ function audit(route, out, categories, cookie) {
   return JSON.parse(readFileSync(out, "utf8"));
 }
 
-// Bytes of JavaScript the route transferred, compressed, on the audited load.
+// Bytes of the app's own JavaScript the route transferred, compressed, on the
+// audited load: the scripts served from the audited origin. A CDN in front of
+// the deployed app adds scripts of its own (Cloudflare's analytics beacon),
+// which are not the app's budget.
 function scriptBytes(report) {
-  const items = report.audits["resource-summary"]?.details?.items ?? [];
-  return items.find((item) => item.resourceType === "script")?.transferSize ?? 0;
+  const origin = new URL(report.requestedUrl).origin;
+  const items = report.audits["network-requests"]?.details?.items ?? [];
+  return items
+    .filter((item) => item.resourceType === "Script" && item.url.startsWith(`${origin}/`))
+    .reduce((sum, item) => sum + (item.transferSize ?? 0), 0);
 }
 
 const score = (report, cat) => report.categories[cat]?.score ?? 0;
