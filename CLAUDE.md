@@ -5,12 +5,12 @@ This repository is the source of truth for Klade (Pivot), an education company, 
 ## The company in 6 lines
 
 - **What:** A mastery-paced learning platform that makes kids actually do the work and shows parents what they can explain.
-- **Who:** Public-school families with a grade 6–10 student who is either catching up or getting ahead. Parent buys and enforces; student uses.
+- **Who:** Public-school families with a grade 6–10 student who is either catching up or getting ahead. Parent buys and sets it up once; the product enforces; student uses.
 - **Thesis:** Kids learn at different rates, but schools pace by age (retention at historic lows) and grades hide the gap (grade inflation), so parents find out too late. AI that hands out answers lowers learning; AI that forces the work raises it.
 - **One-liner:** "Every kid has an AI that does the work for them. We built one that makes them do it."
 - **Summary:** Mastery-paced platform for public-school kids grades 6–10, starting with Algebra 1. Short required sessions; AI coach that won't give answers; explain-back + timed checks; parents pay for enforceable accountability and a record of what their kid can explain.
 - **Insight:** Content isn't scarce (Khan is free). Accountability and evidence of understanding are; that's what families pay Kumon/RSM for.
-- **Product:** 30-min sessions (warm-up → learn → guided practice with an AI coach that never gives answers → explain-back graded by AI → timed exit check), pace chosen at signup, milestones, same-day parent alerts.
+- **Product:** 30-min sessions (warm-up → learn → guided practice with an AI coach that never gives answers → explain-back graded by AI → timed exit check), pace chosen at signup, milestones, same-day parent alerts. XP and streaks (real); screen-time gate, mentor check-ins and completion rewards (prototypes).
 - **Model:** Parent subscription, test range $19–39/mo core; hard-coded curriculum; small-model AI only for coaching, grading, weekly analysis (~$1–2 AI cost per student per month, estimate).
 
 ## Stage & constraints
@@ -20,7 +20,7 @@ This repository is the source of truth for Klade (Pivot), an education company, 
 - Founders: Arjun (CEO, head of dev, NYU Stern), Gavin (Northwestern), Adam (Vanderbilt). All part-time students; fall 2026 is deliberately slow (discovery with teachers, parents, professors).
 - For-profit, built as a pivot inside the Klade entity.
 - Category signal: we're building in the category YC called for in its Fall 2026 RFS ("The Primer": parent-bought, consumer-scale AI tutor; stated ages ~4–10). Say "category YC called for," not "YC requested us."
-- Key MVP feature: interest-framed problems. Onboarding asks the kid's interests; same math for everyone, hand-written context variants per interest (hard-coded, no AI).
+- Key MVP feature: enforcement that does not depend on the parent: a screen-time gate with a parent rule builder (mocked as a phone panel for the MVP), XP and streaks (real), same-day alerts. Interest-framed problems (onboarding asks the kid's interests; same math for everyone, hand-written context variants per interest, no AI) are a supporting feature, never the headline: Wild Zebra claims interest personalization.
 - Vision: the learning experience adapts to each kid (pace, prior knowledge, errors, interests, supports). Never "learning styles" (unsupported).
 - Accommodations are built in (extended/untimed checks, voice/typing, TTS). Say "more kids identified with learning differences," not "more kids are neurodivergent."
 
@@ -41,6 +41,7 @@ This repository is the source of truth for Klade (Pivot), an education company, 
 - `05-teacher-interview-guide.md`: discovery interview scripts
 - `06-office-hours-prep.md`: evaluation toolkit (gstack /office-hours, startup-skill, llm-council); six forcing questions pre-answered
 - `07-pitch-language.md`: one-liners, 3-sentence summary, problem chain, say / don't-say list
+- `08-mvp-steering-oct1.md`: Oct 1 steering (positioning, enforcement system, mock policy, cut order, demo script v3). Overrides 01 to 07 where they conflict.
 - `council/council-prompts.md`: ready-to-run LLM Council questions
 
 ## Working rules for any session here
