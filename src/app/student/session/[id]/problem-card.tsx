@@ -16,6 +16,8 @@ const CoachPanel = dynamic(() => import("./coach-panel").then((m) => m.CoachPane
 });
 
 interface CoachProps {
+  /** The server has a model key. Without one the coach says it is offline and asks nothing. */
+  available: boolean;
   example: SimilarExample;
   initialTurns: readonly CoachTurn[];
 }
@@ -66,7 +68,7 @@ export function ProblemCard({ sessionId, block, index, text, equation, coach }: 
   useEffect(() => {
     attemptStart.current = Date.now();
   }, []);
-  const coachState = useCoach(sessionId, block, index, coach?.initialTurns ?? []);
+  const coachState = useCoach(sessionId, block, index, coach?.initialTurns ?? [], coach?.available);
 
   const [feedback, submit, pending] = useActionState(
     async (_prev: Feedback | null, form: FormData): Promise<Feedback | null> => {

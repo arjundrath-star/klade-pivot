@@ -7,6 +7,7 @@ import { ProblemCard } from "./problem-card";
 import { SessionComplete } from "./session-complete";
 import { SessionRunner } from "./session-runner";
 import { WorkedExample } from "./worked-example";
+import { coachConfigured } from "@/coach/client";
 import { exampleFor } from "@/coach/example";
 import { coachContext } from "@/coach/prompt";
 import {
@@ -106,6 +107,7 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
               coach={
                 isCoachedBlock(block) && !progress.solved.has(key)
                   ? {
+                      available: coachConfigured(),
                       example: exampleFor(p, session.interests),
                       initialTurns: coach.turns.get(key) ?? [],
                     }

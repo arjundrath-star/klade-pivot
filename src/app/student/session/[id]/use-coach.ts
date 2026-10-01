@@ -62,6 +62,7 @@ export function useCoach(
   block: AnsweredBlockId,
   index: number,
   initialTurns: readonly CoachTurn[],
+  available = true,
 ): CoachState {
   const router = useRouter();
   const [turns, setTurns] = useState(initialTurns);
@@ -74,8 +75,13 @@ export function useCoach(
 
   const ask = async (message: string) => {
     if (inFlight.current || level === null) return;
-    inFlight.current = true;
     setAsked(true);
+    // The server said at render time that it has no model key: say so without a request.
+    if (!available) {
+      setError(OFFLINE);
+      return;
+    }
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     setLive({ level, student: message, coach: "" });
