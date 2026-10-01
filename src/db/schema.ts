@@ -3,6 +3,7 @@ import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-or
 import { EXPLAIN_SOURCES, EXPLAIN_VERDICTS } from "@/coach/rubric";
 import type { Interest } from "@/engine/types";
 import { BLOCK_IDS, PROBLEM_BLOCK_IDS, type BlockId } from "@/session/blocks";
+import { MASTERY_STATUSES, SESSION_OUTCOMES } from "@/session/mastery";
 import { TIMER_MODES } from "@/session/timer";
 
 const id = () =>
@@ -100,6 +101,8 @@ export const sessionLogs = sqliteTable(
       .default({}),
     /** When the student confirmed they read the lesson. Next out of the learn block waits for it. */
     lessonReadAt: integer("lesson_read_at", { mode: "timestamp_ms" }),
+    /** The mastery verdict, set when the session is done. */
+    outcome: text("outcome", { enum: SESSION_OUTCOMES }),
     startedAt: integer("started_at", { mode: "timestamp_ms" }),
     completedAt: integer("completed_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
@@ -138,7 +141,28 @@ export const attempts = sqliteTable(
   (t) => [
     index("attempts_student_id_idx").on(t.studentId),
     index("attempts_session_log_id_idx").on(t.sessionLogId, t.block, t.problemIndex),
+    // An exit-check problem takes exactly one attempt, even when two tabs answer at once.
+    uniqueIndex("attempts_exit_once_idx")
+      .on(t.sessionLogId, t.problemIndex)
+      .where(sql`${t.block} = 'exit'`),
   ],
+);
+
+/**
+ * When the server first sent each exit-check problem to the student. The deadline for the answer
+ * runs from here, so reloading the page does not restart the clock.
+ */
+export const exitShown = sqliteTable(
+  "exit_shown",
+  {
+    id: id(),
+    sessionLogId: text("session_log_id")
+      .notNull()
+      .references(() => sessionLogs.id),
+    problemIndex: integer("problem_index").notNull(),
+    shownAt: integer("shown_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [uniqueIndex("exit_shown_problem_idx").on(t.sessionLogId, t.problemIndex)],
 );
 
 /**
@@ -174,6 +198,33 @@ export const explainBacks = sqliteTable(
   },
   // One row per attempt: two tabs submitting at once cannot both record a first try.
   (t) => [uniqueIndex("explain_backs_attempt_idx").on(t.sessionLogId, t.attempt)],
+);
+
+/**
+ * Where a student stands on one concept. A concept is one session template. The evidence columns
+ * point at the session that decided the status and stay null while the concept is in progress.
+ */
+export const mastery = sqliteTable(
+  "mastery",
+  {
+    id: id(),
+    studentId: text("student_id")
+      .notNull()
+      .references(() => students.id),
+    sessionTemplateId: text("session_template_id")
+      .notNull()
+      .references(() => sessionTemplates.id),
+    status: text("status", { enum: MASTERY_STATUSES }).notNull(),
+    sessionLogId: text("session_log_id").references(() => sessionLogs.id),
+    /** Exit-check problems answered correctly in that session. */
+    exitScore: integer("exit_score"),
+    /** The session's final explain-back attempt. */
+    explainBackId: text("explain_back_id").references(() => explainBacks.id),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("mastery_student_concept_idx").on(t.studentId, t.sessionTemplateId)],
 );
 
 export const alerts = sqliteTable(

@@ -238,10 +238,13 @@ describe("grading", () => {
   });
 
   it("grades nothing more once the result is final", async () => {
-    expect(await moveBlock({ sessionId, from: "exit", direction: "back" })).toMatchObject({
-      ok: true,
-      to: "explain",
-    });
+    expect(await explain(sessionId)).toEqual({ ok: false, error: "wrong-block" });
+    // The exit check has no Back, so the log is put back on block 4 directly.
+    const db = await getDb();
+    await db
+      .update(sessionLogs)
+      .set({ currentBlock: "explain" })
+      .where(eq(sessionLogs.id, sessionId));
     expect(await explain(sessionId)).toEqual({ ok: false, error: "graded" });
     expect(requestGrade).not.toHaveBeenCalled();
   });

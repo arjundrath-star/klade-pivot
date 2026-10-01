@@ -1,11 +1,30 @@
 import { test, expect, type Page } from "@playwright/test";
 import { watchConsole } from "./console";
-import { answersFor, recordPass, renderedFor } from "../helpers/answers";
+import {
+  answersFor,
+  recordPass,
+  renderedFor,
+  sessionAtExit,
+  setTimerMode,
+} from "../helpers/answers";
 import type { AnsweredBlockId } from "@/session/blocks";
 
 async function expectBlock(page: Page, label: string, position: number) {
   await expect(page.getByRole("heading", { level: 2, name: label })).toBeVisible();
   await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(position));
+}
+
+/** Answers the three exit-check problems one at a time, right where `correct` is true. */
+async function answerExitCheck(page: Page, sessionId: string, correct: readonly boolean[]) {
+  const answers = await answersFor(sessionId, "exit");
+  for (const [i, right] of correct.entries()) {
+    const card = page.getByRole("article");
+    await expect(card).toContainText(`Problem ${i + 1} of 3`);
+    await expect(card.getByRole("button", { name: "I'm stuck" })).toHaveCount(0);
+    await card.getByLabel("Your answer").fill(String(right ? answers[i] : answers[i] + 1));
+    await card.getByRole("button", { name: "Submit" }).click();
+  }
+  await expect(page.getByText("You answered all 3 problems.")).toBeVisible();
 }
 
 async function solveBlock(page: Page, sessionId: string, block: AnsweredBlockId) {
@@ -155,10 +174,47 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   await expect(page.getByText(/Passed\./)).toBeVisible();
   await next.click();
   await expectBlock(page, "Exit check", 5);
-  await page.getByRole("button", { name: "Finish" }).click();
 
-  await expect(page.getByRole("heading", { level: 1, name: "Session done" })).toBeVisible();
+  // One problem at a time, 90 seconds each, no coach and no way back to the lesson.
+  await expect(page.getByText("1:30 for each problem.")).toBeVisible();
+  const countdown = page.getByRole("timer", { name: "Time left on this problem" });
+  await expect(countdown).toHaveText(/^1:(30|2\d) left$/);
+  await expect(page.getByRole("button", { name: "Back" })).toBeDisabled();
+  const finish = page.getByRole("button", { name: "Finish" });
+  await expect(finish).toBeDisabled();
+  await answerExitCheck(page, sessionId, [true, true, true]);
+  await finish.click();
+
+  await expect(page.getByRole("heading", { level: 1, name: "Mastered" })).toBeVisible();
+  await expect(page.getByText("You got 3 of 3 on the exit check")).toBeVisible();
   await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "Mastered" })).toBeVisible();
+  await page.goto("/student");
+  await expect(page.getByText("Every session in this unit is done.")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("extended time gives each exit problem 135 seconds, and failing it repeats the concept", async ({
+  page,
+}) => {
+  const errors = watchConsole(page);
+  // There is no sign-in, so the browser is always Maya: she switches to extended time here.
+  await setTimerMode("extended");
+  const sessionId = await sessionAtExit();
+  await page.goto(`/student/session/${sessionId}`);
+  await expectBlock(page, "Exit check", 5);
+  await expect(page.getByText("2:15 for each problem.")).toBeVisible();
+  await expect(page.getByRole("timer", { name: "Time left on this problem" })).toHaveText(
+    /^2:1[0-5] left$/,
+  );
+
+  // The same rule as standard time: 1 of 3 is not mastery.
+  await answerExitCheck(page, sessionId, [true, false, false]);
+  await page.getByRole("button", { name: "Finish" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Session done" })).toBeVisible();
+  await expect(page.getByText("This concept repeats next session.")).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to today" }).click();
+  await expect(page.getByText("Today: repeat two-step equations")).toBeVisible();
   expect(errors).toEqual([]);
 });

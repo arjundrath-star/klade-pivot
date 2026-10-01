@@ -19,7 +19,11 @@ export const PROBLEM_BLOCK_IDS = ["warmup", "guided", "exit"] as const;
 
 export type ProblemBlockId = (typeof PROBLEM_BLOCK_IDS)[number];
 
-/** Blocks that take answers today. Each one gates Next until every problem has a correct attempt. */
+/**
+ * Practice blocks: answers retry until right, and Next waits for a correct attempt on every problem.
+ * The exit check takes answers too but is not one of these: it takes one attempt per problem, and
+ * "all correct" would trap a student who fails it.
+ */
 export const ANSWERED_BLOCK_IDS = ["warmup", "guided"] as const satisfies readonly ProblemBlockId[];
 
 export type AnsweredBlockId = (typeof ANSWERED_BLOCK_IDS)[number];
@@ -42,8 +46,8 @@ export function problemKey(block: ProblemBlockId, index: number): string {
   return `${block}:${index}`;
 }
 
-/** How many problems each answered block holds. */
-export type ProblemCounts = Readonly<Record<AnsweredBlockId, number>>;
+/** How many problems each problem block holds. */
+export type ProblemCounts = Readonly<Record<ProblemBlockId, number>>;
 
 /** What the student has done so far in a session, as stored on the server. */
 export interface SessionProgress {
@@ -53,12 +57,14 @@ export interface SessionProgress {
   lessonRead: boolean;
   /** Where the explain-back stands, from the graded attempts on the server. */
   explainBack: ExplainStatus;
+  /** Exit-check problems answered, one attempt each, right or wrong. */
+  exitAnswered: number;
 }
 
 /**
  * A block is complete when its gate is met: the lesson confirmed as read for learn, every problem
  * solved for an answered block, a final explain-back result (a pass, or the retry graded either
- * way) for explain. The exit block is a stub that never holds the student back.
+ * way) for explain, an attempt on every problem for the exit check.
  */
 export function isBlockComplete(
   block: BlockId,
@@ -67,6 +73,7 @@ export function isBlockComplete(
 ): boolean {
   if (block === "learn") return progress.lessonRead;
   if (block === "explain") return isExplainFinal(progress.explainBack);
+  if (block === "exit") return progress.exitAnswered >= counts.exit;
   if (!isAnsweredBlock(block)) return true;
   for (let index = 0; index < counts[block]; index += 1) {
     if (!progress.solved.has(problemKey(block, index))) return false;
@@ -77,15 +84,18 @@ export function isBlockComplete(
 export type Direction = "next" | "back";
 
 type StepResult =
-  { ok: true; to: BlockId | "done" } | { ok: false; error: "incomplete" | "first-block" };
+  | { ok: true; to: BlockId | "done" }
+  | { ok: false; error: "incomplete" | "first-block" | "exit-check" };
 
 /**
- * Moves one block. Back is always open except from the first block; Next needs the current block
+ * Moves one block. Back is open except from the first block and from the exit check, which is
+ * closed-book: the lesson's worked example is one block away. Next needs the current block
  * complete, and Next from the last block finishes the session.
  */
 export function step(current: BlockId, direction: Direction, currentComplete: boolean): StepResult {
   const index = BLOCK_IDS.indexOf(current);
   if (direction === "back") {
+    if (current === "exit") return { ok: false, error: "exit-check" };
     return index === 0
       ? { ok: false, error: "first-block" }
       : { ok: true, to: BLOCK_IDS[index - 1] };

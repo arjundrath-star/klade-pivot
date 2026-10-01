@@ -1,11 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { blockBudgetSeconds, formatClock, leaveBlock, timeInBlock } from "@/session/timer";
+import {
+  blockBudgetSeconds,
+  exitProblemSeconds,
+  formatClock,
+  isExitAnswerLate,
+  leaveBlock,
+  timeInBlock,
+} from "@/session/timer";
 
 describe("blockBudgetSeconds", () => {
   it("budgets each block's minutes, half again for extended time, nothing for untimed", () => {
     expect(blockBudgetSeconds("warmup", "standard")).toBe(240);
     expect(blockBudgetSeconds("guided", "extended")).toBe(900);
     expect(blockBudgetSeconds("exit", "untimed")).toBeNull();
+  });
+});
+
+describe("exit-check timer", () => {
+  it("gives 90 seconds a problem, 135 for extended time, no limit for untimed", () => {
+    expect(exitProblemSeconds("standard")).toBe(90);
+    expect(exitProblemSeconds("extended")).toBe(135);
+    expect(exitProblemSeconds("untimed")).toBeNull();
+  });
+
+  it("counts an answer late only past the student's limit and the transit allowance", () => {
+    expect(isExitAnswerLate(89_000, "standard")).toBe(false);
+    expect(isExitAnswerLate(91_500, "standard")).toBe(false);
+    expect(isExitAnswerLate(93_000, "standard")).toBe(true);
+    expect(isExitAnswerLate(130_000, "extended")).toBe(false);
+    expect(isExitAnswerLate(140_000, "extended")).toBe(true);
+    expect(isExitAnswerLate(10 * 60 * 60 * 1000, "untimed")).toBe(false);
   });
 });
 

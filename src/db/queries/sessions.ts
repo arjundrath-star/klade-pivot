@@ -1,46 +1,44 @@
-import { and, asc, eq, notExists, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { sessionLogs, sessionTemplates, students, units } from "@/db/schema";
+import { mastery, sessionLogs, sessionTemplates, students, units } from "@/db/schema";
 import type { BlockId } from "@/session/blocks";
+import type { SessionOutcome } from "@/session/mastery";
 import type { BlockTimes } from "@/session/timer";
 
 type TodaySession =
-  | { kind: "open"; sessionId: string; title: string }
-  | { kind: "next"; templateId: string; title: string }
+  | { kind: "open"; sessionId: string; title: string; repeat: boolean }
+  | { kind: "next"; templateId: string; title: string; repeat: boolean }
   | { kind: "complete" };
 
-/** The session the student should do today: the one in progress, else the next one not done. */
+/**
+ * The session the student should do today: the one in progress, else a concept marked Repeat,
+ * else the first concept in course order not yet mastered. `repeat` says the concept is a repeat.
+ */
 export async function findTodaySession(studentId: string): Promise<TodaySession> {
   const db = await getDb();
+  const studentMastery = and(
+    eq(mastery.sessionTemplateId, sessionTemplates.id),
+    eq(mastery.studentId, studentId),
+  );
+  const isRepeat = sql<boolean>`${mastery.status} is 'repeat'`.mapWith(Boolean);
   const [[open], [next]] = await Promise.all([
     db
-      .select({ id: sessionLogs.id, title: sessionTemplates.title })
+      .select({ id: sessionLogs.id, title: sessionTemplates.title, repeat: isRepeat })
       .from(sessionLogs)
       .innerJoin(sessionTemplates, eq(sessionTemplates.id, sessionLogs.sessionTemplateId))
+      .leftJoin(mastery, studentMastery)
       .where(and(eq(sessionLogs.studentId, studentId), eq(sessionLogs.status, "in_progress"))),
     db
-      .select({ id: sessionTemplates.id, title: sessionTemplates.title })
+      .select({ id: sessionTemplates.id, title: sessionTemplates.title, repeat: isRepeat })
       .from(sessionTemplates)
       .innerJoin(units, eq(units.id, sessionTemplates.unitId))
-      .where(
-        notExists(
-          db
-            .select({ id: sessionLogs.id })
-            .from(sessionLogs)
-            .where(
-              and(
-                eq(sessionLogs.sessionTemplateId, sessionTemplates.id),
-                eq(sessionLogs.studentId, studentId),
-                eq(sessionLogs.status, "done"),
-              ),
-            ),
-        ),
-      )
-      .orderBy(asc(units.position), asc(sessionTemplates.position))
+      .leftJoin(mastery, studentMastery)
+      .where(or(isNull(mastery.status), ne(mastery.status, "mastered")))
+      .orderBy(desc(isRepeat), asc(units.position), asc(sessionTemplates.position))
       .limit(1),
   ]);
-  if (open) return { kind: "open", sessionId: open.id, title: open.title };
-  if (next) return { kind: "next", templateId: next.id, title: next.title };
+  if (open) return { kind: "open", sessionId: open.id, title: open.title, repeat: open.repeat };
+  if (next) return { kind: "next", templateId: next.id, title: next.title, repeat: next.repeat };
   return { kind: "complete" };
 }
 
@@ -67,7 +65,14 @@ export async function openTodaySession(studentId: string, seed: number): Promise
     })
     .onConflictDoNothing()
     .returning({ id: sessionLogs.id });
-  if (created) return created.id;
+  if (created) {
+    // A concept already marked Repeat keeps that mark until this session decides it again.
+    await db
+      .insert(mastery)
+      .values({ studentId, sessionTemplateId: today.templateId, status: "in_progress" })
+      .onConflictDoNothing();
+    return created.id;
+  }
 
   // A concurrent request opened one first; the one-open-session index kept it to one.
   const raced = await findTodaySession(studentId);
@@ -87,6 +92,8 @@ export async function getSession(id: string, studentId: string) {
       blockStartedAt: sessionLogs.blockStartedAt,
       blockElapsedMs: sessionLogs.blockElapsedMs,
       lessonReadAt: sessionLogs.lessonReadAt,
+      outcome: sessionLogs.outcome,
+      sessionTemplateId: sessionLogs.sessionTemplateId,
       title: sessionTemplates.title,
       contentKey: sessionTemplates.contentKey,
       interests: students.interests,
@@ -100,25 +107,20 @@ export async function getSession(id: string, studentId: string) {
 }
 
 /**
- * Moves an open session from block `from` to `to`, or finishes it, saving the time spent in each
- * block. False when the session is no longer open at `from`, for example because another tab moved
- * it first.
+ * Moves an open session from block `from` to block `to`, saving the time spent in each block. False
+ * when the session is no longer open at `from`, for example because another tab moved it first.
+ * Finishing a session is `finishSession`.
  */
 export async function moveSession(
   id: string,
   from: BlockId,
-  to: BlockId | "done",
+  to: BlockId,
   blockElapsedMs: BlockTimes,
 ): Promise<boolean> {
   const db = await getDb();
-  const now = new Date();
   const moved = await db
     .update(sessionLogs)
-    .set(
-      to === "done"
-        ? { status: "done", completedAt: now, blockElapsedMs }
-        : { currentBlock: to, blockStartedAt: now, blockElapsedMs },
-    )
+    .set({ currentBlock: to, blockStartedAt: new Date(), blockElapsedMs })
     .where(
       and(
         eq(sessionLogs.id, id),
@@ -149,4 +151,48 @@ export async function markLessonRead(id: string, studentId: string): Promise<boo
     )
     .returning({ id: sessionLogs.id });
   return marked.length > 0;
+}
+
+interface Finish {
+  sessionLogId: string;
+  studentId: string;
+  sessionTemplateId: string;
+  outcome: SessionOutcome;
+  exitScore: number;
+  explainBackId: string;
+  blockElapsedMs: BlockTimes;
+}
+
+/**
+ * Closes a session open on the exit check with its verdict and writes the concept's mastery row, in
+ * one batch. False when the session was not open on the exit check any more.
+ */
+export async function finishSession(finish: Finish): Promise<boolean> {
+  const { sessionLogId, studentId, sessionTemplateId, outcome, exitScore, explainBackId } = finish;
+  const db = await getDb();
+  const now = new Date();
+  const evidence = { status: outcome, sessionLogId, exitScore, explainBackId, updatedAt: now };
+  // The verdict comes from rows that no longer change once the exit check is answered, so a second
+  // tab finishing at the same moment writes the same mastery row; only its status update misses.
+  const [closed] = await db.batch([
+    db
+      .update(sessionLogs)
+      .set({ status: "done", outcome, completedAt: now, blockElapsedMs: finish.blockElapsedMs })
+      .where(
+        and(
+          eq(sessionLogs.id, sessionLogId),
+          eq(sessionLogs.status, "in_progress"),
+          eq(sessionLogs.currentBlock, "exit"),
+        ),
+      )
+      .returning({ id: sessionLogs.id }),
+    db
+      .insert(mastery)
+      .values({ studentId, sessionTemplateId, ...evidence })
+      .onConflictDoUpdate({
+        target: [mastery.studentId, mastery.sessionTemplateId],
+        set: evidence,
+      }),
+  ]);
+  return closed.length > 0;
 }

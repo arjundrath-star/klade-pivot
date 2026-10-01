@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { z } from "zod";
+import { ExitAnswer } from "./exit-check";
 import { ExplainBack } from "./explain-back";
 import { ProblemCard } from "./problem-card";
 import { SessionComplete } from "./session-complete";
@@ -16,15 +17,54 @@ import {
   type BlockId,
 } from "@/session/blocks";
 import { DEMO_STUDENT_ID } from "@/db/demo";
-import { loadSession } from "@/session/load";
-import { renderSessionProblem } from "@/session/problems";
-import { timeInBlock } from "@/session/timer";
+import { markExitShown } from "@/db/queries/exit";
+import { sessionSummary } from "@/session/complete";
+import { loadSession, type LoadedSession } from "@/session/load";
+import { findProblem, renderSessionProblem } from "@/session/problems";
+import { exitProblemSeconds, exitRemainingMs, formatClock, timeInBlock } from "@/session/timer";
 
-function StubPanel({ children }: { children: ReactNode }) {
+// Seen only while the runner refreshes on its way into block 4 or 5.
+const gettingReady = <p className="text-sm text-zinc-600 dark:text-zinc-400">Getting ready…</p>;
+
+/**
+ * Block 5: the next unanswered exit-check problem, one at a time. Rendering a problem starts its
+ * clock, so this runs only once the student is in the block, and the deadline runs from the first
+ * time the server sent the problem: a reload shows the time left, not a fresh clock.
+ */
+async function exitPanel({ session, problems, counts, progress }: LoadedSession) {
+  if (session.currentBlock !== "exit" || !isBlockComplete("explain", counts, progress)) {
+    return gettingReady;
+  }
+  const problem = findProblem(problems, "exit", progress.exitAnswered);
+  if (!problem) {
+    return <p>You answered all {counts.exit} problems. Press Finish to see how you did.</p>;
+  }
+  const shownAt = await markExitShown(session.id, problem.index);
+  const limitSeconds = exitProblemSeconds(session.timerMode);
+  const remainingMs = exitRemainingMs(Date.now() - shownAt.getTime(), session.timerMode);
+  const rendered = renderSessionProblem(problem, session.interests);
   return (
-    <p className="rounded-lg border border-dashed border-zinc-300 p-5 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
-      {children}
-    </p>
+    <div className="flex flex-col gap-4">
+      <p className="text-zinc-600 dark:text-zinc-400">
+        One try per problem, no coach, no hints.{" "}
+        {limitSeconds === null
+          ? "Take the time you need."
+          : `${formatClock(limitSeconds)} for each problem.`}
+      </p>
+      <article className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+        <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+          Problem {problem.index + 1} of {counts.exit}
+        </p>
+        <p className="leading-relaxed">{rendered.text}</p>
+        {rendered.kind === "symbolic" && <p className="font-mono text-xl">{rendered.equation}</p>}
+        <ExitAnswer
+          key={problem.index}
+          sessionId={session.id}
+          index={problem.index}
+          remainingMs={remainingMs}
+        />
+      </article>
+    </div>
   );
 }
 
@@ -36,7 +76,10 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
   const loaded = await loadSession(id, DEMO_STUDENT_ID);
   if (!loaded) notFound();
   const { session, content, problems, counts, progress, coach, explain } = loaded;
-  if (session.status === "done") return <SessionComplete title={session.title} />;
+  if (session.status === "done") {
+    const summary = session.outcome ? sessionSummary(loaded, session.outcome) : undefined;
+    return <SessionComplete title={session.title} summary={summary} />;
+  }
   if (session.status !== "in_progress") notFound();
 
   // Problems render on the server so the answers never reach the browser. The coach's worked
@@ -109,10 +152,9 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
         <ExplainBack sessionId={session.id} initialResults={explain.results} />
       </div>
     ) : (
-      // Seen only while the runner refreshes on its way in from guided practice.
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">Getting ready…</p>
+      gettingReady
     ),
-    exit: <StubPanel>The exit check is not built yet.</StubPanel>,
+    exit: await exitPanel(loaded),
   };
 
   return (
@@ -133,6 +175,7 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
       initialSolved={[...progress.solved]}
       initialLessonRead={progress.lessonRead}
       initialExplainBack={progress.explainBack}
+      exitAnswered={progress.exitAnswered}
       panels={panels}
     />
   );

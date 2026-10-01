@@ -64,5 +64,9 @@ export function renderSessionProblem(
 }
 
 export function problemCounts(content: SessionContent): ProblemCounts {
-  return { warmup: content.warmup.length, guided: content.guided.length };
+  return {
+    warmup: content.warmup.length,
+    guided: content.guided.length,
+    exit: content.exit.length,
+  };
 }

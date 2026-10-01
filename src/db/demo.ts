@@ -7,6 +7,9 @@ export const DEMO_STUDENT_ID = "demo-student-maya";
 
 const DEMO_FAMILY_ID = "demo-family";
 
+/** Session 1 of the seeded curriculum: two-step equations. */
+export const S1_TEMPLATE_ID = "algebra-1-linear-equations-s1";
+
 /** May 31 of the next May that has not started yet. */
 export function nextMay(now: Date): string {
   const year = now.getMonth() >= 4 ? now.getFullYear() + 1 : now.getFullYear();
@@ -38,7 +41,7 @@ export async function seedDemo(now = new Date()): Promise<void> {
     position: 1,
   };
   const session1 = {
-    id: "algebra-1-linear-equations-s1",
+    id: S1_TEMPLATE_ID,
     unitId: unit.id,
     title: "Two-step equations",
     position: 1,

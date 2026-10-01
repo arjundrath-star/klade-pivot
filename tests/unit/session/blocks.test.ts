@@ -10,14 +10,15 @@ import {
   type SessionProgress,
 } from "@/session/blocks";
 
-const counts: ProblemCounts = { warmup: 2, guided: 3 };
+const counts: ProblemCounts = { warmup: 2, guided: 3, exit: 3 };
 
 function progress(
   solvedKeys: Iterable<string>,
   lessonRead = false,
   explainBack: ExplainStatus = "pending",
+  exitAnswered = 0,
 ): SessionProgress {
-  return { solved: new Set(solvedKeys), lessonRead, explainBack };
+  return { solved: new Set(solvedKeys), lessonRead, explainBack, exitAnswered };
 }
 
 describe("block order", () => {
@@ -39,6 +40,11 @@ describe("block order", () => {
   it("goes back one block and never before the first", () => {
     expect(step("guided", "back", false)).toEqual({ ok: true, to: "learn" });
     expect(step("warmup", "back", true)).toEqual({ ok: false, error: "first-block" });
+  });
+
+  it("never goes back from the exit check, which is closed-book", () => {
+    expect(step("exit", "back", false)).toEqual({ ok: false, error: "exit-check" });
+    expect(step("exit", "back", true)).toEqual({ ok: false, error: "exit-check" });
   });
 });
 
@@ -79,8 +85,14 @@ describe("gating", () => {
     expect(at("failed")).toBe(true);
   });
 
-  it("never holds the student in the exit check while it is a stub", () => {
-    expect(isBlockComplete("exit", counts, progress([]))).toBe(true);
+  it("finishes the exit check once every problem has its one attempt, right or wrong", () => {
+    const at = (exitAnswered: number) =>
+      isBlockComplete("exit", counts, progress([], true, "passed", exitAnswered));
+    expect(at(0)).toBe(false);
+    expect(at(2)).toBe(false);
+    expect(at(3)).toBe(true);
+    // A failed explain-back does not hold the student here; the verdict reads it.
+    expect(isBlockComplete("exit", counts, progress([], true, "failed", 3))).toBe(true);
   });
 });
 

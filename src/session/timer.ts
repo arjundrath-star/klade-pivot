@@ -16,6 +16,38 @@ export function blockBudgetSeconds(block: BlockId, mode: TimerMode): number | nu
   return Math.round(BLOCKS[block].minutes * 60 * (mode === "extended" ? EXTENDED_FACTOR : 1));
 }
 
+/** Seconds a standard-time student gets for each exit-check problem (spec §3.2 block 5). */
+const EXIT_PROBLEM_SECONDS = 90;
+
+/** Seconds the student gets for each exit-check problem, or null when the student is untimed. */
+export function exitProblemSeconds(mode: TimerMode): number | null {
+  if (mode === "untimed") return null;
+  return EXIT_PROBLEM_SECONDS * (mode === "extended" ? EXTENDED_FACTOR : 1);
+}
+
+// An answer typed as the countdown hits zero still has to reach the server.
+const EXIT_GRACE_MS = 2000;
+
+/** Longest time an attempt records; a tab left open overnight counts as an hour. */
+export const MAX_ATTEMPT_MS = 60 * 60 * 1000;
+
+/** `ms` as an attempt records it: never negative, never over an hour. */
+export function attemptMs(ms: number): number {
+  return Math.min(Math.max(ms, 0), MAX_ATTEMPT_MS);
+}
+
+/** Time left on an exit-check problem shown `elapsedMs` ago, or null when the student is untimed. */
+export function exitRemainingMs(elapsedMs: number, mode: TimerMode): number | null {
+  const seconds = exitProblemSeconds(mode);
+  return seconds === null ? null : seconds * 1000 - elapsedMs;
+}
+
+/** Whether an exit-check answer `elapsedMs` after its problem was shown came after the deadline. */
+export function isExitAnswerLate(elapsedMs: number, mode: TimerMode): boolean {
+  const seconds = exitProblemSeconds(mode);
+  return seconds !== null && elapsedMs > seconds * 1000 + EXIT_GRACE_MS;
+}
+
 /** `m:ss` for a non-negative number of seconds. */
 export function formatClock(totalSeconds: number): string {
   const seconds = Math.max(0, Math.floor(totalSeconds));

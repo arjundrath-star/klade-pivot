@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { startTodaySession } from "./actions";
+import { inSentence } from "./title";
 import { DEMO_STUDENT_ID } from "@/db/demo";
 import { findTodaySession } from "@/db/queries/sessions";
 import { getStudent } from "@/db/queries/students";
@@ -34,7 +35,15 @@ export default async function StudentHome() {
               <p className="text-lg">Every session in this unit is done.</p>
             ) : (
               <>
-                <p className="text-xl font-semibold">{today.title}</p>
+                <p className="text-xl font-semibold">
+                  {today.repeat ? `Today: repeat ${inSentence(today.title)}` : today.title}
+                </p>
+                {today.repeat && (
+                  <p className="text-zinc-600 dark:text-zinc-400">
+                    Last time didn&apos;t reach mastery, so this concept comes again before anything
+                    new.
+                  </p>
+                )}
                 <p className="text-zinc-600 dark:text-zinc-400">
                   About 30 minutes: warm-up, lesson, guided practice, explain-back, exit check.
                 </p>

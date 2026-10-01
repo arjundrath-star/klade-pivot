@@ -8,7 +8,7 @@ import { DEMO_STUDENT_ID } from "@/db/demo";
 import { openTodaySession } from "@/db/queries/sessions";
 import { aiUsage, attempts, coachTurns } from "@/db/schema";
 import { answersFor, recordPass } from "../../helpers/answers";
-import { solve, withTempDatabase } from "../../helpers/database";
+import { answerExit, solve, withTempDatabase } from "../../helpers/database";
 
 // The model is mocked; the route, the filter and the database are real.
 vi.mock("@/coach/client", () => ({
@@ -256,6 +256,7 @@ describe("coaching", () => {
     expect(await moveBlock({ sessionId, from: "explain", direction: "next" })).toMatchObject({
       to: "exit",
     });
+    await answerExit(sessionId, [true, true, true]);
     expect(await moveBlock({ sessionId, from: "exit", direction: "next" })).toMatchObject({
       to: "done",
     });

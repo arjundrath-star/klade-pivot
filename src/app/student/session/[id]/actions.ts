@@ -14,8 +14,9 @@ import {
   type ExplainResult,
   type ExplainStatus,
 } from "@/coach/rubric";
-import { recordAttempt } from "@/db/queries/attempts";
+import { recordAttempt, recordExitAttempt } from "@/db/queries/attempts";
 import { DEMO_STUDENT_ID } from "@/db/demo";
+import { exitShownAt } from "@/db/queries/exit";
 import { graderCalls, recordExplainBack, recordGraderCalls } from "@/db/queries/explain";
 import { markLessonRead, moveSession } from "@/db/queries/sessions";
 import { checkAnswer } from "@/engine/check";
@@ -29,16 +30,14 @@ import {
   step,
   type BlockId,
 } from "@/session/blocks";
+import { completeSession, type CompleteError } from "@/session/complete";
 import { loadSession, openProblem, type OpenProblemError } from "@/session/load";
-import { leaveBlock } from "@/session/timer";
-
-const MAX_ATTEMPT_MS = 60 * 60 * 1000;
+import type { SessionSummary } from "@/session/mastery";
+import { findProblem } from "@/session/problems";
+import { attemptMs, isExitAnswerLate, leaveBlock } from "@/session/timer";
 
 // Longer gaps (a tab left open overnight) are recorded as an hour rather than rejected.
-const elapsedMs = z
-  .int()
-  .nonnegative()
-  .transform((ms) => Math.min(ms, MAX_ATTEMPT_MS));
+const elapsedMs = z.int().nonnegative().transform(attemptMs);
 
 const AnswerInput = z.object({
   sessionId: z.uuid(),
@@ -63,6 +62,18 @@ const ANSWER_ERRORS: Readonly<Record<OpenProblemError, AnswerError>> = {
   solved: "already-solved",
 };
 
+const ExitAnswerInput = z.object({
+  sessionId: z.uuid(),
+  index: z.int().nonnegative(),
+  answer: z.string().max(40),
+  /** The countdown ran out: the answer is recorded as incorrect, whatever was typed. */
+  expired: z.boolean(),
+});
+
+export type ExitAnswerResult =
+  | { ok: true; verdict: "recorded" | "not-a-number" }
+  | { ok: false; error: "invalid" | "closed" | "wrong-block" | "answered" };
+
 const ExplainInput = z.object({
   sessionId: z.uuid(),
   text: untrustedText(MAX_EXPLANATION_LENGTH),
@@ -84,10 +95,22 @@ const MoveInput = z.object({
   direction: z.enum(["next", "back"]),
 });
 
+export type MoveError =
+  "invalid" | "closed" | "moved" | "incomplete" | "first-block" | "exit-check";
+
 export type MoveResult =
   /** `elapsedMs` is the time already spent in `to` on earlier visits. */
-  | { ok: true; to: BlockId | "done"; elapsedMs: number }
-  | { ok: false; error: "invalid" | "closed" | "moved" | "incomplete" | "first-block" };
+  | { ok: true; to: BlockId; elapsedMs: number }
+  | { ok: true; to: "done"; summary: SessionSummary }
+  | { ok: false; error: MoveError };
+
+// Help in the exit check never comes through the app, so a session refused for it reads as broken.
+const COMPLETE_ERRORS: Readonly<Record<CompleteError, MoveError>> = {
+  closed: "closed",
+  moved: "moved",
+  incomplete: "incomplete",
+  aided: "invalid",
+};
 
 // Sign-in is not built yet, so every session action acts as the demo student.
 async function loadOpenSession(sessionId: string) {
@@ -125,6 +148,50 @@ export async function submitAnswer(input: z.input<typeof AnswerInput>): Promise<
 }
 
 /**
+ * Records the one attempt an exit-check problem takes. Only the problem on screen can be answered,
+ * and the clock is the server's: an answer that arrives after the student's time per problem, or
+ * that the browser sent because its countdown ran out, is recorded as incorrect. An on-time answer
+ * that is not a number is not recorded, so the student can fix it while the clock runs.
+ */
+export async function submitExitAnswer(
+  input: z.input<typeof ExitAnswerInput>,
+): Promise<ExitAnswerResult> {
+  const parsed = ExitAnswerInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid" };
+  const { sessionId, index, answer, expired } = parsed.data;
+
+  const [open, shownAt] = await Promise.all([
+    loadOpenSession(sessionId),
+    exitShownAt(sessionId, index),
+  ]);
+  if (!open) return { ok: false, error: "closed" };
+  if (open.session.currentBlock !== "exit") return { ok: false, error: "wrong-block" };
+  const current = open.progress.exitAnswered;
+  if (index < current) return { ok: false, error: "answered" };
+  const problem = findProblem(open.problems, "exit", index);
+  if (index > current || !problem || !shownAt) return { ok: false, error: "invalid" };
+
+  const elapsed = Date.now() - shownAt.getTime();
+  const late = expired || isExitAnswerLate(elapsed, open.session.timerMode);
+  const instance = generateInstance(problem.template, problem.seed);
+  const check = checkAnswer(answer, rational(instance.solution));
+  if (!late && check.normalized === null) return { ok: true, verdict: "not-a-number" };
+
+  const recorded = await recordExitAttempt({
+    studentId: open.session.studentId,
+    sessionLogId: sessionId,
+    problemIndex: index,
+    templateKey: instance.templateKey,
+    seed: instance.seed,
+    answer: answer.trim(),
+    correct: !late && check.correct,
+    timeMs: attemptMs(elapsed),
+    hintsUsed: open.coach.turns.get(problemKey("exit", index))?.length ?? 0,
+  });
+  return recorded ? { ok: true, verdict: "recorded" } : { ok: false, error: "answered" };
+}
+
+/**
  * Records that the student read the lesson, which unlocks Next out of the learn block. "closed"
  * means the session is not open on the learn block, for example because another tab moved it.
  */
@@ -135,7 +202,10 @@ export async function confirmLesson(input: z.input<typeof LessonInput>): Promise
   return marked ? { ok: true } : { ok: false, error: "closed" };
 }
 
-/** Moves the session one block. The server decides whether the current block is complete. */
+/**
+ * Moves the session one block. The server decides whether the current block is complete. Next from
+ * the exit check finishes the session through `completeSession`, which computes the verdict.
+ */
 export async function moveBlock(input: z.input<typeof MoveInput>): Promise<MoveResult> {
   const parsed = MoveInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid" };
@@ -147,10 +217,15 @@ export async function moveBlock(input: z.input<typeof MoveInput>): Promise<MoveR
 
   const result = step(from, direction, isBlockComplete(from, open.counts, open.progress));
   if (!result.ok) return result;
+  if (result.to === "done") {
+    const completed = await completeSession(sessionId, DEMO_STUDENT_ID);
+    if (!completed.ok) return { ok: false, error: COMPLETE_ERRORS[completed.error] };
+    return { ok: true, to: "done", summary: completed.summary };
+  }
   const times = leaveBlock(open.session.blockElapsedMs, from, open.session.blockStartedAt);
   const moved = await moveSession(sessionId, from, result.to, times);
   if (!moved) return { ok: false, error: "moved" };
-  return { ok: true, to: result.to, elapsedMs: result.to === "done" ? 0 : (times[result.to] ?? 0) };
+  return { ok: true, to: result.to, elapsedMs: times[result.to] ?? 0 };
 }
 
 /** Characters per second of composing; anything faster than a second counts as one second. */

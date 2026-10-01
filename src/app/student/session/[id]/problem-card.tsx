@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useActionState, useEffect, useId, useRef } from "react";
 import { submitAnswer, type AnswerResult } from "./actions";
-import { useProgress } from "./session-runner";
+import { NOT_A_NUMBER_MESSAGE, useProgress } from "./session-runner";
 import { useCoach } from "./use-coach";
 import type { SimilarExample } from "@/coach/example";
 import type { CoachTurn } from "@/coach/turns";
@@ -45,7 +45,7 @@ function feedbackFor(result: AnswerResult): Feedback {
     case "incorrect":
       return { tone: "bad", message: "Not quite. Try again." };
     case "not-a-number":
-      return { tone: "info", message: "Enter a number, like 4, -3, or 1/2." };
+      return { tone: "info", message: NOT_A_NUMBER_MESSAGE };
   }
 }
 

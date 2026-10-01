@@ -10,6 +10,7 @@ export async function explainBacksFor(sessionLogId: string) {
   const db = await getDb();
   return db
     .select({
+      id: explainBacks.id,
       block: explainBacks.block,
       problemIndex: explainBacks.problemIndex,
       attempt: explainBacks.attempt,

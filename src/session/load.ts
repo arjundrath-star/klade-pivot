@@ -1,7 +1,7 @@
 import { explainStatus, type ExplainResult } from "@/coach/rubric";
 import type { CoachTurn } from "@/coach/turns";
 import { sessionContent } from "@/content/sessions";
-import { solvedProblems } from "@/db/queries/attempts";
+import { exitAttemptsFor, solvedProblems } from "@/db/queries/attempts";
 import { coachTurnsFor } from "@/db/queries/coach";
 import { explainBacksFor } from "@/db/queries/explain";
 import { getSession } from "@/db/queries/sessions";
@@ -61,11 +61,12 @@ function explainResult(row: ExplainBackRow): ExplainResult {
  * coach has said so far, in one round trip. Undefined when the student has no log with that id.
  */
 export async function loadSession(id: string, studentId: string) {
-  const [session, solved, turns, explained] = await Promise.all([
+  const [session, solved, turns, explained, exitAttempts] = await Promise.all([
     getSession(id, studentId),
     solvedProblems(id),
     coachTurnsFor(id),
     explainBacksFor(id),
+    exitAttemptsFor(id),
   ]);
   if (!session) return undefined;
   const content = sessionContent(session.contentKey);
@@ -80,6 +81,7 @@ export async function loadSession(id: string, studentId: string) {
       solved: new Set(solved.map((p) => problemKey(p.block, p.problemIndex))),
       lessonRead: session.lessonReadAt !== null,
       explainBack: explainStatus(explained.map((row) => row.verdict)),
+      exitAnswered: exitAttempts.length,
     } satisfies SessionProgress,
     coach: {
       /** Coach calls made in the session so far, against the per-session limit. */
@@ -91,7 +93,11 @@ export async function loadSession(id: string, studentId: string) {
       problem: explainProblem(problems, coachTurns, explained),
       /** Graded attempts, first attempt first. */
       results: explained.map(explainResult),
+      /** The row of the latest graded attempt, which is the final one once the status is final. */
+      latestId: explained.at(-1)?.id,
     },
+    /** Exit-check attempts, one per answered problem. */
+    exitAttempts,
   };
 }
 

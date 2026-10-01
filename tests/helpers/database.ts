@@ -2,8 +2,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, expect, vi } from "vitest";
-import { submitAnswer } from "@/app/student/session/[id]/actions";
+import { submitAnswer, submitExitAnswer } from "@/app/student/session/[id]/actions";
 import { seedDemo } from "@/db/demo";
+import { markExitShown } from "@/db/queries/exit";
 import type { AnsweredBlockId } from "@/session/blocks";
 import { answersFor } from "./answers";
 
@@ -35,6 +36,22 @@ export async function solve(
     expect(await submitAnswer({ sessionId, block, index, answer, timeMs: 1000 })).toEqual({
       ok: true,
       verdict: "correct",
+    });
+  }
+}
+
+/**
+ * Shows each exit-check problem in turn, as the page does, and answers it right where `correct` is
+ * true and wrong where it is false.
+ */
+export async function answerExit(sessionId: string, correct: readonly boolean[]): Promise<void> {
+  const answers = await answersFor(sessionId, "exit");
+  for (const [index, right] of correct.entries()) {
+    await markExitShown(sessionId, index);
+    const answer = String(right ? answers[index] : answers[index] + 1);
+    expect(await submitExitAnswer({ sessionId, index, answer, expired: false })).toEqual({
+      ok: true,
+      verdict: "recorded",
     });
   }
 }

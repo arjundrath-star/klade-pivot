@@ -3,8 +3,9 @@
 import { createContext, use, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BlockTimer } from "./block-timer";
+import { loadExitPanel } from "./exit-check";
 import { loadExplainPanel } from "./explain-back";
-import { moveBlock } from "./actions";
+import { moveBlock, type MoveError } from "./actions";
 import { SessionComplete } from "./session-complete";
 import type { ExplainStatus } from "@/coach/rubric";
 import {
@@ -16,6 +17,7 @@ import {
   type ProblemCounts,
   type SessionProgress,
 } from "@/session/blocks";
+import type { SessionSummary } from "@/session/mastery";
 import { blockBudgetSeconds, type TimerMode } from "@/session/timer";
 
 interface ProgressState extends SessionProgress {
@@ -35,6 +37,8 @@ export function useProgress(): ProgressState {
 
 export const RELOAD_MESSAGE = "Something went wrong. Reload the page.";
 
+export const NOT_A_NUMBER_MESSAGE = "Enter a number, like 4, -3, or 1/2.";
+
 /** What unlocks Next in a block that is not complete yet. */
 function lockedMessage(block: BlockId): string {
   switch (block) {
@@ -42,13 +46,15 @@ function lockedMessage(block: BlockId): string {
       return "Go through every step, then confirm you've read it, to unlock Next.";
     case "explain":
       return "Get your explanation graded to unlock Next.";
+    case "exit":
+      return "Answer every problem to unlock Finish.";
     default:
       return "Solve every problem to unlock Next.";
   }
 }
 
 // "moved" and "closed" have no message: the runner reloads the session from the server instead.
-function moveError(error: "invalid" | "incomplete" | "first-block", block: BlockId): string {
+function moveError(error: Exclude<MoveError, "moved" | "closed">, block: BlockId): string {
   switch (error) {
     case "invalid":
       return RELOAD_MESSAGE;
@@ -56,6 +62,8 @@ function moveError(error: "invalid" | "incomplete" | "first-block", block: Block
       return lockedMessage(block);
     case "first-block":
       return "This is the first block.";
+    case "exit-check":
+      return "The exit check can't go back.";
   }
 }
 
@@ -70,6 +78,8 @@ interface SessionRunnerProps {
   initialSolved: readonly string[];
   initialLessonRead: boolean;
   initialExplainBack: ExplainStatus;
+  /** Read live from each render: an exit answer refreshes the page with the new count. */
+  exitAnswered: number;
   /** Each block's panel, rendered on the server. */
   panels: Readonly<Record<BlockId, ReactNode>>;
 }
@@ -84,14 +94,15 @@ export function SessionRunner({
   initialSolved,
   initialLessonRead,
   initialExplainBack,
+  exitAnswered,
   panels,
 }: SessionRunnerProps) {
   const router = useRouter();
-  // Where the student is, and how long they had already spent there when they arrived.
-  const [at, setAt] = useState<{ block: BlockId | "done"; elapsedMs: number }>({
-    block: initialBlock,
-    elapsedMs: initialElapsedMs,
-  });
+  // Where the student is, and how long they had already spent there when they arrived; once the
+  // session is finished, its verdict.
+  const [at, setAt] = useState<
+    { block: BlockId; elapsedMs: number } | { block: "done"; summary: SessionSummary }
+  >({ block: initialBlock, elapsedMs: initialElapsedMs });
   const [solved, setSolved] = useState<ReadonlySet<string>>(() => new Set(initialSolved));
   const [lessonRead, setLessonRead] = useState(initialLessonRead);
   const [explainBack, setExplainBack] = useState(initialExplainBack);
@@ -101,10 +112,15 @@ export function SessionRunner({
   const markSolved = (key: string) => setSolved((prev) => new Set(prev).add(key));
   const markLessonRead = () => setLessonRead(true);
 
-  if (at.block === "done") return <SessionComplete title={title} />;
+  if (at.block === "done") return <SessionComplete title={title} summary={at.summary} />;
   const block = at.block;
   const position = BLOCK_IDS.indexOf(block);
-  const complete = isBlockComplete(block, counts, { solved, lessonRead, explainBack });
+  const complete = isBlockComplete(block, counts, {
+    solved,
+    lessonRead,
+    explainBack,
+    exitAnswered,
+  });
   const last = position === BLOCK_IDS.length - 1;
 
   const move = (direction: Direction) => {
@@ -116,12 +132,20 @@ export function SessionRunner({
         else setError(moveError(result.error, block));
         return;
       }
-      setAt({ block: result.to, elapsedMs: result.elapsedMs });
-      // The page rendered block 4 before guided practice was finished, so it has no problem to
-      // explain yet; the refresh renders it now.
-      // The panel's code downloads while the refresh runs.
+      setAt(
+        result.to === "done"
+          ? { block: "done", summary: result.summary }
+          : { block: result.to, elapsedMs: result.elapsedMs },
+      );
+      // The page renders blocks 4 and 5 only once the student reaches them: block 4 needs guided
+      // practice finished, and showing block 5 starts its clock. The refresh renders them now,
+      // and the panel's code downloads while it runs.
       if (block === "guided" && result.to === "explain") {
         void loadExplainPanel();
+        router.refresh();
+      }
+      if (block === "explain" && result.to === "exit") {
+        void loadExitPanel();
         router.refresh();
       }
     });
@@ -129,7 +153,15 @@ export function SessionRunner({
 
   return (
     <ProgressContext
-      value={{ solved, lessonRead, explainBack, markSolved, markLessonRead, setExplainBack }}
+      value={{
+        solved,
+        lessonRead,
+        explainBack,
+        exitAnswered,
+        markSolved,
+        markLessonRead,
+        setExplainBack,
+      }}
     >
       <div className="flex flex-col gap-8">
         <header className="flex flex-col gap-4">
@@ -156,7 +188,7 @@ export function SessionRunner({
             <button
               type="button"
               onClick={() => move("back")}
-              disabled={position === 0 || pending}
+              disabled={position === 0 || block === "exit" || pending}
               className="btn-secondary"
             >
               Back

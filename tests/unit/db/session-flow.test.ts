@@ -10,7 +10,7 @@ import { getStudent } from "@/db/queries/students";
 import { attempts, students } from "@/db/schema";
 import { sessionProblems } from "@/session/problems";
 import { answersFor, recordPass } from "../../helpers/answers";
-import { solve, withTempDatabase } from "../../helpers/database";
+import { answerExit, solve, withTempDatabase } from "../../helpers/database";
 
 // Runs the session flow against a real libSQL file.
 withTempDatabase("klade-db-", new Date("2026-09-29T12:00:00Z"));
@@ -228,10 +228,11 @@ describe("session flow", () => {
     expect(await moveBlock({ sessionId, from: "explain", direction: "next" })).toMatchObject({
       ok: true,
     });
+    await answerExit(sessionId, [true, true, true]);
     expect(await moveBlock({ sessionId, from: "exit", direction: "next" })).toEqual({
       ok: true,
       to: "done",
-      elapsedMs: 0,
+      summary: { outcome: "mastered", exitCorrect: 3, exitTotal: 3, explainPassed: true },
     });
 
     const session = await getSession(sessionId, DEMO_STUDENT_ID);

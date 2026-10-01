@@ -35,8 +35,12 @@ describe("sessionProblems", () => {
     expect(new Set(seeds).size).toBe(seeds.length);
   });
 
-  it("counts the problems in each answered block", () => {
-    expect(problemCounts(s1)).toEqual({ warmup: s1.warmup.length, guided: s1.guided.length });
+  it("counts the problems in each problem block", () => {
+    expect(problemCounts(s1)).toEqual({
+      warmup: s1.warmup.length,
+      guided: s1.guided.length,
+      exit: s1.exit.length,
+    });
   });
 });
 
