@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { APP_DESCRIPTION, APP_NAME, THEME_COLOR } from "@/config/app";
+import { APP_URL } from "@/config/app-url";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,10 +15,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Klade",
-  description:
-    "Mastery-paced Algebra 1. An AI coach that makes the student do the work, and shows the parent what they can explain.",
+  metadataBase: APP_URL,
+  title: APP_NAME,
+  applicationName: APP_NAME,
+  description: APP_DESCRIPTION,
+  // With the manifest, Chrome offers "Install app" and iOS adds it to the home screen.
+  appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "black-translucent" },
 };
+
+export const viewport: Viewport = { themeColor: THEME_COLOR };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
