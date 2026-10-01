@@ -1,7 +1,7 @@
 import { scheduleSlots, sessionActivity } from "@/db/queries/schedule";
 import { getStudent } from "@/db/queries/students";
 import type { ScheduleSlot, Weekday } from "@/engine/pace";
-import { streak, type Streak } from "@/engine/progress";
+import { streak, streakSpan, type Streak } from "@/engine/progress";
 import { calendarDay, plannedSlots, sessionsBehind } from "@/parent/progress";
 
 /** The student's schedule carried on through `today`, and when their sessions finished. */
@@ -31,17 +31,32 @@ export async function scheduleRecord(
   };
 }
 
-/** Where the student stands against their schedule as of `now`: sessions owed and the streak. */
-export async function studentStanding(
-  studentId: string,
-  now: Date,
-): Promise<{ behind: number; streak: Streak }> {
+/** Where the student stands against their schedule as of `now`. */
+export interface Standing {
+  /** Sessions owed. */
+  behind: number;
+  streak: Streak;
+  /** Calendar weeks the streak covers. */
+  streakWeeks: number;
+  /** An earlier streak in the record ended. */
+  streakBroken: boolean;
+  /** Sessions the student has finished. */
+  sessionsDone: number;
+}
+
+/** Where the student stands against their schedule as of `now`. */
+export async function studentStanding(studentId: string, now: Date): Promise<Standing> {
   const today = calendarDay(now);
   const { schedule, completed } = await scheduleRecord(studentId, today);
   const completedDays = completed.map(calendarDay);
+  const current = streak(schedule, completedDays, today);
+  const span = streakSpan(schedule, completedDays, today, current.count);
   return {
     behind: sessionsBehind(schedule, completedDays, today),
-    streak: streak(schedule, completedDays, today),
+    streak: current,
+    streakWeeks: span.weeks,
+    streakBroken: span.broken,
+    sessionsDone: completed.length,
   };
 }
 

@@ -1,6 +1,6 @@
 import { and, eq, sum } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { badges, mastery, sessionTemplates, xpEvents } from "@/db/schema";
+import { badges, mastery, rewardUnlocks, sessionTemplates, xpEvents } from "@/db/schema";
 import type { XpAward } from "@/engine/progress";
 
 /** An XP award for one session, as `xp_events` stores it. */
@@ -9,17 +9,28 @@ export interface XpGrant extends XpAward {
   sessionLogId: string;
 }
 
-/** What one session earned: its XP awards and the badges it was the first to earn. */
+/**
+ * What one session earned: its XP awards, and the badges and completion rewards it was the first
+ * to earn.
+ */
 export async function sessionEarnings(sessionLogId: string) {
   const db = await getDb();
-  const [xp, earned] = await Promise.all([
+  const [xp, earned, unlocked] = await Promise.all([
     db
       .select({ kind: xpEvents.kind, amount: xpEvents.amount })
       .from(xpEvents)
       .where(eq(xpEvents.sessionLogId, sessionLogId)),
     db.select({ key: badges.key }).from(badges).where(eq(badges.sessionLogId, sessionLogId)),
+    db
+      .select({ key: rewardUnlocks.key })
+      .from(rewardUnlocks)
+      .where(eq(rewardUnlocks.sessionLogId, sessionLogId)),
   ]);
-  return { xp, badges: earned.map((row) => row.key) };
+  return {
+    xp,
+    badges: earned.map((row) => row.key),
+    unlocks: unlocked.map((row) => row.key),
+  };
 }
 
 /** Content keys of the concepts the student has mastered. */

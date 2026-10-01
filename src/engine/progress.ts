@@ -3,7 +3,7 @@
  * function decide when something was earned and store it; these functions say what it is worth.
  * XP pays for work completed and gates passed, never for speed or scores.
  */
-import type { ScheduleSlot } from "@/engine/pace";
+import { addDays, weekdayOf, WEEKDAYS, type ScheduleSlot } from "@/engine/pace";
 
 export const XP_KINDS = ["warmup", "guided", "explain", "exit"] as const;
 
@@ -72,6 +72,39 @@ export function streak(
     }
   }
   return { count, untilFreeze };
+}
+
+/** The Monday of the week `day` falls in. */
+function weekOf(day: string): string {
+  return addDays(day, -WEEKDAYS.indexOf(weekdayOf(day)));
+}
+
+export interface StreakSpan {
+  /** Calendar weeks, Monday to Sunday, the current streak has a session in. */
+  weeks: number;
+  /** An earlier streak in the record ended: some completed schedule day is not in this one. */
+  broken: boolean;
+}
+
+/**
+ * What a streak of `count` as of `today` spans. `streak` adds one for every completed schedule
+ * day, none for a freeze, and starts again at a break, so the streak's sessions are its last
+ * `count` completed schedule days, and any completed day before them belonged to a streak that
+ * ended.
+ */
+export function streakSpan(
+  slots: readonly ScheduleSlot[],
+  completedDays: readonly string[],
+  today: string,
+  count: number,
+): StreakSpan {
+  const completed = new Set(completedDays);
+  const days = slots
+    .filter((slot) => slot.day <= today && completed.has(slot.day))
+    .map((slot) => slot.day)
+    .sort();
+  const run = count === 0 ? [] : days.slice(-count);
+  return { weeks: new Set(run.map(weekOf)).size, broken: run.length < days.length };
 }
 
 /** A concept of the course with content, as badges and levels count it. */

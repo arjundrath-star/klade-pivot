@@ -3,12 +3,18 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { startTodaySession } from "./actions";
 import { ProgressPanel } from "./progress-panel";
+import { rewardBoard } from "@/content/rewards";
 import { inSentence } from "@/content/title";
+import { mentorFor } from "@/db/queries/mentor";
+import { latestExplanation } from "@/db/queries/parent";
+import { rewardRows } from "@/db/queries/reward-progress";
 import { studentEarnings } from "@/db/queries/rewards";
 import { findTodaySession } from "@/db/queries/sessions";
 import { getStudent } from "@/db/queries/students";
+import { MentorCard } from "@/mentor/mentor-card";
 import { timeLabel } from "@/parent/phone-rule";
 import { PhoneSection } from "@/phone/phone-section";
+import { RewardsPanel } from "@/rewards/rewards-panel";
 import { currentStudentId } from "@/session/current-student";
 import { lockView } from "@/session/lock-status";
 import { studentStanding } from "@/session/pace";
@@ -20,13 +26,17 @@ export default async function StudentHome() {
   await connection();
   const studentId = await currentStudentId();
   const now = new Date();
-  const [student, today, standing, earnings, phone] = await Promise.all([
+  const [student, today, standing, earnings, phone, rows, mentor, explanation] = await Promise.all([
     getStudent(studentId),
     findTodaySession(studentId),
     studentStanding(studentId, now),
     studentEarnings(studentId),
     lockView(studentId, now),
+    rewardRows(studentId),
+    mentorFor(studentId),
+    latestExplanation(studentId),
   ]);
+  const rewards = rewardBoard(rows, standing);
 
   return (
     <div className="flex flex-col gap-8">
@@ -83,6 +93,12 @@ export default async function StudentHome() {
                 Prototype: this phone runs inside the app.
               </p>
             </PhoneSection>
+          )}
+          {rewards.length > 0 && (
+            <RewardsPanel entries={rewards} behind={standing.behind} viewer={{ kind: "student" }} />
+          )}
+          {mentor && (
+            <MentorCard mentor={mentor} now={now} student={{ viewer: "student", explanation }} />
           )}
           <ProgressPanel
             xp={earnings.xp}

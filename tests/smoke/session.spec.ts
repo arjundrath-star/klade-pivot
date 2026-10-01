@@ -174,6 +174,10 @@ test("a student walks all five blocks of a session and it is saved as they go", 
     await expect(badges).toHaveCount(2);
     await expect(badges.nth(0)).toContainText("Two-step equations mastered");
     await expect(badges.nth(1)).toContainText("Unit 1 Mastered");
+    // Maya's seeded 4-week streak stood at 3 of 4; a session done on its day finishes it.
+    await expect(
+      earned.getByRole("list", { name: "Rewards unlocked" }).getByRole("listitem"),
+    ).toHaveText(/Reward unlocked: Pick your mentor for a free check-in/);
   };
   await expectEarned();
   await page.reload();
@@ -189,10 +193,20 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   );
   await expect(page.getByText("1-session streak")).toBeVisible();
   await expect(page.getByText("Badges: 2 of 4")).toBeVisible();
+  const rewards = page.getByRole("region", { name: "Your rewards" });
+  await expect(rewards.getByRole("progressbar", { name: /^4-week streak/ })).toHaveAttribute(
+    "aria-valuenow",
+    "4",
+  );
+  await expect(rewards.getByText("Unlocked")).toBeVisible();
+  // The mentor's note quotes the explanation word for word.
+  const mentor = page.getByRole("region", { name: /^Your mentor/ });
+  await expect(mentor.getByRole("blockquote")).toHaveText(explanation);
 
   await page.goto("/parent");
   await expect(page.getByText("1-session streak")).toBeVisible();
   await expect(page.getByText("Streak freeze banked")).toBeVisible();
+  await expect(page.getByText("Earned: one free mentor check-in")).toBeVisible();
   expect(errors).toEqual([]);
 });
 

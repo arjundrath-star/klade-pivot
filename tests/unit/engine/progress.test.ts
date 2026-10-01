@@ -10,6 +10,7 @@ import {
   FREEZE_RESTORE_SESSIONS,
   level,
   streak,
+  streakSpan,
   XP_TABLE,
   xpAward,
   type UnitOutline,
@@ -195,5 +196,37 @@ describe("levels", () => {
       mastered: 1,
       total: 1,
     });
+  });
+});
+
+describe("the weeks a streak covers", () => {
+  const span = (done: string[], today: string) =>
+    streakSpan(SLOTS, done, today, streak(SLOTS, done, today).count);
+  const weeks = (done: string[], today: string) => span(done, today).weeks;
+
+  it("is zero without a streak", () => {
+    expect(weeks([], "2026-10-12")).toBe(0);
+  });
+
+  it("counts calendar weeks, Monday to Sunday, with a session in the streak", () => {
+    expect(weeks(days(0), "2026-10-05")).toBe(1);
+    expect(weeks(days(0, 1, 2), "2026-10-09")).toBe(1);
+    expect(weeks(days(0, 1, 2, 3), "2026-10-12")).toBe(2);
+  });
+
+  it("keeps the weeks a freeze covered", () => {
+    // Oct 9 missed, the freeze holds: Oct 5, 7 and 12 are one streak across two weeks.
+    expect(weeks(days(0, 1, 3), "2026-10-12")).toBe(2);
+  });
+
+  it("starts again after a break, and says a streak ended", () => {
+    // Oct 7 spends the freeze, Oct 9 ends the streak; Oct 12 and 14 start a new one.
+    expect(span(days(0, 3, 4), "2026-10-14")).toEqual({ weeks: 1, broken: true });
+    expect(span(days(0, 1, 3), "2026-10-12")).toEqual({ weeks: 2, broken: false });
+    expect(span([], "2026-10-12")).toEqual({ weeks: 0, broken: false });
+  });
+
+  it("ignores sessions off the schedule", () => {
+    expect(weeks(["2026-10-06"], "2026-10-06")).toBe(0);
   });
 });

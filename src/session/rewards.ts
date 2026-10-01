@@ -2,8 +2,18 @@ import { MAX_TOTAL_SCORE, totalScore } from "@/coach/rubric";
 import { ALGEBRA1_BADGES, ALGEBRA1_CONTENT } from "@/content/algebra1/concepts";
 import { masteredConcepts, sessionEarnings, type XpGrant } from "@/db/queries/rewards";
 import {
+  reachedRewards,
+  REWARD_KEYS,
+  REWARDS,
+  type Reward,
+  type RewardKey,
+} from "@/content/rewards";
+import { rewardRows } from "@/db/queries/reward-progress";
+import type { ScheduleSlot } from "@/engine/pace";
+import {
   earnedBadges,
   streak,
+  streakSpan,
   xpAward,
   XP_KINDS,
   type Badge,
@@ -33,6 +43,8 @@ export interface SessionRewards {
   streak: StreakChange;
   /** Badges this session was the first to earn, in shelf order. */
   badges: Badge[];
+  /** Completion rewards this session unlocked. */
+  unlocks: Reward[];
 }
 
 /**
@@ -59,16 +71,27 @@ export function blockXp(
 /** The student whose session finished, as `loadSession` returns them. */
 type FinishedBy = Pick<LoadedSession["session"], "id" | "studentId" | "sessionDays">;
 
-/**
- * The streak change for the session that finished at `completedAt`, counting only sessions that
- * finished before it, so it reads the same before the session is stored, right after, and on any
- * later reload. "Before" is the streak going into that day, so a day marked missed earlier and
- * then done does not show as a spent freeze.
- */
-async function streakChange(session: FinishedBy, completedAt: Date): Promise<StreakChange> {
+/** The schedule on the day a session finished, and the days sessions finished before it. */
+interface FinishRecord {
+  day: string;
+  schedule: ScheduleSlot[];
+  earlier: string[];
+}
+
+async function finishRecord(session: FinishedBy, completedAt: Date): Promise<FinishRecord> {
   const day = calendarDay(completedAt);
   const { schedule, completed } = await scheduleRecord(session.studentId, day, session.sessionDays);
   const earlier = completed.filter((at) => at.getTime() < completedAt.getTime()).map(calendarDay);
+  return { day, schedule, earlier };
+}
+
+/**
+ * The streak change for the session that finished on `day`, counting only sessions that finished
+ * before it, so it reads the same before the session is stored, right after, and on any later
+ * reload. "Before" is the streak going into that day, so a day marked missed earlier and then done
+ * does not show as a spent freeze.
+ */
+function streakChange({ day, schedule, earlier }: FinishRecord): StreakChange {
   return {
     before: streak(
       schedule.filter((slot) => slot.day < day),
@@ -92,7 +115,7 @@ export async function sessionRewards(
 ): Promise<SessionRewards> {
   const [earned, streakAfter] = await Promise.all([
     sessionEarnings(session.id),
-    change ?? streakChange(session, completedAt),
+    change ?? finishRecord(session, completedAt).then(streakChange),
   ]);
   return {
     xp: earned.xp.reduce((total, award) => total + award.amount, 0),
@@ -100,6 +123,7 @@ export async function sessionRewards(
     awards: earned.xp.toSorted((a, b) => XP_KINDS.indexOf(a.kind) - XP_KINDS.indexOf(b.kind)),
     streak: streakAfter,
     badges: ALGEBRA1_BADGES.filter((badge) => earned.badges.includes(badge.key)),
+    unlocks: REWARD_KEYS.filter((key) => earned.unlocks.includes(key)).map((key) => REWARDS[key]),
   };
 }
 
@@ -113,20 +137,30 @@ function explainedPerfectly({ explain }: LoadedSession): boolean {
 /**
  * What finishing the session at `completedAt` with `outcome` pays, worked out before the session
  * is stored so `finishSession` can write it in the same batch: the exit-check XP when the check
- * passed, and every badge the student's mastery, streak and this session's explanation will
- * qualify for once it is done.
+ * passed, every badge the student's mastery, streak and this session's explanation will qualify
+ * for once it is done, and every completion reward the streak after it puts at its target. A
+ * student with no reward rows unlocks nothing.
  */
 export async function sessionAwards(
   loaded: LoadedSession,
   outcome: SessionOutcome,
   exitCorrect: number,
   completedAt: Date,
-): Promise<{ xp: XpGrant | null; badges: string[]; change: StreakChange }> {
+): Promise<{
+  xp: XpGrant | null;
+  badges: string[];
+  unlocks: RewardKey[];
+  change: StreakChange;
+}> {
   const { session } = loaded;
-  const [change, mastered] = await Promise.all([
-    streakChange(session, completedAt),
+  const [record, mastered, rows] = await Promise.all([
+    finishRecord(session, completedAt),
     masteredConcepts(session.studentId),
+    rewardRows(session.studentId),
   ]);
+  const change = streakChange(record);
+  const done = [...record.earlier, record.day];
+  const span = streakSpan(record.schedule, done, record.day, change.after.count);
   if (outcome === "mastered") mastered.add(session.contentKey);
   const badges = earnedBadges(ALGEBRA1_CONTENT, {
     mastered,
@@ -139,6 +173,11 @@ export async function sessionAwards(
         ? { studentId: session.studentId, sessionLogId: session.id, ...xpAward("exit") }
         : null,
     badges: badges.map((badge) => badge.key),
+    unlocks: reachedRewards(rows, {
+      streakWeeks: span.weeks,
+      streakBroken: span.broken,
+      sessionsDone: done.length,
+    }),
     change,
   };
 }

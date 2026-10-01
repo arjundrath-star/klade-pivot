@@ -54,8 +54,9 @@ export function sessionSummary(
  * only when every exit-check problem has its attempt and none of them had help (decision D33); a
  * request that falls short is refused and the session stays in progress. The verdict comes from
  * the stored exit attempts and explain-back, never from the client, and is written to the concept's
- * mastery row as the log closes, with the exit-check XP and badges it earns (`sessionAwards`).
- * Side effects of a finished session belong here, like the parent's mastery alert.
+ * mastery row as the log closes, with the exit-check XP, badges and completion rewards it earns
+ * (`sessionAwards`). Side effects of a finished session belong here, like the parent's mastery
+ * alert.
  */
 export async function completeSession(
   sessionId: string,
@@ -90,6 +91,7 @@ export async function completeSession(
     completedAt,
     xp: awards.xp,
     badges: awards.badges,
+    unlocks: awards.unlocks,
   });
   if (!finished) return { ok: false, error: "moved" };
   const [rewards] = await Promise.all([

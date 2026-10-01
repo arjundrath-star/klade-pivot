@@ -6,7 +6,7 @@ import type { ComponentProps } from "react";
 // The screen loads as its own chunk after the page, so no route's first load carries it.
 const PhonePanel = dynamic(() => import("./phone-panel").then((m) => m.PhonePanel), {
   ssr: false,
-  loading: () => <div className="h-full rounded-[2.1rem] bg-[#1B1838]" />,
+  loading: () => <div className="h-full rounded-[2.1rem] bg-dusk" />,
 });
 
 /** The phone's body, drawn at its full size before the screen inside it loads. */

@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { EXPLAIN_RECORD_SOURCES, EXPLAIN_VERDICTS } from "@/coach/rubric";
-import { DEFAULT_SESSION_TIME, type Weekday } from "@/engine/pace";
+import { REWARD_KEYS } from "@/content/rewards";
+import { DEFAULT_SESSION_TIME, WEEKDAYS, type Weekday } from "@/engine/pace";
 import { XP_KINDS } from "@/engine/progress";
 import type { Interest } from "@/engine/types";
 import { BLOCK_IDS, PROBLEM_BLOCK_IDS, type BlockId } from "@/session/blocks";
@@ -361,6 +362,75 @@ export const lockRules = sqliteTable("lock_rules", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
+});
+
+/**
+ * Progress toward one completion reward (steering §4.1). Prototype: the rows are seeded, and a
+ * reward that reads live data adds it on top (the header of src/content/rewards says which).
+ * A student without rows has no rewards panel and unlocks nothing.
+ */
+export const rewardProgress = sqliteTable(
+  "reward_progress",
+  {
+    id: id(),
+    studentId: text("student_id")
+      .notNull()
+      .references(() => students.id),
+    key: text("key", { enum: REWARD_KEYS }).notNull(),
+    current: integer("current").notNull(),
+    target: integer("target").notNull(),
+  },
+  (t) => [uniqueIndex("reward_progress_student_key_idx").on(t.studentId, t.key)],
+);
+
+/** A completion reward the student unlocked, once each, and the finished session that did it. */
+export const rewardUnlocks = sqliteTable(
+  "reward_unlocks",
+  {
+    id: id(),
+    studentId: text("student_id")
+      .notNull()
+      .references(() => students.id),
+    key: text("key", { enum: REWARD_KEYS }).notNull(),
+    sessionLogId: text("session_log_id")
+      .notNull()
+      .references(() => sessionLogs.id),
+    unlockedAt: integer("unlocked_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("reward_unlocks_student_key_idx").on(t.studentId, t.key),
+    index("reward_unlocks_session_log_idx").on(t.sessionLogId),
+  ],
+);
+
+/**
+ * A college-student mentor (steering §3.3). Prototype: seeded, with no booking or video behind it.
+ * First name, school and class year only.
+ */
+export const mentors = sqliteTable("mentors", {
+  id: id(),
+  name: text("name").notNull(),
+  school: text("school").notNull(),
+  classYear: integer("class_year").notNull(),
+});
+
+/** The student's mentor and their weekly 10-minute check-in. Prototype: seeded. */
+export const mentorAssignments = sqliteTable("mentor_assignments", {
+  id: id(),
+  studentId: text("student_id")
+    .notNull()
+    .unique()
+    .references(() => students.id),
+  mentorId: text("mentor_id")
+    .notNull()
+    .references(() => mentors.id),
+  checkInDay: text("check_in_day", { enum: WEEKDAYS }).notNull(),
+  /** 24-hour "HH:MM" in the family's time zone. */
+  checkInTime: text("check_in_time").notNull(),
+  /** What the mentor tells the parent about the last check-in. */
+  lastSummary: text("last_summary").notNull(),
+  /** What the mentor asks of the student, after quoting their latest explain-back. */
+  note: text("note").notNull(),
 });
 
 /** One coach exchange: what the student said and what the coach answered, at one hint level. */

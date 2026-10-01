@@ -64,6 +64,13 @@
       "when": 1790882857832,
       "tag": "0008_screen_time_gate",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1790884130167,
+      "tag": "0009_rewards_mentor",
+      "breakpoints": true
     }
   ]
 }

@@ -6,7 +6,16 @@ import { describe, expect, it } from "vitest";
 // verification, so these words never reach a parent.
 const BANNED = /\b(prove[sdn]?|proving|proof|verified)\b/gi;
 
-const PARENT_FACING = ["src/app/parent", "src/parent", "src/app/layout.tsx", "src/app/page.tsx"];
+const PARENT_FACING = [
+  "src/app/parent",
+  "src/parent",
+  "src/app/layout.tsx",
+  "src/app/page.tsx",
+  // The prototype's rewards and mentor cards render on the parent view too.
+  "src/content/rewards.ts",
+  "src/rewards",
+  "src/mentor",
+];
 
 function files(target: string): string[] {
   if (!statSync(target).isDirectory()) return [target];

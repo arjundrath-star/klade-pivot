@@ -12,8 +12,8 @@ import type { LockView } from "@/session/lock-status";
 const POLL_MS = 3000;
 const TOAST_MS = 10_000;
 
-const DUSK = "#1B1838";
-const AMBER = "#F2B33D";
+const DUSK = "var(--color-dusk)";
+const AMBER = "var(--color-marigold)";
 
 type Toast = { kind: "session"; xp: number; streak: number } | { kind: "override" };
 
@@ -109,7 +109,7 @@ export function PhonePanel({ viewer, initial, sessionHref }: PhonePanelProps) {
         className="absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none"
         style={{
           opacity: locked ? 1 : 0,
-          background: `radial-gradient(120% 55% at 50% 108%, rgba(242,179,61,0.5), transparent 70%), linear-gradient(170deg, #2B2660 0%, ${DUSK} 62%)`,
+          background: `radial-gradient(120% 55% at 50% 108%, rgba(242,179,61,0.5), transparent 70%), linear-gradient(170deg, var(--color-dusk-high) 0%, ${DUSK} 62%)`,
         }}
       />
       <div
@@ -171,7 +171,7 @@ export function PhonePanel({ viewer, initial, sessionHref }: PhonePanelProps) {
           {locked ? (
             <div className="rounded-2xl bg-white/12 p-3.5 ring-1 ring-white/15 backdrop-blur-md">
               <p className="flex items-start gap-2 text-[13px] leading-snug font-medium">
-                <AppGlyph name="lock" className="mt-px size-4 shrink-0 text-[#F2B33D]" />
+                <AppGlyph name="lock" className="mt-px size-4 shrink-0 text-marigold" />
                 Locked. Finish today&apos;s 30-minute session to unlock.
               </p>
               <Link

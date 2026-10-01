@@ -8,16 +8,19 @@ import {
   totalScore,
   type RubricScores,
 } from "@/coach/rubric";
+import { rewardBoard } from "@/content/rewards";
 import { sessionContent } from "@/content/sessions";
 import { DEMO_FAMILY_ID, DEMO_STUDENT_ID } from "@/db/demo";
 import { familyAlerts } from "@/db/queries/alerts";
 import { coachTurnsFor } from "@/db/queries/coach";
+import { mentorFor } from "@/db/queries/mentor";
 import {
   explainIntegrity,
   latestExplanation,
   masteryGrid,
   sessionHistory,
 } from "@/db/queries/parent";
+import { rewardRows } from "@/db/queries/reward-progress";
 import { getStudent } from "@/db/queries/students";
 import {
   calendarDay,
@@ -30,7 +33,9 @@ import {
   streakLabel,
 } from "@/parent/progress";
 import { ruleSummary } from "@/parent/phone-rule";
+import { MentorCard } from "@/mentor/mentor-card";
 import { PhoneSection } from "@/phone/phone-section";
+import { RewardsPanel } from "@/rewards/rewards-panel";
 import { lockView } from "@/session/lock-status";
 import type { MasteryStatus } from "@/session/mastery";
 import { studentStanding } from "@/session/pace";
@@ -85,13 +90,15 @@ export default async function ParentView() {
   const now = new Date();
   const [
     student,
-    { behind, streak },
+    standing,
     history,
     grid,
     { explanation, transcript },
     integrity,
     alerts,
     phone,
+    rewardProgress,
+    mentor,
   ] = await Promise.all([
     getStudent(DEMO_STUDENT_ID),
     studentStanding(DEMO_STUDENT_ID, now),
@@ -101,11 +108,15 @@ export default async function ParentView() {
     explainIntegrity(DEMO_STUDENT_ID),
     familyAlerts(DEMO_FAMILY_ID),
     lockView(DEMO_STUDENT_ID, now),
+    rewardRows(DEMO_STUDENT_ID),
+    mentorFor(DEMO_STUDENT_ID),
   ]);
 
   if (!student) return <p>No student yet. Run npm run db:seed to add the demo student.</p>;
   const { name } = student;
+  const { behind, streak } = standing;
   const { rule } = phone;
+  const rewards = rewardBoard(rewardProgress, standing);
   const rows = history
     .map((row) => ({ row, day: historyDay(row) }))
     .sort((a, b) => b.day.localeCompare(a.day));
@@ -145,6 +156,15 @@ export default async function ParentView() {
           </Link>
         </p>
       </PhoneSection>
+
+      {rewards.length > 0 && (
+        <RewardsPanel
+          entries={rewards}
+          behind={behind}
+          viewer={{ kind: "parent", name, targetDate: student.targetDate }}
+        />
+      )}
+      {mentor && <MentorCard mentor={mentor} now={now} student={{ viewer: "parent", name }} />}
 
       <section aria-labelledby="alerts-heading" className={SECTION}>
         <h2 id="alerts-heading" className={HEADING}>

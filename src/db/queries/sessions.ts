@@ -1,9 +1,11 @@
 import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
+import type { RewardKey } from "@/content/rewards";
 import { getDb } from "@/db/client";
 import type { XpGrant } from "@/db/queries/rewards";
 import {
   badges,
   mastery,
+  rewardUnlocks,
   sessionLogs,
   sessionTemplates,
   students,
@@ -193,13 +195,15 @@ interface Finish {
   xp: XpGrant | null;
   /** Keys of every badge the student qualifies for once this session is done. */
   badges: readonly string[];
+  /** Completion rewards whose progress this session leaves at the target. */
+  unlocks: readonly RewardKey[];
 }
 
 /**
  * Closes a session open on the exit check with its verdict, writes the concept's mastery row and
- * stores what the session earned, in one batch. Awards are idempotent, so a second tab finishing at
- * the same moment stores nothing twice. False when the session was not open on the exit check any
- * more.
+ * stores what the session earned (XP, badges, completion rewards) in one batch. Awards are
+ * idempotent, so a second tab finishing at the same moment stores nothing twice. False when the
+ * session was not open on the exit check any more.
  */
 export async function finishSession(finish: Finish): Promise<boolean> {
   const { sessionLogId, studentId, sessionTemplateId, outcome, exitScore, explainBackId } = finish;
@@ -238,6 +242,12 @@ export async function finishSession(finish: Finish): Promise<boolean> {
       db
         .insert(badges)
         .values({ studentId, sessionLogId, key, earnedAt: completedAt })
+        .onConflictDoNothing(),
+    ),
+    ...finish.unlocks.map((key) =>
+      db
+        .insert(rewardUnlocks)
+        .values({ studentId, sessionLogId, key, unlockedAt: completedAt })
         .onConflictDoNothing(),
     ),
   ]);

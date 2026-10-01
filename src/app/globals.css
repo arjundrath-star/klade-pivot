@@ -10,6 +10,11 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* The prototype features' palette: the phone, the rewards panel, the mentor card. */
+  --color-dusk: #1b1838;
+  --color-dusk-high: #2b2660;
+  --color-marigold: #f2b33d;
+  --color-mint: #86efc6;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,6 +36,13 @@ body {
 
 @utility btn-secondary {
   @apply rounded-md border border-zinc-300 px-4 py-2 font-medium disabled:opacity-40 dark:border-zinc-700;
+}
+
+/* The rewards panel and the waiting room: dusk with a marigold glow, like the locked phone. */
+@utility bg-dusk-glow {
+  background:
+    radial-gradient(100% 60% at 100% 0%, rgb(242 179 61 / 0.25), transparent 70%),
+    linear-gradient(170deg, var(--color-dusk-high) 0%, var(--color-dusk) 70%);
 }
 
 /* The phone panel's notification banner drops in from the top of the screen. */

@@ -2,7 +2,14 @@ import { and, eq } from "drizzle-orm";
 import type { RubricScores } from "@/coach/rubric";
 import { getDb } from "@/db/client";
 import { DEMO_STUDENT_ID, S1_TEMPLATE_ID } from "@/db/demo";
-import { explainBacks, sessionLogs, students } from "@/db/schema";
+import {
+  explainBacks,
+  mentorAssignments,
+  rewardProgress,
+  rewardUnlocks,
+  sessionLogs,
+  students,
+} from "@/db/schema";
 import { generateInstance } from "@/engine/generate";
 import type { RenderedProblem } from "@/engine/render";
 import type { Interest } from "@/engine/types";
@@ -153,4 +160,17 @@ export async function sessionAtExit(
     await db.insert(explainBacks).values({ ...first, id: undefined, attempt: 2 });
   }
   return sessionId;
+}
+
+/**
+ * Deletes the demo student's prototype rows: reward progress, unlocks and the mentor. `seedDemo`
+ * restores all but the unlocks.
+ */
+export async function removePrototypeRows(): Promise<void> {
+  const db = await getDb();
+  await db.batch([
+    db.delete(rewardUnlocks).where(eq(rewardUnlocks.studentId, DEMO_STUDENT_ID)),
+    db.delete(rewardProgress).where(eq(rewardProgress.studentId, DEMO_STUDENT_ID)),
+    db.delete(mentorAssignments).where(eq(mentorAssignments.studentId, DEMO_STUDENT_ID)),
+  ]);
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Reward } from "@/content/rewards";
 import { inSentence } from "@/content/title";
 import { streakLabel, XP_LABELS } from "@/parent/progress";
 import type { SessionSummary } from "@/session/complete";
@@ -21,8 +22,25 @@ function streakChangeLine({ before, after, sessionDay, alreadyCounted }: StreakC
   return `Up from ${before.count}: done on its day.${freeze}`;
 }
 
+/** A completion reward the session unlocked, in the rewards panel's colors. Prototype. */
+function RewardUnlocked({ reward }: { reward: Reward }) {
+  return (
+    <li className="flex items-start gap-3 rounded-2xl bg-dusk p-4 text-white">
+      <span className="grid size-9 shrink-0 place-items-center rounded-[0.7rem] bg-marigold text-dusk">
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 fill-current">
+          <path d="m12 2.8 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.1 6.4 20l1.1-6.2L3 9.4l6.2-.9L12 2.8Z" />
+        </svg>
+      </span>
+      <p className="flex flex-col gap-0.5">
+        <span className="font-semibold">Reward unlocked: {reward.kid}</span>
+        <span className="text-sm text-white/75">{reward.trigger}, done. Prototype reward.</span>
+      </p>
+    </li>
+  );
+}
+
 function Earned({ rewards }: Pick<SessionSummary, "rewards">) {
-  const { xp, awards, streak, badges } = rewards;
+  const { xp, awards, streak, badges, unlocks } = rewards;
   return (
     <section
       aria-labelledby="earned-heading"
@@ -54,6 +72,13 @@ function Earned({ rewards }: Pick<SessionSummary, "rewards">) {
               <span className="font-semibold">{badge.label}</span>
               <span className={`text-sm ${MUTED}`}>{badge.detail}</span>
             </li>
+          ))}
+        </ul>
+      )}
+      {unlocks.length > 0 && (
+        <ul aria-label="Rewards unlocked" className="flex flex-col gap-2">
+          {unlocks.map((reward) => (
+            <RewardUnlocked key={reward.key} reward={reward} />
           ))}
         </ul>
       )}
