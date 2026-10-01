@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Klade",
   description:
-    "Mastery-paced Algebra 1. An AI coach that makes the student do the work, and proves to the parent that they learned it.",
+    "Mastery-paced Algebra 1. An AI coach that makes the student do the work, and shows the parent what they can explain.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

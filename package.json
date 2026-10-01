@@ -47,7 +47,7 @@
     "typescript": "^5",
     "vitest": "^5.0.2"
   },
-  "description": "Mastery-paced Algebra 1 platform: an AI coach that makes the student do the work, and proves to the parent that they learned it.",
+  "description": "Mastery-paced Algebra 1 platform: an AI coach that makes the student do the work, and shows the parent what they can explain.",
   "engines": {
     "node": ">=22"
   }

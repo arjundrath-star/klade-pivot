@@ -9,8 +9,8 @@ export default function Home() {
           Every kid has an AI that does the work for them. We built one that makes them do it.
         </h1>
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
-          Thirty-minute sessions paced by mastery, not by age. A coach that never gives the answer.
-          Proof of understanding the parent can actually see.
+          Thirty-minute sessions on a schedule the parent sets. A same-day alert when one is
+          skipped. A coach that never gives the answer, and a record of what the kid can explain.
         </p>
       </div>
     </main>
