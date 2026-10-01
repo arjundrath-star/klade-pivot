@@ -57,7 +57,7 @@ test("a parent onboards a new student, whose first session is framed in their in
   // AC 1: the whole setup takes well under a minute; the automation does it in under 20 s.
   expect(Date.now() - started).toBeLessThan(20_000);
 
-  await expect(page.getByText("Two-step equations")).toBeVisible();
+  await expect(page.getByText("Two-step equations", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Start" }).click();
   await expect(page).toHaveURL(/\/student\/session\/[0-9a-f-]{36}$/);
   const sessionId = page.url().split("/").pop() ?? "";

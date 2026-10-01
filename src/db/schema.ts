@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { EXPLAIN_RECORD_SOURCES, EXPLAIN_VERDICTS } from "@/coach/rubric";
 import { DEFAULT_SESSION_TIME, type Weekday } from "@/engine/pace";
+import { XP_KINDS } from "@/engine/progress";
 import type { Interest } from "@/engine/types";
 import { BLOCK_IDS, PROBLEM_BLOCK_IDS, type BlockId } from "@/session/blocks";
 import { MASTERY_STATUSES, SESSION_OUTCOMES } from "@/session/mastery";
@@ -279,6 +280,53 @@ export const alerts = sqliteTable(
     index("alerts_family_created_idx").on(t.familyId, t.createdAt),
     // A session raises each kind of alert once, even when two requests raise it together.
     uniqueIndex("alerts_session_type_idx").on(t.sessionLogId, t.type),
+  ],
+);
+
+/**
+ * XP the student earned in one session for one thing the session pays for (`XP_TABLE`). Unique on
+ * the session and the kind, so a replayed action or a second tab never pays twice.
+ */
+export const xpEvents = sqliteTable(
+  "xp_events",
+  {
+    id: id(),
+    studentId: text("student_id")
+      .notNull()
+      .references(() => students.id),
+    sessionLogId: text("session_log_id")
+      .notNull()
+      .references(() => sessionLogs.id),
+    kind: text("kind", { enum: XP_KINDS }).notNull(),
+    amount: integer("amount").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("xp_events_session_kind_idx").on(t.sessionLogId, t.kind),
+    index("xp_events_student_idx").on(t.studentId),
+  ],
+);
+
+/** A badge the student earned, once each, and the finished session that earned it. */
+export const badges = sqliteTable(
+  "badges",
+  {
+    id: id(),
+    studentId: text("student_id")
+      .notNull()
+      .references(() => students.id),
+    /** A key from `allBadges` in src/engine/progress. */
+    key: text("key").notNull(),
+    sessionLogId: text("session_log_id")
+      .notNull()
+      .references(() => sessionLogs.id),
+    earnedAt: integer("earned_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("badges_student_key_idx").on(t.studentId, t.key),
+    index("badges_session_log_idx").on(t.sessionLogId),
   ],
 );
 

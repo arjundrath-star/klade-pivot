@@ -1,12 +1,12 @@
 "use client";
 
 import { createContext, use, useState, useTransition, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { BlockTimer } from "./block-timer";
 import { loadExitPanel } from "./exit-check";
 import { loadExplainPanel } from "./explain-back";
 import { moveBlock, type MoveError } from "./actions";
-import { SessionComplete } from "./session-complete";
 import type { ExplainStatus } from "@/coach/rubric";
 import {
   BLOCK_IDS,
@@ -17,8 +17,18 @@ import {
   type ProblemCounts,
   type SessionProgress,
 } from "@/session/blocks";
-import type { SessionSummary } from "@/session/mastery";
+import type { SessionSummary } from "@/session/complete";
 import { blockBudgetSeconds, type TimerMode } from "@/session/timer";
+
+// The end screen shows only once the exit check is finished, so its code stays out of the route's
+// first load. Finish starts the download while the server adds up the session.
+const loadSessionComplete = () => import("./session-complete");
+
+const SessionComplete = dynamic(() => loadSessionComplete().then((m) => m.SessionComplete), {
+  loading: () => (
+    <p className="text-sm text-zinc-600 dark:text-zinc-400">Adding up your session…</p>
+  ),
+});
 
 interface ProgressState extends SessionProgress {
   markSolved: (key: string) => void;
@@ -125,6 +135,7 @@ export function SessionRunner({
 
   const move = (direction: Direction) => {
     setError(null);
+    if (last && direction === "next") void loadSessionComplete();
     startTransition(async () => {
       const result = await moveBlock({ sessionId, from: block, direction });
       if (!result.ok) {

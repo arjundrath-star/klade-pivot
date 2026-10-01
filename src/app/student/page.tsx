@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { startTodaySession } from "./actions";
+import { ProgressPanel } from "./progress-panel";
 import { inSentence } from "@/content/title";
+import { studentEarnings } from "@/db/queries/rewards";
 import { findTodaySession } from "@/db/queries/sessions";
 import { getStudent } from "@/db/queries/students";
 import { currentStudentId } from "@/session/current-student";
+import { studentStanding } from "@/session/pace";
 
 export const metadata: Metadata = { title: "Today · Klade" };
 
@@ -13,9 +16,11 @@ export default async function StudentHome() {
   // Reads the database, so it renders per request, never at build time.
   await connection();
   const studentId = await currentStudentId();
-  const [student, today] = await Promise.all([
+  const [student, today, standing, earnings] = await Promise.all([
     getStudent(studentId),
     findTodaySession(studentId),
+    studentStanding(studentId, new Date()),
+    studentEarnings(studentId),
   ]);
 
   return (
@@ -57,6 +62,12 @@ export default async function StudentHome() {
               </>
             )}
           </section>
+          <ProgressPanel
+            xp={earnings.xp}
+            streak={standing.streak}
+            mastered={earnings.mastered}
+            earned={earnings.badges}
+          />
         </>
       ) : (
         <p>

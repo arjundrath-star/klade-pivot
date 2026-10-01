@@ -1,6 +1,15 @@
 import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { mastery, sessionLogs, sessionTemplates, students, units } from "@/db/schema";
+import type { XpGrant } from "@/db/queries/rewards";
+import {
+  badges,
+  mastery,
+  sessionLogs,
+  sessionTemplates,
+  students,
+  units,
+  xpEvents,
+} from "@/db/schema";
 import type { BlockId } from "@/session/blocks";
 import type { SessionOutcome } from "@/session/mastery";
 import type { BlockTimes } from "@/session/timer";
@@ -101,11 +110,13 @@ export async function getSession(id: string, studentId: string) {
       blockElapsedMs: sessionLogs.blockElapsedMs,
       lessonReadAt: sessionLogs.lessonReadAt,
       outcome: sessionLogs.outcome,
+      completedAt: sessionLogs.completedAt,
       sessionTemplateId: sessionLogs.sessionTemplateId,
       title: sessionTemplates.title,
       contentKey: sessionTemplates.contentKey,
       interests: students.interests,
       timerMode: students.timerMode,
+      sessionDays: students.sessionDays,
       familyId: students.familyId,
       studentName: students.name,
     })
@@ -117,8 +128,10 @@ export async function getSession(id: string, studentId: string) {
 }
 
 /**
- * Moves an open session from block `from` to block `to`, saving the time spent in each block. False
- * when the session is no longer open at `from`, for example because another tab moved it first.
+ * Moves an open session from block `from` to block `to`, saving the time spent in each block, and
+ * stores the XP leaving `from` pays in the same batch, so the two land together or not at all. The
+ * award is stored even when another tab moved the session first: the block was complete either
+ * way, and a session pays each kind once. False when the session is no longer open at `from`.
  * Finishing a session is `finishSession`.
  */
 export async function moveSession(
@@ -126,9 +139,10 @@ export async function moveSession(
   from: BlockId,
   to: BlockId,
   blockElapsedMs: BlockTimes,
+  xp: XpGrant | null,
 ): Promise<boolean> {
   const db = await getDb();
-  const moved = await db
+  const move = db
     .update(sessionLogs)
     .set({ currentBlock: to, blockStartedAt: new Date(), blockElapsedMs })
     .where(
@@ -139,6 +153,9 @@ export async function moveSession(
       ),
     )
     .returning({ id: sessionLogs.id });
+  const [moved] = xp
+    ? await db.batch([move, db.insert(xpEvents).values(xp).onConflictDoNothing()])
+    : [await move];
   return moved.length > 0;
 }
 
@@ -171,23 +188,36 @@ interface Finish {
   exitScore: number;
   explainBackId: string;
   blockElapsedMs: BlockTimes;
+  completedAt: Date;
+  /** The exit-check XP, when the check passed. */
+  xp: XpGrant | null;
+  /** Keys of every badge the student qualifies for once this session is done. */
+  badges: readonly string[];
 }
 
 /**
- * Closes a session open on the exit check with its verdict and writes the concept's mastery row, in
- * one batch. False when the session was not open on the exit check any more.
+ * Closes a session open on the exit check with its verdict, writes the concept's mastery row and
+ * stores what the session earned, in one batch. Awards are idempotent, so a second tab finishing at
+ * the same moment stores nothing twice. False when the session was not open on the exit check any
+ * more.
  */
 export async function finishSession(finish: Finish): Promise<boolean> {
   const { sessionLogId, studentId, sessionTemplateId, outcome, exitScore, explainBackId } = finish;
+  const { completedAt, xp } = finish;
   const db = await getDb();
-  const now = new Date();
-  const evidence = { status: outcome, sessionLogId, exitScore, explainBackId, updatedAt: now };
+  const evidence = {
+    status: outcome,
+    sessionLogId,
+    exitScore,
+    explainBackId,
+    updatedAt: completedAt,
+  };
   // The verdict comes from rows that no longer change once the exit check is answered, so a second
   // tab finishing at the same moment writes the same mastery row; only its status update misses.
   const [closed] = await db.batch([
     db
       .update(sessionLogs)
-      .set({ status: "done", outcome, completedAt: now, blockElapsedMs: finish.blockElapsedMs })
+      .set({ status: "done", outcome, completedAt, blockElapsedMs: finish.blockElapsedMs })
       .where(
         and(
           eq(sessionLogs.id, sessionLogId),
@@ -203,6 +233,13 @@ export async function finishSession(finish: Finish): Promise<boolean> {
         target: [mastery.studentId, mastery.sessionTemplateId],
         set: evidence,
       }),
+    ...(xp ? [db.insert(xpEvents).values(xp).onConflictDoNothing()] : []),
+    ...finish.badges.map((key) =>
+      db
+        .insert(badges)
+        .values({ studentId, sessionLogId, key, earnedAt: completedAt })
+        .onConflictDoNothing(),
+    ),
   ]);
   return closed.length > 0;
 }

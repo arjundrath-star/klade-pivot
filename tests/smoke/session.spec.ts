@@ -5,9 +5,11 @@ import {
   answersFor,
   recordPass,
   renderedFor,
+  scheduleToday,
   sessionAtExit,
   setTimerMode,
 } from "../helpers/answers";
+import { XP_TABLE } from "@/engine/progress";
 
 /** Answers the three exit-check problems one at a time, right where `correct` is true. */
 async function answerExitCheck(page: Page, sessionId: string, correct: readonly boolean[]) {
@@ -27,8 +29,12 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   browser,
 }) => {
   const errors = watchConsole(page);
+  // Today is on Maya's schedule, so finishing the session counts toward her streak.
+  await scheduleToday();
   await page.goto("/student");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hi, Maya");
+  await expect(page.getByText("Level 1")).toBeVisible();
+  await expect(page.getByText("Badges: 0 of 4")).toBeVisible();
   await page.getByRole("button", { name: "Start" }).click();
 
   await expect(page).toHaveURL(/\/student\/session\/[0-9a-f-]{36}$/);
@@ -169,12 +175,37 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   await answerExitCheck(page, sessionId, [true, true, true]);
   await finish.click();
 
-  await expect(page.getByRole("heading", { level: 1, name: "Mastered" })).toBeVisible();
-  await expect(page.getByText("You got 3 of 3 on the exit check")).toBeVisible();
+  // XP for the warm-up, every guided problem, the explain-back pass and the exit-check pass.
+  const xp = XP_TABLE.warmup + XP_TABLE.guided * guided.length + XP_TABLE.explain + XP_TABLE.exit;
+  const expectEarned = async () => {
+    await expect(page.getByRole("heading", { level: 1, name: "Mastered" })).toBeVisible();
+    await expect(page.getByText("You got 3 of 3 on the exit check")).toBeVisible();
+    const earned = page.getByRole("region", { name: "This session" });
+    await expect(earned.getByText(`+${xp} XP`)).toBeVisible();
+    await expect(earned.getByText("1-session streak")).toBeVisible();
+    const badges = earned.getByRole("list", { name: "Badges earned" }).getByRole("listitem");
+    await expect(badges).toHaveCount(2);
+    await expect(badges.nth(0)).toContainText("Two-step equations mastered");
+    await expect(badges.nth(1)).toContainText("Unit 1 Mastered");
+  };
+  await expectEarned();
   await page.reload();
-  await expect(page.getByRole("heading", { level: 1, name: "Mastered" })).toBeVisible();
+  await expectEarned();
+
   await page.goto("/student");
   await expect(page.getByText("Every session in this unit is done.")).toBeVisible();
+  await expect(page.getByText("Level 2")).toBeVisible();
+  await expect(page.getByText(`${xp} XP`, { exact: true })).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "Unit 1 concepts mastered" })).toHaveAttribute(
+    "aria-valuenow",
+    "1",
+  );
+  await expect(page.getByText("1-session streak")).toBeVisible();
+  await expect(page.getByText("Badges: 2 of 4")).toBeVisible();
+
+  await page.goto("/parent");
+  await expect(page.getByText("1-session streak")).toBeVisible();
+  await expect(page.getByText("Streak freeze banked")).toBeVisible();
   expect(errors).toEqual([]);
 });
 

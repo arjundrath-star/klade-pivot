@@ -1,4 +1,4 @@
-import { S1_KEY } from "@/content/sessions";
+import { ALGEBRA1_CONTENT } from "@/content/algebra1/concepts";
 import { getDb } from "@/db/client";
 import { courses, families, sessionTemplates, students, units } from "@/db/schema";
 import { DEFAULT_SESSION_TIME, PRESET_SESSIONS, proposedDays } from "@/engine/pace";
@@ -39,18 +39,20 @@ export async function seedDemo(now = new Date()): Promise<void> {
     interests: ["sports" as const, "music" as const],
   };
   const course = { id: "algebra-1", title: "Algebra 1" };
+  const [unit1] = ALGEBRA1_CONTENT;
+  const [concept1] = unit1.concepts;
   const unit = {
     id: "algebra-1-linear-equations",
     courseId: course.id,
-    title: "Linear equations in one variable",
-    position: 1,
+    title: unit1.title,
+    position: unit1.number,
   };
   const session1 = {
     id: S1_TEMPLATE_ID,
     unitId: unit.id,
-    title: "Two-step equations",
+    title: concept1.title,
     position: 1,
-    contentKey: S1_KEY,
+    contentKey: concept1.key,
   };
 
   await db.batch([

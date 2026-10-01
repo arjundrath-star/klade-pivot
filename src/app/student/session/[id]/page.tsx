@@ -21,6 +21,7 @@ import { sessionSummary } from "@/session/complete";
 import { currentStudentId } from "@/session/current-student";
 import { loadSession, type LoadedSession } from "@/session/load";
 import { findProblem, renderSessionProblem } from "@/session/problems";
+import { sessionRewards } from "@/session/rewards";
 import { exitProblemSeconds, exitRemainingMs, formatClock, timeInBlock } from "@/session/timer";
 
 // Seen only while the runner refreshes on its way into block 4 or 5.
@@ -76,7 +77,11 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
   if (!loaded) notFound();
   const { session, content, problems, counts, progress, coach, explain } = loaded;
   if (session.status === "done") {
-    const summary = session.outcome ? sessionSummary(loaded, session.outcome) : undefined;
+    const { outcome, completedAt } = session;
+    const summary =
+      outcome && completedAt
+        ? sessionSummary(loaded, outcome, await sessionRewards(session, completedAt))
+        : undefined;
     return <SessionComplete title={session.title} summary={summary} />;
   }
   if (session.status !== "in_progress") notFound();

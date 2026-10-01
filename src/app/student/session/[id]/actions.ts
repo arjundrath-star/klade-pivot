@@ -29,11 +29,11 @@ import {
   step,
   type BlockId,
 } from "@/session/blocks";
-import { completeSession, type CompleteError } from "@/session/complete";
+import { completeSession, type CompleteError, type SessionSummary } from "@/session/complete";
 import { currentStudentId } from "@/session/current-student";
 import { loadSession, openProblem, type OpenProblemError } from "@/session/load";
-import type { SessionSummary } from "@/session/mastery";
 import { findProblem } from "@/session/problems";
+import { blockXp } from "@/session/rewards";
 import { attemptMs, isExitAnswerLate, leaveBlock } from "@/session/timer";
 
 // Longer gaps (a tab left open overnight) are recorded as an hour rather than rejected.
@@ -202,8 +202,10 @@ export async function confirmLesson(input: z.input<typeof LessonInput>): Promise
 }
 
 /**
- * Moves the session one block. The server decides whether the current block is complete. Next from
- * the exit check finishes the session through `completeSession`, which computes the verdict.
+ * Moves the session one block. The server decides whether the current block is complete. Next out
+ * of a complete block pays its XP first (once per session, however often the student goes back
+ * and forth), and Next from the exit check finishes the session through `completeSession`, which
+ * computes the verdict and pays the rest.
  */
 export async function moveBlock(input: z.input<typeof MoveInput>): Promise<MoveResult> {
   const parsed = MoveInput.safeParse(input);
@@ -222,7 +224,8 @@ export async function moveBlock(input: z.input<typeof MoveInput>): Promise<MoveR
     return { ok: true, to: "done", summary: completed.summary };
   }
   const times = leaveBlock(open.session.blockElapsedMs, from, open.session.blockStartedAt);
-  const moved = await moveSession(sessionId, from, result.to, times);
+  const xp = direction === "next" ? blockXp(from, open) : null;
+  const moved = await moveSession(sessionId, from, result.to, times, xp);
   if (!moved) return { ok: false, error: "moved" };
   return { ok: true, to: result.to, elapsedMs: times[result.to] ?? 0 };
 }

@@ -1,10 +1,12 @@
 import { and, eq } from "drizzle-orm";
+import type { RubricScores } from "@/coach/rubric";
 import { getDb } from "@/db/client";
 import { DEMO_STUDENT_ID, S1_TEMPLATE_ID } from "@/db/demo";
 import { explainBacks, sessionLogs, students } from "@/db/schema";
 import { generateInstance } from "@/engine/generate";
 import type { RenderedProblem } from "@/engine/render";
 import type { Interest } from "@/engine/types";
+import { calendarDay } from "@/parent/progress";
 import type { BlockId, ProblemBlockId } from "@/session/blocks";
 import { loadSession } from "@/session/load";
 import { renderSessionProblem } from "@/session/problems";
@@ -48,8 +50,12 @@ export async function renderedFor(
   return loaded.problems.map((p) => renderSessionProblem(p, interests ?? loaded.interests));
 }
 
-/** Stores a passing first explain-back for the session, as the grader would have. */
-export async function recordPass(sessionId: string, text: string): Promise<void> {
+/** Stores a passing first explain-back for the session with `scores`, as the grader would have. */
+export async function recordPass(
+  sessionId: string,
+  text: string,
+  scores: RubricScores = { correctness: 3, justification: 2, precision: 2 },
+): Promise<void> {
   const loaded = await loadSession(sessionId, DEMO_STUDENT_ID);
   if (!loaded) throw new Error(`session ${sessionId} not found`);
   const { problem } = loaded.explain;
@@ -61,9 +67,7 @@ export async function recordPass(sessionId: string, text: string): Promise<void>
     attempt: 1,
     text,
     source: "typed",
-    correctness: 3,
-    justification: 2,
-    precision: 2,
+    ...scores,
     feedback: "You said why each step keeps the equation balanced.",
     verdict: "pass",
     pasted: false,
@@ -75,6 +79,21 @@ export async function recordPass(sessionId: string, text: string): Promise<void>
 export async function setTimerMode(timerMode: TimerMode): Promise<void> {
   const db = await getDb();
   await db.update(students).set({ timerMode }).where(eq(students.id, DEMO_STUDENT_ID));
+}
+
+/** Puts today on the demo student's schedule, as onboarding would have, unless it is there. */
+export async function scheduleToday(): Promise<void> {
+  const db = await getDb();
+  await db
+    .insert(sessionLogs)
+    .values({
+      studentId: DEMO_STUDENT_ID,
+      sessionTemplateId: S1_TEMPLATE_ID,
+      status: "scheduled",
+      seed: 1,
+      scheduledFor: calendarDay(new Date()),
+    })
+    .onConflictDoNothing();
 }
 
 /** Closes the demo student's open session, if any. */

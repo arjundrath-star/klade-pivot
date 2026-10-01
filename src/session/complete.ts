@@ -3,8 +3,18 @@ import { finishSession } from "@/db/queries/sessions";
 import { masteryMessage } from "@/parent/alerts";
 import { isBlockComplete, problemKey } from "@/session/blocks";
 import { loadSession, type LoadedSession } from "@/session/load";
-import { masteryVerdict, type SessionOutcome, type SessionSummary } from "@/session/mastery";
+import { masteryVerdict, type SessionOutcome } from "@/session/mastery";
+import { sessionAwards, sessionRewards, type SessionRewards } from "@/session/rewards";
 import { leaveBlock } from "@/session/timer";
+
+/** What the student sees at the end of a session. */
+export interface SessionSummary {
+  outcome: SessionOutcome;
+  exitCorrect: number;
+  exitTotal: number;
+  explainPassed: boolean;
+  rewards: SessionRewards;
+}
 
 export type CompleteError = "closed" | "moved" | "incomplete" | "aided";
 
@@ -25,12 +35,17 @@ function exitCorrect({ exitAttempts }: LoadedSession): number {
 }
 
 /** The end-of-session result for a session whose verdict is `outcome`. */
-export function sessionSummary(loaded: LoadedSession, outcome: SessionOutcome): SessionSummary {
+export function sessionSummary(
+  loaded: LoadedSession,
+  outcome: SessionOutcome,
+  rewards: SessionRewards,
+): SessionSummary {
   return {
     outcome,
     exitCorrect: exitCorrect(loaded),
     exitTotal: loaded.counts.exit,
     explainPassed: loaded.progress.explainBack === "passed",
+    rewards,
   };
 }
 
@@ -39,7 +54,8 @@ export function sessionSummary(loaded: LoadedSession, outcome: SessionOutcome): 
  * only when every exit-check problem has its attempt and none of them had help (decision D33); a
  * request that falls short is refused and the session stays in progress. The verdict comes from
  * the stored exit attempts and explain-back, never from the client, and is written to the concept's
- * mastery row as the log closes. Side effects of a finished session belong here.
+ * mastery row as the log closes, with the exit-check XP and badges it earns (`sessionAwards`).
+ * Side effects of a finished session belong here, like the parent's mastery alert.
  */
 export async function completeSession(
   sessionId: string,
@@ -61,6 +77,8 @@ export async function completeSession(
 
   const score = exitCorrect(loaded);
   const outcome = masteryVerdict(score, progress.explainBack);
+  const completedAt = new Date();
+  const awards = await sessionAwards(loaded, outcome, score, completedAt);
   const finished = await finishSession({
     sessionLogId: session.id,
     studentId: session.studentId,
@@ -69,17 +87,22 @@ export async function completeSession(
     exitScore: score,
     explainBackId,
     blockElapsedMs: leaveBlock(session.blockElapsedMs, "exit", session.blockStartedAt),
+    completedAt,
+    xp: awards.xp,
+    badges: awards.badges,
   });
   if (!finished) return { ok: false, error: "moved" };
-  const summary = sessionSummary(loaded, outcome);
-  if (outcome === "mastered") {
-    await recordAlert({
-      familyId: session.familyId,
-      studentId: session.studentId,
-      type: "milestone",
-      sessionLogId: session.id,
-      message: masteryMessage(session.studentName, session.title, score, summary.exitTotal),
-    });
-  }
-  return { ok: true, summary };
+  const [rewards] = await Promise.all([
+    sessionRewards(session, completedAt, awards.change),
+    outcome === "mastered"
+      ? recordAlert({
+          familyId: session.familyId,
+          studentId: session.studentId,
+          type: "milestone",
+          sessionLogId: session.id,
+          message: masteryMessage(session.studentName, session.title, score, counts.exit),
+        })
+      : undefined,
+  ]);
+  return { ok: true, summary: sessionSummary(loaded, outcome, rewards) };
 }

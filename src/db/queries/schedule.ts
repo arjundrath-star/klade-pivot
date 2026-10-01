@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { sessionLogs, sessionTemplates, units } from "@/db/schema";
-import type { ScheduleSlot } from "@/parent/progress";
+import type { ScheduleSlot } from "@/engine/pace";
 
 /** Every day on the student's schedule and whether it was marked missed. */
 export async function scheduleSlots(studentId: string): Promise<ScheduleSlot[]> {

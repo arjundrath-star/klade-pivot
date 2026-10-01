@@ -141,7 +141,7 @@ describe("answering the exit check", () => {
 
   it("marks the concept Repeat on 1 of 3, and the next session repeats it", async () => {
     const explainId = (await loadSession(sessionId, DEMO_STUDENT_ID))?.explain.latestId;
-    expect(await moveBlock({ sessionId, from: "exit", direction: "next" })).toEqual({
+    expect(await moveBlock({ sessionId, from: "exit", direction: "next" })).toMatchObject({
       ok: true,
       to: "done",
       summary: { outcome: "repeat", exitCorrect: 1, exitTotal: 3, explainPassed: true },
@@ -253,7 +253,7 @@ describe("completion (D33)", () => {
   it("repeats a perfect exit check when the explain-back failed", async () => {
     const sessionId = await sessionAtExit("fail");
     await answerExit(sessionId, [true, true, true]);
-    expect(await completeSession(sessionId, DEMO_STUDENT_ID)).toEqual({
+    expect(await completeSession(sessionId, DEMO_STUDENT_ID)).toMatchObject({
       ok: true,
       summary: { outcome: "repeat", exitCorrect: 3, exitTotal: 3, explainPassed: false },
     });
@@ -263,7 +263,7 @@ describe("completion (D33)", () => {
   it("masters the concept on 3 of 3 with a passed explain-back, and nothing is left", async () => {
     const sessionId = await sessionAtExit();
     await answerExit(sessionId, [true, true, true]);
-    expect(await completeSession(sessionId, DEMO_STUDENT_ID)).toEqual({
+    expect(await completeSession(sessionId, DEMO_STUDENT_ID)).toMatchObject({
       ok: true,
       summary: { outcome: "mastered", exitCorrect: 3, exitTotal: 3, explainPassed: true },
     });

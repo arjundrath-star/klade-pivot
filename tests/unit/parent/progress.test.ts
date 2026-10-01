@@ -6,8 +6,8 @@ import {
   progressLine,
   sessionsBehind,
   targetMonth,
-  type ScheduleSlot,
 } from "@/parent/progress";
+import type { ScheduleSlot } from "@/engine/pace";
 
 const TODAY = "2026-10-01";
 

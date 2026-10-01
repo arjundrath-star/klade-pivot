@@ -1,5 +1,6 @@
 /** Where a student stands against their schedule. Pure: the parent view and the admin panel share it. */
-import { scheduleDays, type Weekday } from "@/engine/pace";
+import { scheduleDays, type ScheduleSlot, type Weekday } from "@/engine/pace";
+import type { Streak, XpKind } from "@/engine/progress";
 
 /**
  * The demo family's time zone. "Today" for the schedule is the family's calendar day, not the
@@ -29,13 +30,6 @@ const timeFormat = new Intl.DateTimeFormat("en-GB", {
 /** The family's clock time at `at`, as 24-hour HH:MM. */
 export function clockTime(at: Date): string {
   return timeFormat.format(at);
-}
-
-/** One day the schedule holds a session on. */
-export interface ScheduleSlot {
-  /** YYYY-MM-DD */
-  day: string;
-  status: "scheduled" | "missed";
 }
 
 function firstDay(slots: readonly ScheduleSlot[]): string {
@@ -141,4 +135,24 @@ export function formatDay(day: string): string {
 /** "May 31, 2027" for the date "2027-05-31". */
 export function formatDate(day: string): string {
   return dateLabel.format(new Date(`${day}T00:00:00Z`));
+}
+
+/** What each XP award is for, as the student reads it. */
+export const XP_LABELS: Readonly<Record<XpKind, string>> = {
+  warmup: "Warm-up done",
+  guided: "Guided problems solved",
+  explain: "Explain-back passed",
+  exit: "Exit check passed",
+};
+
+/** "No streak yet", "1-session streak". */
+export function streakLabel(count: number): string {
+  return count === 0 ? "No streak yet" : `${count}-session streak`;
+}
+
+/** The streak freeze as the parent and the student read it. */
+export function freezeLabel({ untilFreeze }: Streak): string {
+  return untilFreeze === 0
+    ? "Streak freeze banked"
+    : `Streak freeze used, back after ${plural(untilFreeze, "more on-time session")}`;
 }

@@ -229,7 +229,7 @@ describe("session flow", () => {
       ok: true,
     });
     await answerExit(sessionId, [true, true, true]);
-    expect(await moveBlock({ sessionId, from: "exit", direction: "next" })).toEqual({
+    expect(await moveBlock({ sessionId, from: "exit", direction: "next" })).toMatchObject({
       ok: true,
       to: "done",
       summary: { outcome: "mastered", exitCorrect: 3, exitTotal: 3, explainPassed: true },

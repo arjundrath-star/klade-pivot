@@ -23,12 +23,14 @@ import {
   calendarDay,
   formatDate,
   formatDay,
+  freezeLabel,
   plural,
   progressLine,
   sessionCount,
+  streakLabel,
 } from "@/parent/progress";
 import type { MasteryStatus } from "@/session/mastery";
-import { studentPace } from "@/session/pace";
+import { studentStanding } from "@/session/pace";
 
 export const metadata: Metadata = { title: "Parent view · Klade" };
 
@@ -78,16 +80,23 @@ export default async function ParentView() {
   // Reads the database, so it renders per request and shows a session the moment it ends.
   await connection();
   const now = new Date();
-  const [student, behind, history, grid, { explanation, transcript }, integrity, alerts] =
-    await Promise.all([
-      getStudent(DEMO_STUDENT_ID),
-      studentPace(DEMO_STUDENT_ID, now),
-      sessionHistory(DEMO_STUDENT_ID),
-      masteryGrid(DEMO_STUDENT_ID),
-      latestWithTranscript(),
-      explainIntegrity(DEMO_STUDENT_ID),
-      familyAlerts(DEMO_FAMILY_ID),
-    ]);
+  const [
+    student,
+    { behind, streak },
+    history,
+    grid,
+    { explanation, transcript },
+    integrity,
+    alerts,
+  ] = await Promise.all([
+    getStudent(DEMO_STUDENT_ID),
+    studentStanding(DEMO_STUDENT_ID, now),
+    sessionHistory(DEMO_STUDENT_ID),
+    masteryGrid(DEMO_STUDENT_ID),
+    latestWithTranscript(),
+    explainIntegrity(DEMO_STUDENT_ID),
+    familyAlerts(DEMO_FAMILY_ID),
+  ]);
 
   if (!student) return <p>No student yet. Run npm run db:seed to add the demo student.</p>;
   const { name } = student;
@@ -99,7 +108,11 @@ export default async function ParentView() {
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold tracking-tight">{name}&apos;s progress</h1>
-        <p className="text-2xl font-semibold">{progressLine(behind, student.targetDate)}</p>
+        <p className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="text-2xl font-semibold">{progressLine(behind, student.targetDate)}</span>
+          <span className="text-lg font-semibold">{streakLabel(streak.count)}</span>
+          <span className={MUTED}>{freezeLabel(streak)}</span>
+        </p>
         <p className={MUTED}>
           Target: {formatDate(student.targetDate)}. {sessionCount(student.pacePerWeek)} a week.
         </p>

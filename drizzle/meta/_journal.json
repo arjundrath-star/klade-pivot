@@ -50,6 +50,13 @@
       "when": 1790877226420,
       "tag": "0006_onboarding_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1790879311623,
+      "tag": "0007_xp_streaks_badges",
+      "breakpoints": true
     }
   ]
 }

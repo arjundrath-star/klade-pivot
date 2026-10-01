@@ -40,6 +40,13 @@ const PROPOSED_DAYS: Readonly<Record<number, readonly Weekday[]>> = {
 /** Sessions start at 5:00 PM unless the family picks another time. 24-hour "HH:MM". */
 export const DEFAULT_SESSION_TIME = "17:00";
 
+/** One day the schedule holds a session on. */
+export interface ScheduleSlot {
+  /** YYYY-MM-DD */
+  day: string;
+  status: "scheduled" | "missed";
+}
+
 /** A unit of the course and how many sessions it takes. */
 export interface UnitEstimate {
   title: string;

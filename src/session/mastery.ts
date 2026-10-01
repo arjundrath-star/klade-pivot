@@ -19,11 +19,3 @@ export const EXIT_PASS_MARK = 2;
 export function masteryVerdict(exitCorrect: number, explainBack: ExplainStatus): SessionOutcome {
   return exitCorrect >= EXIT_PASS_MARK && explainBack === "passed" ? "mastered" : "repeat";
 }
-
-/** What the student sees at the end of a session. */
-export interface SessionSummary {
-  outcome: SessionOutcome;
-  exitCorrect: number;
-  exitTotal: number;
-  explainPassed: boolean;
-}
