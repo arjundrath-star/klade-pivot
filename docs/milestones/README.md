@@ -16,6 +16,7 @@ One milestone per one-shot session, in this order. Each derives from `docs/memo/
 | 10  | Screen-time gate: rule builder and phone panel | steering §3.1, §5       | steering 15 to 18, 21 |
 | 11  | Rewards panel and mentor cards                 | steering §3.3, §4.1     | steering 14, 19, 20 |
 | 12  | Public URL, demo seed, demo run                | §8 item 10, steering §6, §7 | 10           |
+| 13  | Visual polish and design system                | steering §1, §7; frontend-design skill | none new; every route 90+ |
 
 Session 2 and 3 content and the weekly digest are cut from the MVP (decision D42, the steering doc's cut order); revisit after the pitch.
 
