@@ -14,11 +14,24 @@ function localPath(url: string): string {
   return target.startsWith("//") ? target.slice(2) : target;
 }
 
+/**
+ * How long a statement waits for another process's write lock before failing. The seed script,
+ * the smoke tests and "Reset demo" all write the file the server is reading.
+ */
+const BUSY_TIMEOUT_MS = 5000;
+
 async function open(url: string, authToken: string | undefined): Promise<LibSQLDatabase> {
   const local = migratesOnConnect(url);
   // libSQL creates the database file but not its directory, which a fresh clone lacks.
   if (local) mkdirSync(path.dirname(localPath(url)), { recursive: true });
-  const db = drizzle(createClient({ url, authToken }));
+  const client = createClient({ url, authToken });
+  if (local) {
+    // Write-ahead logging lets readers go on while another process writes, and a writer that
+    // finds the file locked waits instead of failing with SQLITE_BUSY.
+    await client.execute("PRAGMA journal_mode = WAL");
+    await client.execute(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
+  }
+  const db = drizzle(client);
   if (local) await applyMigrations(db);
   return db;
 }
