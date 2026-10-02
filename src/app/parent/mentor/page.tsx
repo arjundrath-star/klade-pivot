@@ -8,7 +8,7 @@ import { getStudent } from "@/db/queries/students";
 import { gatedFamily } from "@/gate/server";
 import { MentorCard } from "@/mentor/mentor-card";
 
-export const metadata: Metadata = { title: "Mentor · Klade" };
+export const metadata: Metadata = { title: "Mentor" };
 
 export default async function ParentMentorPage() {
   await connection();
@@ -22,7 +22,7 @@ export default async function ParentMentorPage() {
           <PageHeader title="Mentor">
             <p>
               A college student who reads {name}&apos;s explain-backs and checks in for ten minutes
-              a week. Every check-in happens in Klade and is recorded; you can join any of them.
+              a week. Every check-in happens in the app and is recorded; you can join any of them.
             </p>
           </PageHeader>
           {mentor ? (

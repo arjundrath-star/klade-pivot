@@ -4,17 +4,50 @@ import { cardClass } from "@/components/ui/card";
 import { SESSION_MINUTES } from "@/engine/pace";
 import { BLOCK_IDS, BLOCKS } from "@/session/blocks";
 
+/** The five blocks as a ruler of the session's thirty minutes, each as wide as it is long. */
+function SessionRuler() {
+  return (
+    <ol
+      aria-label="The five blocks of a session"
+      className="grid gap-x-1.5 sm:gap-x-2"
+      style={{
+        gridTemplateColumns: BLOCK_IDS.map((id) => `${BLOCKS[id].minutes}fr`).join(" "),
+      }}
+    >
+      {BLOCK_IDS.map((id, index) => (
+        <li key={id} className="flex min-w-0 flex-col gap-3">
+          <span
+            aria-hidden="true"
+            className={`h-2.5 rounded-full ${index % 2 === 0 ? "bg-primary" : "bg-primary/55"}`}
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="font-display text-sm leading-tight font-semibold sm:text-lg">
+              {BLOCKS[id].label}
+            </span>
+            <span className="text-xs text-ink-soft tabular-nums sm:text-sm">
+              {BLOCKS[id].minutes} min
+            </span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-16 px-6 py-16 sm:py-24">
+    <main
+      id="main"
+      className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-20 px-6 py-16 sm:py-24"
+    >
       <section className="flex max-w-3xl flex-col gap-6">
-        <p className="text-sm font-semibold text-today-deep">Algebra 1, for grades 6 to 10</p>
-        <h1 className="font-display text-4xl leading-tight font-bold tracking-tight sm:text-5xl">
-          Every kid has an AI that does the work for them. We built one that makes them do it.
+        <h1 className="font-display text-4xl leading-[1.05] font-bold tracking-tight sm:text-5xl">
+          We don&apos;t carry anyone. We give them a foothold.
         </h1>
         <p className="max-w-xl text-lg text-ink-soft">
-          Thirty-minute sessions on a schedule the parent sets. A same-day alert when one is
-          skipped. A coach that never gives the answer, and a record of what the kid can explain.
+          AI that does the work carries kids up the mountain, and the test is where they fall.
+          Foothold AI makes them do the climbing: thirty-minute sessions on a schedule the parent
+          sets, a coach that never gives the answer, and a record of what the kid can explain.
         </p>
         <div className="flex flex-wrap items-center gap-5">
           <Link href="/onboarding" className={buttonClass("primary")}>
@@ -26,29 +59,23 @@ export default function Home() {
         </div>
       </section>
 
-      <section aria-labelledby="session-heading" className="flex flex-col gap-5">
-        <h2 id="session-heading" className="font-display text-2xl font-semibold tracking-tight">
-          One session is {SESSION_MINUTES} minutes, in five blocks
-        </h2>
-        <ol className="grid gap-3 sm:grid-cols-5">
-          {BLOCK_IDS.map((id, index) => (
-            <li key={id} className={`${cardClass("primary", "xs")} flex flex-col gap-2`}>
-              <span className="grid size-7 place-items-center rounded-full bg-primary font-display text-sm font-semibold text-white">
-                {index + 1}
-              </span>
-              <span className="font-display text-lg leading-tight font-semibold">
-                {BLOCKS[id].label}
-              </span>
-              <span className="text-sm text-ink-soft">{BLOCKS[id].minutes} minutes</span>
-            </li>
-          ))}
-        </ol>
+      <section aria-labelledby="session-heading" className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <h2 id="session-heading" className="font-display text-2xl font-semibold tracking-tight">
+            A session is {SESSION_MINUTES} minutes, in five blocks
+          </h2>
+          <p className="max-w-xl text-ink-soft">
+            Algebra 1 first, for grades 6 to 10. Every kid gets the same math; the word problems are
+            written in the kid&apos;s own interests.
+          </p>
+        </div>
+        <SessionRuler />
       </section>
 
       <section className={`${cardClass("today")} flex flex-col gap-3 sm:p-8`}>
-        <p className="font-display text-2xl font-semibold tracking-tight">
+        <h2 className="font-display text-2xl font-semibold tracking-tight">
           Set it once. We hold them to it.
-        </p>
+        </h2>
         <p className="max-w-2xl text-ink-soft">
           You pick the days and the time. On a session day the games and social apps wait until the
           session is done, and you hear the same day if it was skipped. Each session ends with your

@@ -27,7 +27,7 @@ import { calendarDay, formatDay, plannedSlots, sessionCount } from "@/parent/pro
 import { currentStudentId } from "@/session/current-student";
 import { scheduleRecord } from "@/session/pace";
 
-export const metadata: Metadata = { title: "Calendar · Klade" };
+export const metadata: Metadata = { title: "Calendar" };
 
 /** How far from the current month the view goes; anything further falls back to this month. */
 const MONTHS_AROUND = 24;

@@ -12,7 +12,7 @@ import { getStudent } from "@/db/queries/students";
 import { MentorCard } from "@/mentor/mentor-card";
 import { currentStudentId } from "@/session/current-student";
 
-export const metadata: Metadata = { title: "Mentor · Klade" };
+export const metadata: Metadata = { title: "Mentor" };
 
 export default async function MentorPage() {
   await connection();
@@ -50,7 +50,7 @@ export default async function MentorPage() {
             </div>
           ) : (
             <Card className="flex max-w-2xl flex-col gap-3">
-              <p className="text-ink-soft">
+              <p className="max-w-prose text-ink-soft">
                 No mentor yet. Mentors are a premium prototype; the waiting room shows how a
                 check-in would start.
               </p>

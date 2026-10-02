@@ -15,7 +15,7 @@ import { ruleSummary } from "@/parent/phone-rule";
 import { RuleFields } from "@/phone/rule-fields";
 import { defaultRule, overrideActive } from "@/session/lock";
 
-export const metadata: Metadata = { title: "Phone rule · Klade" };
+export const metadata: Metadata = { title: "Phone rule" };
 
 const ROW = "flex flex-wrap items-center justify-between gap-4";
 

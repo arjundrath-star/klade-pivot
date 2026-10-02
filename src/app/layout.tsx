@@ -20,7 +20,7 @@ const bricolage = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   metadataBase: APP_URL,
-  title: APP_NAME,
+  title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
   applicationName: APP_NAME,
   description: APP_DESCRIPTION,
   // With the manifest, Chrome offers "Install app" and iOS adds it to the home screen.
@@ -36,6 +36,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${instrumentSans.variable} ${bricolage.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-30 focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:font-semibold focus:text-white focus:outline-none"
+        >
+          Skip to content
+        </a>
         <header className="mx-auto flex w-full max-w-7xl items-center px-6 pt-5">
           <Wordmark />
         </header>

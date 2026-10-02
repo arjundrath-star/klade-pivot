@@ -1,8 +1,8 @@
-# Klade
+# Foothold AI
 
-**Every kid has an AI that does the work for them. We built one that makes them do it.**
+**We don't carry anyone. We give them a foothold.**
 
-Klade is a mastery-paced learning platform for public-school students in grades 6 to 10, starting with Algebra 1. Students complete short, required sessions in which an AI coach makes them do the work instead of handing over answers, then explain their reasoning out loud, graded against a rubric, and pass a timed check. Parents get accountability they can enforce and a record of what their kid can explain.
+Foothold AI is a mastery-paced learning platform for public-school students in grades 6 to 10, starting with Algebra 1. Students complete short, required sessions in which an AI coach makes them do the work instead of handing over answers, then explain their reasoning out loud, graded against a rubric, and pass a timed check. Parents get accountability they can enforce and a record of what their kid can explain.
 
 ## What the MVP shows
 
@@ -56,7 +56,7 @@ npm run gate                 # the full check
 scripts/gate.sh --quick      # typecheck, lint, and unit tests only
 npm run coach:redteam        # pressure-tests the coach against the real model; needs the API key
 npm run db:reset -- --demo   # a fresh local database in the demo's starting state
-npm run lighthouse -- --base https://klade.rathworkspace.cloud   # the budgets against the deployed app
+npm run lighthouse -- --base https://foothold.rathworkspace.cloud   # the budgets against the deployed app
 ```
 
 ## Layout
@@ -75,7 +75,7 @@ docs/milestones/ the build plan, one spec per milestone
 
 ## Status
 
-Pre-product. The MVP demo runs at **https://klade.rathworkspace.cloud**: the production build on a
+Pre-product. The MVP demo runs at **https://foothold.rathworkspace.cloud**: the production build on a
 VPS behind a Cloudflare tunnel, seeded with the demo family. The student pages and onboarding are
 open; the parent and admin views sit behind a shared password. The build plan is in
 `docs/milestones/`, and `docs/demo-runbook.md` has the demo script, the rehearsal order and the

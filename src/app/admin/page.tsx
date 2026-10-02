@@ -25,7 +25,7 @@ import { calendarDay, formatDay } from "@/parent/progress";
 import { demoClockFor } from "@/session/lock";
 import { overrideTarget } from "@/session/override";
 
-export const metadata: Metadata = { title: "Admin · Klade" };
+export const metadata: Metadata = { title: "Admin" };
 
 type UsageRow = Awaited<ReturnType<typeof usageBySession>>[number];
 

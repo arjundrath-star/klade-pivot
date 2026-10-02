@@ -4,7 +4,7 @@ import { OnboardingForm } from "./onboarding-form";
 import { nextMay } from "@/db/demo";
 import { calendarDay } from "@/parent/progress";
 
-export const metadata: Metadata = { title: "Set up · Klade" };
+export const metadata: Metadata = { title: "Set up" };
 
 export default async function OnboardingPage() {
   // The plan starts today, so the page renders per request, never at build time.

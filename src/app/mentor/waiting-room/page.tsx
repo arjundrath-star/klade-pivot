@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { CHECK_IN_MINUTES } from "@/mentor/check-in";
 
-export const metadata: Metadata = { title: "Waiting room · Klade" };
+export const metadata: Metadata = { title: "Waiting room" };
 
 /** Where the check-in's video would start. A static mock: no video, no booking. */
 export default function WaitingRoom() {
@@ -47,9 +47,9 @@ export default function WaitingRoom() {
           How check-ins work
         </h2>
         <ul className="flex list-disc flex-col gap-1.5 pl-5 text-ink-soft">
-          <li>Every check-in happens here in Klade and is recorded.</li>
+          <li>Every check-in happens here in the app and is recorded.</li>
           <li>A parent can join any check-in.</li>
-          <li>Mentors never contact you outside Klade.</li>
+          <li>Mentors never contact you outside the app.</li>
         </ul>
       </section>
       <Link href="/student/mentor" className="link self-start">

@@ -1,12 +1,12 @@
 import { APP_NAME } from "@/config/app";
 
-/** The mark from the app icon: a marigold K on night. */
+/** The mark from the app icon: a marigold F on night. */
 function Mark() {
   return (
     <svg viewBox="0 0 32 32" aria-hidden="true" className="size-7">
       <rect width="32" height="32" rx="9" className="fill-night" />
       <path
-        d="M11 8v16M21.5 8 13 16l8.5 8"
+        d="M11 24V8h11M11 15.5h8"
         className="stroke-today"
         strokeWidth="3.2"
         strokeLinecap="round"

@@ -1,4 +1,5 @@
 /** Alert copy and the alert email. Parent-facing text: see the wording rule in tests/unit/parent. */
+import { APP_NAME, EMAIL_COLORS } from "@/config/app";
 import { inSentence } from "@/content/title";
 import { sessionCount, targetMonth } from "@/parent/progress";
 import { PRONOUN_FORMS, type Pronoun } from "@/parent/pronouns";
@@ -74,6 +75,7 @@ interface AlertEmail {
 export function alertEmailHtml({ type, studentName, message, parentUrl }: AlertEmail): string {
   const subject = escapeHtml(alertSubject(type, studentName));
   const name = escapeHtml(studentName);
+  const { ink, inkSoft, line, well, primary } = EMAIL_COLORS;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -81,14 +83,14 @@ export function alertEmailHtml({ type, studentName, message, parentUrl }: AlertE
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${subject}</title>
 </head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:Helvetica,Arial,sans-serif;color:#18181b;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
+<body style="margin:0;padding:0;background:${well};font-family:Helvetica,Arial,sans-serif;color:${ink};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${well};padding:32px 16px;">
 <tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:8px;padding:32px;">
-<tr><td style="font-size:13px;font-weight:bold;letter-spacing:0.08em;text-transform:uppercase;color:#52525b;padding-bottom:16px;">Klade · Algebra 1</td></tr>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid ${line};border-radius:12px;padding:32px;">
+<tr><td style="font-size:15px;font-weight:bold;color:${ink};padding-bottom:20px;">${APP_NAME}</td></tr>
 <tr><td style="font-size:20px;line-height:1.5;padding-bottom:24px;">${escapeHtml(message)}</td></tr>
-<tr><td style="padding-bottom:24px;"><a href="${escapeHtml(parentUrl)}" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:6px;">See ${name}'s progress</a></td></tr>
-<tr><td style="font-size:13px;line-height:1.5;color:#52525b;">You get this email because you set up Klade for ${name}.</td></tr>
+<tr><td style="padding-bottom:24px;"><a href="${escapeHtml(parentUrl)}" style="display:inline-block;background:${primary};color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:999px;">See ${name}'s progress</a></td></tr>
+<tr><td style="font-size:13px;line-height:1.5;color:${inkSoft};">You get this email because you set up ${APP_NAME} for ${name}.</td></tr>
 </table>
 </td></tr>
 </table>
