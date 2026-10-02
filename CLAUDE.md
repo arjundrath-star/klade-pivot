@@ -132,7 +132,7 @@ The session ends only after step 6's report is written. Do not end a turn while 
 - Database access only through `src/db/`. Every query that filters has an index that serves it.
 - Images through `next/image`, fonts through `next/font`. No external font, script, or style CDNs.
 - No barrel files. Import from the module, not from an `index.ts` that re-exports everything.
-- Main routes ship under 150 KB of first-load JS (`next build` prints it). Lighthouse performance, accessibility, and best-practices each 90 or better on every route in `ROUTES`; the gate enforces this.
+- Main routes ship under 150 KB of first-load JS; the session route, a full-screen workspace from milestone 17, may use up to 175 KB (decision D48). Lighthouse performance, accessibility, and best-practices each 90 or better on every route in `ROUTES`; the gate enforces this.
 - Errors are handled where they happen with a typed result. Nothing is swallowed, nothing is rethrown as a string.
 - Curriculum is data, not prompts. Lessons, worked examples, problem templates, and interest variants live in `src/content/` as typed TypeScript and are graded deterministically. The LLM never generates a problem, an answer, or a lesson at runtime.
 
