@@ -18,6 +18,7 @@ One milestone per one-shot session, in this order. Each derives from `docs/memo/
 | 12  | Public URL, demo seed, demo run                | §8 item 10, steering §6, §7 | 10           |
 | 13  | Algebra I course map, demo persona, student dashboard | docs/curriculum/algebra1-outline.md; steering §1, §7 | none new; demo-driven |
 | 14  | Visual polish and design system                | steering §1, §7; frontend-design skill | none new; every route 90+ |
+| 15  | Foothold AI rename, demo-day fixes, anti-template pass | decision D46; docs/memo/eval/vibe-checklist.md | none new; demo-driven |
 
 Session 2 and 3 content and the weekly digest are cut from the MVP (decision D42, the steering doc's cut order); revisit after the pitch.
 
