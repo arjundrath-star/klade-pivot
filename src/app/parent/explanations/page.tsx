@@ -9,7 +9,7 @@ import {
   type RubricScores,
 } from "@/coach/rubric";
 import { Badge } from "@/components/ui/badge";
-import { Card, cardClass } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { coachTurnsFor } from "@/db/queries/coach";
 import { explainIntegrity, latestExplanation } from "@/db/queries/parent";
@@ -17,7 +17,7 @@ import { getStudent } from "@/db/queries/students";
 import { gatedFamily } from "@/gate/server";
 import { plural } from "@/parent/progress";
 
-export const metadata: Metadata = { title: "Explanations · Klade" };
+export const metadata: Metadata = { title: "Explanations" };
 
 function rubricLine(verdict: "pass" | "fail", scores: RubricScores): string {
   const parts = CRITERIA.map((c) => `${CRITERION_LABELS[c].toLowerCase()} ${scores[c]}`);
@@ -45,10 +45,10 @@ export default async function ExplanationsPage() {
     <ParentShell active="/parent/explanations" student={student}>
       {({ name }) => (
         <section aria-labelledby="explain-heading" className="flex max-w-3xl flex-col gap-6">
-          <PageHeader id="explain-heading" title={`What ${name} can explain`}>
+          <PageHeader id="explain-heading" title="Explanations">
             <p>
-              After each session, {name} explains why every step works, by voice or typing, and a
-              rubric grades it. The latest explanation is here word for word.
+              What {name} can explain. After each session, {name} explains why every step works, by
+              voice or typing, and a rubric grades it. The latest explanation is here word for word.
             </p>
           </PageHeader>
           <Card tone="course" className="flex flex-col gap-4">
@@ -71,7 +71,7 @@ export default async function ExplanationsPage() {
                     </p>
                   </>
                 )}
-                <details className={`${cardClass("well", "none")} flex flex-col gap-2 px-4 py-3`}>
+                <details className="flex flex-col gap-2 border-t border-course/40 pt-3">
                   <summary className="focus-ring cursor-pointer rounded-sm font-medium">
                     Coach conversation in this session ({plural(transcript.length, "hint")})
                   </summary>

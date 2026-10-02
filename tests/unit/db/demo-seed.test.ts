@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq, getTableName, is } from "drizzle-orm";
 import { SQLiteTable } from "drizzle-orm/sqlite-core";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ALGEBRA1_COURSE } from "@/content/algebra1/course";
 import { rewardBoard } from "@/content/rewards";
 import { S1_KEY } from "@/content/keys";
@@ -173,7 +173,7 @@ describe("the demo persona", () => {
     expect(await latestExplanation(DEMO_STUDENT_ID)).toBeUndefined();
   });
 
-  it("stands at a 5-session streak, on track, with the 4-week streak reward at 3 of 4", async () => {
+  it("stands at a 5-session streak, on track, with the 4-week streak reward one session short", async () => {
     const standing = await studentStanding(DEMO_STUDENT_ID, DEMO_DAY);
     expect(standing).toEqual({
       behind: 0,
@@ -182,13 +182,15 @@ describe("the demo persona", () => {
       streakBroken: false,
       sessionsDone: 5,
     });
+    // The demo day is a Friday, in the same calendar week as her last three sessions, so the
+    // streak reward already reads at its target and waits on today's session to unlock it.
     const board = rewardBoard(await rewardRows(DEMO_STUDENT_ID), standing);
     expect(
       board.map(({ reward, current, target, unlocked }) => [reward.key, current, target, unlocked]),
     ).toEqual([
       ["course-on-time", 5, 120, false],
       ["unit-on-time", 5, ALGEBRA1_COURSE[0].sessions, false],
-      ["streak-4-weeks", 3, 4, false],
+      ["streak-4-weeks", 4, 4, false],
       ["intensive-pace", 0, 4, false],
     ]);
     // Rewards read her sessions live; the record unlocks none of them.
@@ -209,6 +211,33 @@ describe("the demo persona", () => {
       position: 7,
       concept: { title: "Equations with variables on both sides", playable: false },
     });
+  });
+});
+
+describe("the demo-day reward", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("completes the 4-week streak reward with today's session on every weekday", async () => {
+    // Monday Oct 5 through Sunday Oct 11, each at noon in New York.
+    for (let offset = 0; offset < 7; offset++) {
+      const day = new Date(Date.UTC(2026, 9, 5 + offset, 16));
+      vi.setSystemTime(day);
+      await resetDemoData(day);
+      const before = rewardBoard(
+        await rewardRows(DEMO_STUDENT_ID),
+        await studentStanding(DEMO_STUDENT_ID, day),
+      ).find((entry) => entry.reward.key === "streak-4-weeks");
+      // One week short on the Monday, which starts a new calendar week; at the target otherwise.
+      expect(before).toMatchObject({ current: offset === 0 ? 3 : 4, target: 4, unlocked: false });
+      const sessionId = await sessionAtExit();
+      await answerExit(sessionId, [true, true, true]);
+      const result = await completeSession(sessionId, DEMO_STUDENT_ID);
+      expect(result.ok && result.summary.rewards.unlocks.map((reward) => reward.key)).toEqual([
+        "streak-4-weeks",
+      ]);
+    }
   });
 });
 
@@ -269,9 +298,9 @@ describe("Reset demo", () => {
       ...DEMO_LOCK_RULE,
     });
     const rows = await rewardRows(DEMO_STUDENT_ID);
-    // One seeded week before the two her record spans: 3 of 4 on the board.
+    // Two seeded weeks before the two her record spans through the demo day: 4 of 4 on the board.
     expect(rows.find((row) => row.key === "streak-4-weeks")).toMatchObject({
-      current: 1,
+      current: 2,
       target: 4,
       unlocked: false,
     });

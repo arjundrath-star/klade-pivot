@@ -4,25 +4,25 @@ import { AppShell, type NavItem } from "@/components/shell/app-shell";
 import { ALGEBRA1_TITLE } from "@/content/algebra1/course";
 
 const ITEMS = [
-  { href: "/parent", label: "Overview", glyph: "overview", tint: "primary" },
-  { href: "/parent/explanations", label: "Explanations", glyph: "explanations", tint: "course" },
-  { href: "/parent/alerts", label: "Alerts", glyph: "alerts", tint: "today" },
-  { href: "/parent/settings", label: "Phone rules", glyph: "phone", tint: "calendar" },
-  { href: "/parent/mentor", label: "Mentor", glyph: "mentor", tint: "mentor" },
+  { href: "/parent", label: "Overview", glyph: "overview" },
+  { href: "/parent/explanations", label: "Explanations", glyph: "explanations" },
+  { href: "/parent/alerts", label: "Alerts", glyph: "alerts" },
+  { href: "/parent/settings", label: "Phone rule", glyph: "phone" },
+  { href: "/parent/mentor", label: "Mentor", glyph: "mentor" },
 ] as const satisfies readonly NavItem[];
 
 type ParentPage = (typeof ITEMS)[number]["href"];
 
-interface ParentShellProps<S extends { name: string }> {
+interface ParentShellProps<S extends { name: string; parentName: string }> {
   active: ParentPage;
-  /** The student, or undefined when the family has none yet. */
+  /** The student with the parent's name from the family row, or undefined when there is none. */
   student: S | undefined;
   /** The page, given the student; without one the shell says so. */
   children: (student: S) => ReactNode;
 }
 
 /** The parent area's frame: the same shell as the student's, with the parent's pages. */
-export function ParentShell<S extends { name: string }>({
+export function ParentShell<S extends { name: string; parentName: string }>({
   active,
   student,
   children,
@@ -33,8 +33,8 @@ export function ParentShell<S extends { name: string }>({
       items={ITEMS}
       active={active}
       identity={{
-        name: "Parent view",
-        detail: student ? `${student.name}, ${ALGEBRA1_TITLE}` : "No student yet",
+        name: student?.parentName ?? "Parent",
+        detail: student ? `${student.name}'s parent, ${ALGEBRA1_TITLE}` : "No student yet",
       }}
     >
       {student ? children(student) : <NoStudent />}

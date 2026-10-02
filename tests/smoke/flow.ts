@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { answersFor, recordPass } from "../helpers/answers";
-import { DEMO_MASTERED_KEYS } from "@/db/demo";
+import { DEMO_MASTERED_KEYS, STREAK_REWARD_WEEKS } from "@/db/demo";
 import { addDays, weekdayOf } from "@/engine/pace";
 import { XP_TABLE } from "@/engine/progress";
 import { calendarDay } from "@/parent/progress";
@@ -29,13 +29,14 @@ export const SEEDED_SESSIONS = DEMO_MASTERED_KEYS.length;
 export const SEEDED_STREAK = SEEDED_SESSIONS;
 
 /**
- * Where the 4-week streak reward stands once today's session is done. Her record spans two
- * calendar weeks on top of one seeded week, so today's session completes the reward only when
- * today starts a new week, a Monday; any other day it stays at 3 of 4.
+ * Where the 4-week streak reward stands before today's session: the seed puts it one session
+ * short, which reads one week short on a Monday (today starts a new calendar week) and at the
+ * target, waiting on the session, on any other day.
  */
-export function streakRewardAfterToday(): { weeks: number; unlocked: boolean } {
-  const unlocked = weekdayOf(calendarDay(new Date())) === "mon";
-  return { weeks: unlocked ? 4 : 3, unlocked };
+export function streakRewardBeforeToday(): number {
+  return weekdayOf(calendarDay(new Date())) === "mon"
+    ? STREAK_REWARD_WEEKS - 1
+    : STREAK_REWARD_WEEKS;
 }
 
 /** The session page is on the block headed `label`, at `position` on the progress bar. */

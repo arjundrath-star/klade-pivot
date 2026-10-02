@@ -75,8 +75,8 @@ export const S1_TEMPLATE_ID = templateIdFor(S1_KEY);
  */
 export const DEMO_MASTERED_KEYS: readonly string[] = conceptsBefore(ALGEBRA1_COURSE, S1_KEY);
 
-/** What the 4-week streak reward reads on the demo day: one week short. */
-const DEMO_STREAK_REWARD_AT = 3;
+/** The 4-week streak reward's target: the session the demo runs is the one that completes it. */
+export const STREAK_REWARD_WEEKS = 4;
 
 /**
  * The demo student's completion-reward rows (prototype). The live numbers come from her records,
@@ -88,7 +88,7 @@ function demoRewards(streakWeeksBeforeRecord: number): RewardProgress[] {
   return [
     { key: "course-on-time", current: 0, target: ALGEBRA1_SESSION_ESTIMATE },
     { key: "unit-on-time", current: 0, target: ALGEBRA1_COURSE[0].sessions },
-    { key: "streak-4-weeks", current: streakWeeksBeforeRecord, target: 4 },
+    { key: "streak-4-weeks", current: streakWeeksBeforeRecord, target: STREAK_REWARD_WEEKS },
     { key: "intensive-pace", current: 0, target: 4 },
   ];
 }
@@ -191,13 +191,13 @@ function curriculumStatements(db: LibSQLDatabase): Statements {
  * The curriculum rows and the demo family: a parent and Maya, grade 6, on track for May, with the
  * prototype's reward rows and mentor, and the demo clock off. Every statement is an upsert, so a
  * re-seed restores the profile and leaves session history, reward progress and unlocked rewards
- * alone. `streakWeeksBeforeRecord` is what the 4-week streak row starts at: the full reading on a
- * blank record, less the weeks a seeded record covers.
+ * alone. `streakWeeksBeforeRecord` is what the 4-week streak row starts at: on a blank record, one
+ * session short of the target, less the weeks a seeded record covers.
  */
 function profileStatements(
   db: LibSQLDatabase,
   now: Date,
-  streakWeeksBeforeRecord = DEMO_STREAK_REWARD_AT,
+  streakWeeksBeforeRecord = STREAK_REWARD_WEEKS - 1,
 ): Statements {
   const family = { id: DEMO_FAMILY_ID, parentName: "Dana", demoClock: null };
   const maya = {
@@ -270,14 +270,16 @@ function demoRecord(today: string): RecordDay[] {
 }
 
 /**
- * The 4-week streak row's start: the reading the demo day should show, less the calendar weeks
- * the record's streak covers, by the same rule the live board adds them back with. Never below
- * zero, should the record ever grow past the reading.
+ * The 4-week streak row's start: the target less the calendar weeks the record's streak will
+ * cover once today's session is done, by the same rule the live board counts them with, so that
+ * session completes the reward whatever weekday the demo runs on. On a day that starts a new week
+ * the board reads one week short before the session; on any other day it reads at the target,
+ * waiting on the session. Never below zero, should the record ever grow past the target.
  */
 function streakWeeksBeforeRecord(record: readonly RecordDay[], today: string): number {
-  const slots = record.map(({ day }) => ({ day, status: "scheduled" as const }));
-  const days = record.map(({ day }) => day);
-  return Math.max(0, DEMO_STREAK_REWARD_AT - streakSpan(slots, days, today, record.length).weeks);
+  const days = [...record.map(({ day }) => day), today];
+  const slots = days.map((day) => ({ day, status: "scheduled" as const }));
+  return Math.max(0, STREAK_REWARD_WEEKS - streakSpan(slots, days, today, days.length).weeks);
 }
 
 /** The content the shipped session has: the seeded sessions earned and scored like it. */

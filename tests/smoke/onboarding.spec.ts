@@ -63,7 +63,8 @@ test("a parent onboards a new student, whose first session is framed in their in
   await page.getByRole("button", { name: "Skip for now" }).click();
 
   await expect(page).toHaveURL(/\/student$/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hi, Ava");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Today");
+  await expect(page.getByText(/^Hi, Ava\./)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your phone" })).toHaveCount(0);
   // AC 1: the whole setup takes well under a minute; the automation does it in under 20 s.
   expect(Date.now() - started).toBeLessThan(20_000);

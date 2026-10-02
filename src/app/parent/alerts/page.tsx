@@ -9,7 +9,7 @@ import { getStudent } from "@/db/queries/students";
 import { gatedFamily } from "@/gate/server";
 import { calendarDay, formatDay } from "@/parent/progress";
 
-export const metadata: Metadata = { title: "Alerts · Klade" };
+export const metadata: Metadata = { title: "Alerts" };
 
 export default async function AlertsPage() {
   await connection();
@@ -28,7 +28,10 @@ export default async function AlertsPage() {
           </PageHeader>
           {alerts.length === 0 ? (
             <Card>
-              <p className="text-ink-soft">No notifications yet.</p>
+              <p className="max-w-prose text-ink-soft">
+                No alerts yet. You get one the same day a session is missed or mastered, and it
+                stays here.
+              </p>
             </Card>
           ) : (
             <ul className="flex flex-col gap-3">

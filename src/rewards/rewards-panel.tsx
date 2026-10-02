@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Card, cardClass } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { CheckGlyph } from "@/components/ui/glyphs";
 import { PanelHeader } from "@/components/ui/panel-header";
 import { ProgressBar } from "@/components/ui/progress";
@@ -24,14 +24,26 @@ function paceLine(reward: Reward, behind: number, targetDate: string): string {
   const prize = inSentence(reward.parent);
   const by = formatDate(targetDate);
   return behind === 0
-    ? `On pace: finish by ${by} → ${prize}`
-    : `${sessionCount(behind)} behind. Catch up to finish by ${by} → ${prize}`;
+    ? `On pace to finish by ${by}: ${prize}.`
+    : `${sessionCount(behind)} behind. Catch up to finish by ${by}: ${prize}.`;
 }
 
-/** The kid's pace on a reward that reads it and is still to earn. */
-function kidPace({ reward, unlocked }: BoardEntry, behind: number): string {
-  if (!reward.paced || unlocked) return "";
-  return behind === 0 ? "You're on pace." : `You're ${sessionCount(behind)} behind.`;
+/**
+ * What a reward's row says under its bar: the trigger, then the cap for the parent or, for the
+ * kid, the pace on a reward that reads it; a reward at its target waits on the next finished
+ * session, which is what unlocks it.
+ */
+function rowLine(
+  { reward, current, target, unlocked }: BoardEntry,
+  behind: number,
+  viewer: RewardsPanelProps["viewer"],
+): string {
+  if (!unlocked && current >= target) {
+    return `${reward.trigger}. Unlocks with the next finished session.`;
+  }
+  if (viewer.kind === "parent") return `${reward.trigger}. ${reward.cap}`;
+  if (!reward.paced || unlocked) return `${reward.trigger}.`;
+  return `${reward.trigger}. ${behind === 0 ? "You're on pace." : `You're ${sessionCount(behind)} behind.`}`;
 }
 
 /**
@@ -44,7 +56,7 @@ export function RewardsPanel({ entries, behind, viewer }: RewardsPanelProps) {
   const paced = entries.find((entry) => entry.reward.paced && !entry.unlocked);
   const earned = entries.filter((entry) => entry.unlocked);
   return (
-    <Card aria-labelledby="rewards-heading" tone="progress" className="flex flex-col gap-5">
+    <Card aria-labelledby="rewards-heading" tone="progress" className="flex flex-col gap-4">
       <PanelHeader
         id="rewards-heading"
         title={parent ? `${parent.name}'s rewards` : "Your rewards"}
@@ -52,8 +64,8 @@ export function RewardsPanel({ entries, behind, viewer }: RewardsPanelProps) {
       >
         <p>
           {parent
-            ? "Earned by doing the work on schedule, never by scores or speed. Paid in Klade: free months, discounts and mentor check-ins, never cash or gift cards."
-            : "Do the work on schedule and these unlock. They're paid in Klade, never in cash."}
+            ? "Earned by doing the work on schedule, never by scores or speed. Paid as free months, discounts and mentor check-ins, never cash or gift cards."
+            : "Do the work on schedule and these unlock. They're paid as free months and check-ins, never in cash."}
         </p>
       </PanelHeader>
 
@@ -68,12 +80,12 @@ export function RewardsPanel({ entries, behind, viewer }: RewardsPanelProps) {
         </div>
       )}
 
-      <ul aria-label="Rewards" className="flex flex-col gap-4">
+      <ul aria-label="Rewards" className="divide-y divide-progress/35">
         {entries.map((entry) => {
           const { reward } = entry;
           const prize = parent ? reward.parent : reward.kid;
           return (
-            <li key={reward.key} className={`${cardClass("well", "xs")} flex flex-col gap-2`}>
+            <li key={reward.key} className="flex flex-col gap-2 py-3.5 first:pt-1 last:pb-0">
               <div className="flex items-baseline justify-between gap-4">
                 <p className="font-semibold">{prize}</p>
                 {entry.unlocked ? (
@@ -94,9 +106,7 @@ export function RewardsPanel({ entries, behind, viewer }: RewardsPanelProps) {
                 tone={entry.unlocked ? "success" : "progress"}
                 segmented
               />
-              <p className="text-sm text-ink-soft">
-                {reward.trigger}. {parent ? reward.cap : kidPace(entry, behind)}
-              </p>
+              <p className="text-sm text-ink-soft">{rowLine(entry, behind, viewer)}</p>
             </li>
           );
         })}

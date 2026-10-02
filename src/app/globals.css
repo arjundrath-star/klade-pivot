@@ -135,10 +135,59 @@
   }
 }
 
+@layer components {
+  /*
+   * A history table: the cells' spacing lives here, since under 480px the table stacks (each
+   * row a block, each cell on its own line with its column heading in front of it, the heading
+   * row kept for screen readers) and the stacked cells need different spacing.
+   */
+  .table-stack th {
+    padding: 0 1rem 0.5rem 0;
+  }
+
+  .table-stack td {
+    padding: 0.625rem 1rem 0.625rem 0;
+  }
+
+  .table-stack :is(th, td):last-child {
+    padding-right: 0;
+  }
+
+  @media (width < 30rem) {
+    .table-stack,
+    .table-stack tbody,
+    .table-stack tr {
+      display: block;
+    }
+
+    .table-stack thead {
+      @apply sr-only;
+    }
+
+    .table-stack tr {
+      padding-block: 0.75rem;
+    }
+
+    .table-stack td {
+      display: flex;
+      gap: 1rem;
+      padding: 0.125rem 0;
+    }
+
+    .table-stack td::before {
+      content: attr(data-label);
+      flex: none;
+      width: 4.5rem;
+      color: var(--color-ink-soft);
+      font-weight: 400;
+    }
+  }
+}
+
 /*
- * A night surface (the mock phone's screen, the admin ribbon): white text, and the soft text,
- * line, track, well and primary tokens turned white, so the same utilities, links and focus
- * rings read right on it. `ink` stays dark for text set on a marigold fill.
+ * A night surface (the mock phone's screen): white text, and the soft text, line, track, well and
+ * primary tokens turned white, so the same utilities, links and focus rings read right on it.
+ * `ink` stays dark for text set on a marigold fill.
  */
 @utility tone-night {
   --color-ink-soft: rgb(255 255 255 / 0.74);

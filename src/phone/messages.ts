@@ -1,8 +1,13 @@
 import { timeLabel } from "@/parent/phone-rule";
+import { weekdayName } from "@/parent/progress";
 import type { LockView } from "@/session/lock-status";
 
 /** What the phone says while it is open: the first condition that let it go, in the kid's words. */
-export function openMessage({ reason, rule }: Pick<LockView, "reason" | "rule">): string {
+export function openMessage({
+  reason,
+  rule,
+  nextLockDay,
+}: Pick<LockView, "reason" | "rule" | "nextLockDay">): string {
   switch (reason) {
     case "session-done":
       return "Today's session is done. Everything is open.";
@@ -11,9 +16,13 @@ export function openMessage({ reason, rule }: Pick<LockView, "reason" | "rule">)
     case "before-start":
       return `Apps lock at ${rule ? timeLabel(rule.startTime) : "the start time"} until today's session is done.`;
     case "not-session-day":
-      return "No session today. Everything is open.";
+      return nextLockDay
+        ? `Everything is open until ${weekdayName(nextLockDay)}, the next session day.`
+        : "No session today. Everything is open.";
     case "weekend-off":
-      return "It's the weekend. Everything is open.";
+      return nextLockDay
+        ? `It's the weekend. Everything is open until ${weekdayName(nextLockDay)}.`
+        : "It's the weekend. Everything is open.";
     case "off":
       return "The phone rule is off.";
     default:

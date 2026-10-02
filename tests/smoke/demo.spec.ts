@@ -10,11 +10,12 @@ import {
   sessionXp,
   solveBlock,
   startSession,
-  streakRewardAfterToday,
+  streakRewardBeforeToday,
   targetNextMay,
 } from "./flow";
 import { SMOKE_ADMIN_PASSWORD } from "./password";
 import { renderedFor } from "../helpers/answers";
+import { STREAK_REWARD_WEEKS } from "@/db/demo";
 
 const EXPLANATION =
   "I subtracted 5 from both sides to keep it balanced, then divided both sides by 2 to get x alone.";
@@ -58,7 +59,8 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   await expect(form.getByRole("checkbox", { name: "Thu", exact: true })).toBeChecked();
   await form.getByRole("button", { name: "Finish setup" }).click();
   await expect(form).toHaveURL(/\/student$/);
-  await expect(form.getByRole("heading", { level: 1 })).toHaveText("Hi, Maya");
+  await expect(form.getByRole("heading", { level: 1 })).toHaveText("Today");
+  await expect(form.getByText(/^Hi, Maya\./)).toBeVisible();
   await expect(form.getByRole("region", { name: "Your phone" })).toBeVisible();
   expect(formErrors).toEqual([]);
   await signup.close();
@@ -67,12 +69,13 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   await page.goto("/parent");
   await expect(page).toHaveURL(/\/gate\?next=%2Fparent$/);
   await page.getByLabel("Password").fill("not the password");
-  await page.getByRole("button", { name: "Enter" }).click();
+  await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByText("That password is not right.")).toBeVisible();
   await page.getByLabel("Password").fill(SMOKE_ADMIN_PASSWORD);
-  await page.getByRole("button", { name: "Enter" }).click();
+  await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/parent$/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Maya's progress");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Overview");
+  await expect(page.getByText("Dana", { exact: true })).toBeVisible();
 
   // 2. "It's Thursday, 5 PM. Maya's phone is locked."
   await page.goto("/admin");
@@ -87,10 +90,10 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   await expect(phone.getByRole("list", { name: "Apps" }).getByText(", locked")).toHaveCount(4);
   const rewards = page.getByRole("region", { name: "Maya's rewards" });
   const streak = rewards.getByRole("progressbar", { name: /^4-week streak/ });
-  await expect(streak).toHaveAttribute("aria-valuenow", "3");
+  await expect(streak).toHaveAttribute("aria-valuenow", String(streakRewardBeforeToday()));
   await page.goto("/parent/mentor");
   await expect(page.getByRole("region", { name: "Maya's mentor: Jordan · NYU '28" })).toBeVisible();
-  const explain = page.getByRole("region", { name: "What Maya can explain" });
+  const explain = page.getByRole("region", { name: "Explanations" });
   await page.goto("/parent/explanations");
   await expect(explain.getByText(/^Nothing yet\./)).toBeVisible();
   await page.goto("/parent");
@@ -100,7 +103,7 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   const student = await page.context().newPage();
   const studentErrors = watchConsole(student);
   await student.goto("/student");
-  await expect(student.getByRole("heading", { level: 1 })).toHaveText("Hi, Maya");
+  await expect(student.getByRole("heading", { level: 1 })).toHaveText("Today");
   const sessionId = await startSession(student);
   const studentNext = student.getByRole("button", { name: "Next" });
   await reachGuidedPractice(student, sessionId);
@@ -134,9 +137,9 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   await answerExitCheck(student, sessionId, [true, true, true]);
   await student.getByRole("button", { name: "Finish" }).click();
 
-  // Mastered: XP, the concept badge, the streak, and the 4-week streak reward in a new week.
+  // Mastered: XP, the concept badge, the streak, and the 4-week streak reward, which this
+  // session completes on any weekday.
   const xp = sessionXp(guided.length);
-  const streakReward = streakRewardAfterToday();
   await expect(student.getByRole("heading", { level: 1, name: "Mastered" })).toBeVisible();
   const earned = student.getByRole("region", { name: "This session" });
   await expect(earned.getByText(`+${xp} XP`)).toBeVisible();
@@ -144,9 +147,7 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
     "Solving two-step linear equations mastered",
   );
   await expect(earned.getByText(`${SEEDED_STREAK + 1}-session streak`)).toBeVisible();
-  await expect(earned.getByRole("list", { name: "Rewards unlocked" })).toHaveCount(
-    streakReward.unlocked ? 1 : 0,
-  );
+  await expect(earned.getByRole("list", { name: "Rewards unlocked" })).toHaveCount(1);
 
   // The phone in the parent's tab unlocks live, within one poll, with what the session earned.
   await expect(phone.getByText(`+${xp} XP`)).toBeVisible({ timeout: 7000 });
@@ -158,10 +159,8 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   await page.reload();
   await expect(page.getByText("On track for May")).toBeVisible();
   await expect(page.getByText(`${SEEDED_STREAK + 1}-session streak`)).toBeVisible();
-  await expect(page.getByText("Earned: one free mentor check-in")).toHaveCount(
-    streakReward.unlocked ? 1 : 0,
-  );
-  await expect(streak).toHaveAttribute("aria-valuenow", String(streakReward.weeks));
+  await expect(page.getByText("Earned: one free mentor check-in")).toHaveCount(1);
+  await expect(streak).toHaveAttribute("aria-valuenow", String(STREAK_REWARD_WEEKS));
   await expect(page.getByRole("region", { name: "Course map" })).toContainText(
     "Maya has mastered 6 of 49 concepts",
   );
@@ -180,7 +179,7 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   expect(Date.now() - started).toBeLessThan(5000);
   await page.goto("/parent");
   await expect(page.getByText("On track for May")).toBeVisible();
-  await expect(streak).toHaveAttribute("aria-valuenow", "3");
+  await expect(streak).toHaveAttribute("aria-valuenow", String(streakRewardBeforeToday()));
   await page.goto("/parent/explanations");
   await expect(explain.getByText(/^Nothing yet\./)).toBeVisible();
   await student.goto("/student");

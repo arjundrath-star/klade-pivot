@@ -1,5 +1,5 @@
 import { buttonClass } from "@/components/ui/button";
-import { CheckGlyph } from "@/components/ui/glyphs";
+import { CheckGlyph, ChevronGlyph } from "@/components/ui/glyphs";
 import { ProgressBar } from "@/components/ui/progress";
 import {
   nodeState,
@@ -22,8 +22,8 @@ interface CourseMapProps {
   today?: () => Promise<void>;
   /** The parent's map: a note under a concept, such as its exit-check score or a repeat. */
   notes?: ReadonlyMap<string, string>;
-  /** The parent's overview: two unit columns and no unit summaries. */
-  condensed?: boolean;
+  /** The unit headings' level: h2 under a page heading, h3 inside a panel with its own h2. */
+  unitHeading: "h2" | "h3";
 }
 
 const STATE_LABELS: Readonly<Record<NodeState, string>> = {
@@ -96,9 +96,11 @@ function Node({
 }
 
 /**
- * The course as a map: every unit with a progress bar, every concept as a node on a rail with its
- * standard code, in three states. Mastered nodes are filled, today's node is the only one that
- * leads anywhere, and upcoming nodes are plain text, built or not. Server-rendered; no client code.
+ * The course as a map: one row per unit, each a native disclosure that shows the unit's title,
+ * progress bar and mastered count when closed and its summary and concepts as nodes on a rail
+ * when open. The unit holding today's concept starts open, the rest closed, so the page reads as
+ * nine rows first. Mastered nodes are filled, today's node is the only one that leads anywhere,
+ * and upcoming nodes are plain text, built or not. Server-rendered; no client code.
  */
 export function CourseMap({
   units,
@@ -106,10 +108,10 @@ export function CourseMap({
   currentKey,
   today,
   notes,
-  condensed = false,
+  unitHeading: UnitHeading,
 }: CourseMapProps) {
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <ul aria-label="Legend" className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-soft">
         {(["mastered", "current", "upcoming"] as const).map((state) => (
           <li key={state} className="flex items-center gap-2">
@@ -118,46 +120,54 @@ export function CourseMap({
           </li>
         ))}
       </ul>
-      <ol className={`grid gap-x-8 gap-y-7 md:grid-cols-2 ${condensed ? "" : "xl:grid-cols-3"}`}>
+      <ol className="divide-y divide-line border-y border-line">
         {units.map((unit) => {
           const done = unit.concepts.filter((concept) => mastered.has(concept.key)).length;
+          const open = unit.concepts.some((concept) => concept.key === currentKey);
           return (
-            <li key={unit.number} className="flex flex-col gap-3">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-display text-lg leading-tight font-semibold">
-                    <span className="mr-2 text-sm font-medium text-course-deep">
-                      Unit {unit.number}
+            <li key={unit.number}>
+              <details open={open} className="group">
+                <summary className="focus-ring flex cursor-pointer list-none items-center gap-4 rounded-sm py-4 hover:bg-well [&::-webkit-details-marker]:hidden">
+                  <span className="flex min-w-0 flex-1 flex-col gap-2">
+                    <span className="flex flex-col gap-x-4 gap-y-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+                      <UnitHeading className="font-display text-lg leading-tight font-semibold">
+                        <span className="mr-2 font-sans text-sm font-medium text-ink-soft">
+                          Unit {unit.number}
+                        </span>
+                        {unit.title}
+                      </UnitHeading>
+                      <span className="shrink-0 text-sm text-ink-soft tabular-nums">
+                        {done} of {unit.concepts.length} mastered
+                      </span>
                     </span>
-                    {unit.title}
-                  </h3>
-                  <span className="shrink-0 text-sm text-ink-soft tabular-nums">
-                    {done} of {unit.concepts.length}
+                    <ProgressBar
+                      label={`Unit ${unit.number} progress`}
+                      value={done}
+                      max={unit.concepts.length}
+                      tone="course"
+                      size="thin"
+                    />
                   </span>
+                  <ChevronGlyph className="size-5 shrink-0 text-ink-soft transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+                </summary>
+                <div className="flex flex-col gap-3 pb-4">
+                  {unit.summary && (
+                    <p className="max-w-prose text-sm text-ink-soft">{unit.summary}</p>
+                  )}
+                  <ol>
+                    {unit.concepts.map((concept, index) => (
+                      <Node
+                        key={concept.key}
+                        concept={concept}
+                        state={nodeState(concept.key, mastered, currentKey)}
+                        last={index === unit.concepts.length - 1}
+                        today={today}
+                        note={notes?.get(concept.key)}
+                      />
+                    ))}
+                  </ol>
                 </div>
-                <ProgressBar
-                  label={`Unit ${unit.number} progress`}
-                  value={done}
-                  max={unit.concepts.length}
-                  tone="course"
-                  size="thin"
-                />
-              </div>
-              {!condensed && unit.summary && (
-                <p className="text-sm text-ink-soft">{unit.summary}</p>
-              )}
-              <ol>
-                {unit.concepts.map((concept, index) => (
-                  <Node
-                    key={concept.key}
-                    concept={concept}
-                    state={nodeState(concept.key, mastered, currentKey)}
-                    last={index === unit.concepts.length - 1}
-                    today={today}
-                    note={notes?.get(concept.key)}
-                  />
-                ))}
-              </ol>
+              </details>
             </li>
           );
         })}

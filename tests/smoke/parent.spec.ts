@@ -9,7 +9,7 @@ test("the parent sees a missed session and the admin switches the interest live"
 }) => {
   const errors = watchConsole(page);
   await page.goto("/parent");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Maya's progress");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Overview");
   await expect(page.getByText("On track for May")).toBeVisible();
   const map = page.getByRole("region", { name: "Course map" });
   await expect(map).toContainText("Maya has mastered 5 of 49 concepts");
@@ -18,7 +18,7 @@ test("the parent sees a missed session and the admin switches the interest live"
   await expect(map.getByText("3 of 3 on the exit check")).toHaveCount(5);
   await expect(page.getByRole("heading", { name: "Session history" })).toBeVisible();
   await page.goto("/parent/explanations");
-  await expect(page.getByRole("heading", { name: "What Maya can explain" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Explanations" })).toBeVisible();
 
   // The admin ribbon on the student's screen drives the demo and comes back to it.
   await page.goto("/student");

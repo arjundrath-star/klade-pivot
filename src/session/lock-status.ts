@@ -1,6 +1,6 @@
 import { lastCompletion, lockInputs } from "@/db/queries/lock";
 import { calendarDay, phoneClock } from "@/parent/progress";
-import { lockState, type LockRuleFields, type LockState } from "@/session/lock";
+import { lockState, nextLockDay, type LockRuleFields, type LockState } from "@/session/lock";
 import { sessionRewards } from "@/session/rewards";
 
 /** What the phone panel shows, as GET /api/lock-state returns it. */
@@ -10,6 +10,8 @@ export type LockView = LockState & {
   /** The lock's clock on the phone's lock screen: "5:05" and "Thursday, October 1". */
   time: string;
   date: string;
+  /** The first day after the lock's clock the rule locks on, for what the open screen says. */
+  nextLockDay: string | null;
   /**
    * What the session that unlocked the phone earned: its XP and the streak after it. Worked out
    * only when asked for, since only the poll that sees the unlock shows it.
@@ -50,6 +52,7 @@ export async function lockView(
       weekendOff: rule.weekendOff,
     },
     ...phoneClock(clock),
+    nextLockDay: rule ? nextLockDay(rule, calendarDay(clock)) : null,
     reward: earned && { xp: earned.xp, streak: earned.streak.after.count },
   };
 }

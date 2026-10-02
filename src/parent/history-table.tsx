@@ -12,47 +12,60 @@ function resultClass(result: string): string {
   return "";
 }
 
-/** Sessions and missed days, latest first: date, concept, outcome, minutes. */
+/**
+ * Sessions and missed days, latest first: date, concept, outcome, minutes. The cells' spacing is
+ * `table-stack` in globals.css, which under 480px stacks the rows with each cell labelled by its
+ * heading.
+ */
 export function HistoryTable({ rows }: HistoryTableProps) {
   const sorted = sortedHistory(rows);
   if (sorted.length === 0) {
-    return <p className="text-ink-soft">No sessions yet.</p>;
+    return (
+      <p className="max-w-prose text-ink-soft">
+        No sessions yet. The first one shows here the day it happens, with its outcome and minutes.
+      </p>
+    );
   }
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="text-ink-soft">
-            <th scope="col" className="pr-4 pb-2 font-medium">
-              Date
-            </th>
-            <th scope="col" className="pr-4 pb-2 font-medium">
-              Concept
-            </th>
-            <th scope="col" className="pr-4 pb-2 font-medium whitespace-nowrap">
-              Outcome
-            </th>
-            <th scope="col" className="pb-2 text-right font-medium">
-              Minutes
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map(({ row, day }) => {
-            const result = historyResult(row);
-            return (
-              <tr key={row.id} className="border-t border-line">
-                <td className="py-2.5 pr-4 whitespace-nowrap">{day ? formatDay(day) : ""}</td>
-                <td className="py-2.5 pr-4">{row.title}</td>
-                <td className={`py-2.5 pr-4 font-medium whitespace-nowrap ${resultClass(result)}`}>
-                  {result}
-                </td>
-                <td className="py-2.5 text-right tabular-nums">{historyMinutes(row)}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <table className="table-stack w-full text-left text-sm">
+      <thead>
+        <tr className="text-ink-soft">
+          <th scope="col" className="font-medium">
+            Date
+          </th>
+          <th scope="col" className="font-medium">
+            Concept
+          </th>
+          <th scope="col" className="font-medium">
+            Outcome
+          </th>
+          <th scope="col" className="text-right font-medium">
+            Minutes
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.map(({ row, day }) => {
+          const result = historyResult(row);
+          return (
+            <tr key={row.id} className="border-t border-line">
+              <td data-label="Date" className="whitespace-nowrap">
+                {day ? formatDay(day) : ""}
+              </td>
+              <td data-label="Concept">{row.title}</td>
+              <td
+                data-label="Outcome"
+                className={`font-medium whitespace-nowrap ${resultClass(result)}`}
+              >
+                {result}
+              </td>
+              <td data-label="Minutes" className="text-right tabular-nums">
+                {historyMinutes(row)}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }

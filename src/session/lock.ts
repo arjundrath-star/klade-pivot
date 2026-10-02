@@ -99,13 +99,21 @@ export function lockState(
   return { locked: true, reason: "session-due" };
 }
 
-function latestLockDay(
-  today: string,
-  days: readonly Weekday[],
-  weekendOff: boolean,
-): string | null {
-  const locking = weekendOff ? days.filter((day) => !WEEKEND.includes(day)) : days;
-  return scheduleDays(addDays(today, -6), today, locking).at(-1) ?? null;
+/** The weekdays the rule locks on: its days, less the weekend when weekends are off. */
+export function lockingDays({
+  days,
+  weekendOff,
+}: Pick<LockRuleFields, "days" | "weekendOff">): Weekday[] {
+  return weekendOff ? days.filter((day) => !WEEKEND.includes(day)) : [...days];
+}
+
+function latestLockDay(today: string, rule: LockRuleFields): string | null {
+  return scheduleDays(addDays(today, -6), today, lockingDays(rule)).at(-1) ?? null;
+}
+
+/** The first day after `day` the rule locks on, within a week; null when it never does. */
+export function nextLockDay(rule: LockRuleFields, day: string): string | null {
+  return scheduleDays(addDays(day, 1), addDays(day, 7), lockingDays(rule))[0] ?? null;
 }
 
 /** Five minutes after the rule's start time, kept on the same day: the demo clock's hour. */
@@ -124,9 +132,9 @@ export function demoClockFor(
   plan: Plan,
   today: string,
 ): { day: string; time: string } {
-  const { days, startTime, weekendOff } = rule ?? defaultRule(plan);
+  const fields = rule ?? defaultRule(plan);
   return {
-    day: latestLockDay(today, days, weekendOff) ?? today,
-    time: demoClockTime(startTime),
+    day: latestLockDay(today, fields) ?? today,
+    time: demoClockTime(fields.startTime),
   };
 }

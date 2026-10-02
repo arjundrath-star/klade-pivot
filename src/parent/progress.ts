@@ -170,6 +170,13 @@ export function formatDay(day: string): string {
   return dayLabel.format(new Date(`${day}T00:00:00Z`));
 }
 
+const weekdayLabel = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "long" });
+
+/** "Thursday" for the calendar day "2026-10-01". */
+export function weekdayName(day: string): string {
+  return weekdayLabel.format(new Date(`${day}T00:00:00Z`));
+}
+
 /** "May 31, 2027" for the date "2027-05-31". */
 export function formatDate(day: string): string {
   return dateLabel.format(new Date(`${day}T00:00:00Z`));

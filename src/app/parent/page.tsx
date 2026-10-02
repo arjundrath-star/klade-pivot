@@ -28,7 +28,7 @@ import { RewardsPanel } from "@/rewards/rewards-panel";
 import { lockView } from "@/session/lock-status";
 import { studentStanding } from "@/session/pace";
 
-export const metadata: Metadata = { title: "Parent view · Klade" };
+export const metadata: Metadata = { title: "Overview" };
 
 type GridRow = Awaited<ReturnType<typeof masteryGrid>>[number];
 
@@ -81,9 +81,7 @@ export default async function ParentOverview() {
         return (
           <>
             <header className="flex flex-col gap-2">
-              <h1 className="font-display text-3xl font-bold tracking-tight">
-                {name}&apos;s progress
-              </h1>
+              <h1 className="font-display text-3xl font-bold tracking-tight">Overview</h1>
               <p className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <span className="font-display text-2xl font-semibold text-primary-deep">
                   {progressLine(behind, student.targetDate)}
@@ -92,34 +90,32 @@ export default async function ParentOverview() {
                 <span className="text-ink-soft">{freezeLabel(streak)}</span>
               </p>
               <p className="text-ink-soft">
-                Target: {formatDate(student.targetDate)}. {sessionCount(student.pacePerWeek)} a
-                week.
+                {name}&apos;s progress in {ALGEBRA1_TITLE}. Target {formatDate(student.targetDate)},{" "}
+                {sessionCount(student.pacePerWeek)} a week.
               </p>
             </header>
 
-            <Card tone="calendar">
-              <PhoneSection
-                heading={`${name}'s phone`}
-                viewer="parent"
-                initial={phone}
-                sessionHref="/student"
-              >
-                <p>
-                  {rule
-                    ? `${ruleSummary(rule, name)}${rule.enabled ? "" : " The rule is off right now."}`
-                    : `No phone rule yet. Set one and ${name}'s apps lock on session days until the session is done.`}
-                </p>
-                <p className="text-ink-soft">
-                  Prototype: this phone runs inside the app. It shows what {name} would see, and
-                  unlocks the moment the session is done.
-                </p>
-                <p>
-                  <Link href="/parent/settings" className="link">
-                    {rule ? "Change the phone rule" : "Set a phone rule"}
-                  </Link>
-                </p>
-              </PhoneSection>
-            </Card>
+            <PhoneSection
+              heading={`${name}'s phone`}
+              viewer="parent"
+              initial={phone}
+              sessionHref="/student"
+            >
+              <p>
+                {rule
+                  ? `${ruleSummary(rule, name)}${rule.enabled ? "" : " The rule is off right now."}`
+                  : `No phone rule yet. Set one and ${name}'s apps lock on session days until the session is done.`}
+              </p>
+              <p className="text-ink-soft">
+                Prototype: this phone runs inside the app. It shows what {name} would see, and
+                unlocks the moment the session is done.
+              </p>
+              <p>
+                <Link href="/parent/settings" className="link">
+                  {rule ? "Change the phone rule" : "Set a phone rule"}
+                </Link>
+              </p>
+            </PhoneSection>
 
             {rewards.length > 0 && (
               <RewardsPanel
@@ -143,7 +139,7 @@ export default async function ParentOverview() {
                 mastered={mastered}
                 currentKey={today.kind === "complete" ? null : today.contentKey}
                 notes={notes}
-                condensed
+                unitHeading="h3"
               />
             </Card>
 

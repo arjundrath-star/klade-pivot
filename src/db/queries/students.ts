@@ -5,13 +5,17 @@ import { families, lockRules, sessionLogs, students } from "@/db/schema";
 import type { Interest } from "@/engine/types";
 import type { LockRuleFields } from "@/session/lock";
 
-/** The student by id. Shared across a request, so a page and its shell read the row once. */
+/**
+ * The student by id, with the parent's name from the family row. Shared across a request, so a
+ * page and its shell read the row once.
+ */
 export const getStudent = cache(async (id: string) => {
   const db = await getDb();
   const [student] = await db
     .select({
       id: students.id,
       familyId: students.familyId,
+      parentName: families.parentName,
       name: students.name,
       pronoun: students.pronoun,
       targetDate: students.targetDate,
@@ -21,6 +25,7 @@ export const getStudent = cache(async (id: string) => {
       interests: students.interests,
     })
     .from(students)
+    .innerJoin(families, eq(families.id, students.familyId))
     .where(eq(students.id, id));
   return student;
 });

@@ -54,22 +54,27 @@ export async function lockInputs(studentId: string) {
   return { sessionDays: row.sessionDays, demoClock: row.demoClock, rule: ruleOf(row) };
 }
 
-/** One of the family's students with their phone rule, and the plan's days and start time. */
+/**
+ * One of the family's students with their phone rule, the plan's days and start time, and the
+ * parent's name for the page's shell.
+ */
 export async function lockSettings(familyId: string, studentId: string) {
   const db = await getDb();
   const [row] = await db
     .select({
       name: students.name,
+      parentName: families.parentName,
       sessionDays: students.sessionDays,
       sessionTime: students.sessionTime,
       ...RULE_COLUMNS,
     })
     .from(students)
+    .innerJoin(families, eq(families.id, students.familyId))
     .leftJoin(lockRules, eq(lockRules.studentId, students.id))
     .where(and(eq(students.id, studentId), eq(students.familyId, familyId)));
   if (!row) return undefined;
-  const { name, sessionDays, sessionTime } = row;
-  return { name, sessionDays, sessionTime, rule: ruleOf(row) };
+  const { name, parentName, sessionDays, sessionTime } = row;
+  return { name, parentName, sessionDays, sessionTime, rule: ruleOf(row) };
 }
 
 /** The student's most recently finished session, if any. */
