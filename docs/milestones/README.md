@@ -21,6 +21,7 @@ One milestone per one-shot session, in this order. Each derives from `docs/memo/
 | 15  | Foothold AI rename, demo-day fixes, anti-template pass | decision D46; docs/memo/eval/vibe-checklist.md | none new; demo-driven |
 | 16  | Fix: workspace header for organization-level keys | decision D47 | none |
 | 17  | Session workspace and the two-step textbook chapter | steering §2; curriculum outline unit 2 | none new; demo-driven |
+| 18  | Demo mode and session ergonomics               | demo runbook; narration | none new; demo-driven |
 
 Session 2 and 3 content and the weekly digest are cut from the MVP (decision D42, the steering doc's cut order); revisit after the pitch.
 
