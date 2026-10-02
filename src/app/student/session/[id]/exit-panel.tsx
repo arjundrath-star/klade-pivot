@@ -3,7 +3,9 @@
 import { useEffect, useEffectEvent, useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { submitExitAnswer } from "./actions";
+import { answerInputClass } from "./equation";
 import { NOT_A_NUMBER_MESSAGE } from "./session-runner";
+import { Button } from "@/components/ui/button";
 import { formatClock } from "@/session/timer";
 
 interface CountdownProps {
@@ -39,7 +41,7 @@ function Countdown({ remainingMs, onExpire }: CountdownProps) {
     <p
       role="timer"
       aria-label="Time left on this problem"
-      className={`font-mono text-lg tabular-nums ${seconds <= 10 ? "text-amber-700 dark:text-amber-400" : ""}`}
+      className={`font-display text-xl font-semibold tabular-nums ${seconds <= 10 ? "text-alert" : ""}`}
     >
       {formatClock(seconds)} left
     </p>
@@ -99,17 +101,14 @@ export function ExitPanel({ sessionId, index, remainingMs }: ExitPanelProps) {
             required
             autoComplete="off"
             maxLength={40}
-            className="w-40 rounded-md border border-zinc-300 px-3 py-2 font-mono dark:border-zinc-700 dark:bg-zinc-900"
+            className={answerInputClass}
           />
         </div>
-        <button type="submit" disabled={pending} className="btn-primary">
+        <Button type="submit" disabled={pending}>
           Submit
-        </button>
+        </Button>
       </form>
-      <p
-        aria-live="polite"
-        className="min-h-5 text-sm font-medium text-zinc-600 dark:text-zinc-400"
-      >
+      <p aria-live="polite" className="min-h-5 text-sm font-medium text-ink-soft">
         {message}
       </p>
     </div>

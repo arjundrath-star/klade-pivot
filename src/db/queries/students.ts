@@ -1,10 +1,12 @@
 import { eq } from "drizzle-orm";
+import { cache } from "react";
 import { getDb } from "@/db/client";
 import { families, lockRules, sessionLogs, students } from "@/db/schema";
 import type { Interest } from "@/engine/types";
 import type { LockRuleFields } from "@/session/lock";
 
-export async function getStudent(id: string) {
+/** The student by id. Shared across a request, so a page and its shell read the row once. */
+export const getStudent = cache(async (id: string) => {
   const db = await getDb();
   const [student] = await db
     .select({
@@ -15,12 +17,13 @@ export async function getStudent(id: string) {
       targetDate: students.targetDate,
       pacePerWeek: students.pacePerWeek,
       sessionDays: students.sessionDays,
+      sessionTime: students.sessionTime,
       interests: students.interests,
     })
     .from(students)
     .where(eq(students.id, id));
   return student;
-}
+});
 
 /** Replaces the student's interest tags. False when there is no such student. */
 export async function setInterests(id: string, interests: readonly Interest[]): Promise<boolean> {

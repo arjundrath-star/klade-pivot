@@ -88,9 +88,13 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   const rewards = page.getByRole("region", { name: "Maya's rewards" });
   const streak = rewards.getByRole("progressbar", { name: /^4-week streak/ });
   await expect(streak).toHaveAttribute("aria-valuenow", "3");
+  await page.goto("/parent/mentor");
   await expect(page.getByRole("region", { name: "Maya's mentor: Jordan · NYU '28" })).toBeVisible();
   const explain = page.getByRole("region", { name: "What Maya can explain" });
+  await page.goto("/parent/explanations");
   await expect(explain.getByText(/^Nothing yet\./)).toBeVisible();
+  await page.goto("/parent");
+  await expect(phone.getByText(LOCKED)).toBeVisible();
 
   // 3. The session, in a second tab, with the locked phone kept on screen in the parent's.
   const student = await page.context().newPage();
@@ -150,12 +154,10 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   await expect(phone.getByText("Today's session is done. Everything is open.")).toBeVisible();
   expect(studentErrors).toEqual([]);
 
-  // 5. The parent view: her words, the reward lines, the course map, the mentor card.
+  // 5. The parent view: the reward lines and the course map, then her words, then the mentor.
   await page.reload();
   await expect(page.getByText("On track for May")).toBeVisible();
   await expect(page.getByText(`${SEEDED_STREAK + 1}-session streak`)).toBeVisible();
-  await expect(explain.getByRole("blockquote")).toHaveText(EXPLANATION);
-  await expect(explain.getByText(/^Feedback Maya saw:/)).toBeVisible();
   await expect(page.getByText("Earned: one free mentor check-in")).toHaveCount(
     streakReward.unlocked ? 1 : 0,
   );
@@ -163,6 +165,10 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   await expect(page.getByRole("region", { name: "Course map" })).toContainText(
     "Maya has mastered 6 of 49 concepts",
   );
+  await page.goto("/parent/explanations");
+  await expect(explain.getByRole("blockquote")).toHaveText(EXPLANATION);
+  await expect(explain.getByText(/^Feedback Maya saw:/)).toBeVisible();
+  await page.goto("/parent/mentor");
   const mentor = page.getByRole("region", { name: "Maya's mentor: Jordan · NYU '28" });
   await expect(mentor.getByText(/^Next check-in Thu, /)).toBeVisible();
 
@@ -174,8 +180,9 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   expect(Date.now() - started).toBeLessThan(5000);
   await page.goto("/parent");
   await expect(page.getByText("On track for May")).toBeVisible();
-  await expect(explain.getByText(/^Nothing yet\./)).toBeVisible();
   await expect(streak).toHaveAttribute("aria-valuenow", "3");
+  await page.goto("/parent/explanations");
+  await expect(explain.getByText(/^Nothing yet\./)).toBeVisible();
   await student.goto("/student");
   await expect(student.getByRole("button", { name: "Start" })).toBeVisible();
   expect(errors).toEqual([]);

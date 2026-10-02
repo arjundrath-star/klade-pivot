@@ -17,6 +17,7 @@ test("the parent sees a missed session and the admin switches the interest live"
   await expect(map.getByText("Next session")).toBeVisible();
   await expect(map.getByText("3 of 3 on the exit check")).toHaveCount(5);
   await expect(page.getByRole("heading", { name: "Session history" })).toBeVisible();
+  await page.goto("/parent/explanations");
   await expect(page.getByRole("heading", { name: "What Maya can explain" })).toBeVisible();
 
   // The admin ribbon on the student's screen drives the demo and comes back to it.
@@ -25,12 +26,13 @@ test("the parent sees a missed session and the admin switches the interest live"
   await ribbon.getByRole("button", { name: "Simulate missed session" }).click();
   await expect(page).toHaveURL(/\/student\?notice=missed$/);
   await expect(ribbon.getByRole("status")).toHaveText(/marked missed/);
-  await expect(page.getByRole("region", { name: "Recent sessions" })).toContainText("Missed");
+  await expect(page.getByRole("region", { name: "This week" })).toContainText("today, missed");
 
   await page.goto("/parent");
+  await expect(page.getByText("1 session behind", { exact: true })).toBeVisible();
+  await page.goto("/parent/alerts");
   const alert = "Maya missed today's Algebra session. She's 1 session behind her May target.";
   await expect(page.getByText(alert)).toBeVisible();
-  await expect(page.getByText("1 session behind", { exact: true })).toBeVisible();
 
   // The email preview is the email itself.
   await page.getByRole("link", { name: "Email preview" }).click();

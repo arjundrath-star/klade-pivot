@@ -3,8 +3,11 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { confirmLesson } from "./actions";
+import { Equation } from "./equation";
 import { RELOAD_MESSAGE, useProgress } from "./session-runner";
 import { StepList } from "./step-list";
+import { Button } from "@/components/ui/button";
+import { cardClass } from "@/components/ui/card";
 import type { LessonStep } from "@/content/lesson";
 
 interface WorkedExampleProps {
@@ -34,31 +37,28 @@ export function WorkedExample({ sessionId, equation, steps }: WorkedExampleProps
   };
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
-      <h3 className="font-semibold">Worked example</h3>
-      <p className="font-mono text-xl">{equation}</p>
+    <div className={`${cardClass()} flex flex-col gap-4`}>
+      <h3 className="font-display text-lg font-semibold">Worked example</h3>
+      <Equation>{equation}</Equation>
       <StepList label="Steps" live steps={steps.slice(0, revealed)} />
       {lessonRead ? (
-        <p className="font-medium text-emerald-700 dark:text-emerald-400">
-          Got it. Press Next to start practice.
-        </p>
+        <p className="font-medium text-success">Got it. Press Next to start practice.</p>
       ) : (
         // One button that changes job keeps keyboard focus in place from the first step to the end.
-        <button
-          type="button"
+        <Button
           onClick={allRevealed ? confirm : () => setRevealed(revealed + 1)}
           disabled={pending}
-          className="btn-primary self-start"
+          className="self-start"
         >
           {allRevealed
             ? "I've read this"
             : revealed === 0
               ? "Show the first step"
               : "Show the next step"}
-        </button>
+        </Button>
       )}
       {error && (
-        <p role="alert" className="text-sm font-medium text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm font-medium text-alert">
           {error}
         </p>
       )}

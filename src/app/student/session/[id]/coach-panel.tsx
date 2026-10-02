@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { Equation } from "./equation";
 import { StepList } from "./step-list";
 import type { CoachState } from "./use-coach";
 import type { SimilarExample } from "@/coach/example";
 import { MAX_HINT_LEVEL } from "@/coach/turns";
+import { Button } from "@/components/ui/button";
+import { cardClass } from "@/components/ui/card";
+import { inputClass } from "@/components/ui/field";
+import { AppGlyph } from "@/phone/apps";
 
 interface CoachPanelProps {
   coach: CoachState;
@@ -29,12 +34,17 @@ export function CoachPanel({ coach, example, onTryAgain }: CoachPanelProps) {
   return (
     <aside
       aria-label="Coach"
-      className="flex flex-col gap-4 rounded-lg border border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900"
+      className={`${cardClass("course", "xs")} flex flex-col gap-4 rounded-md`}
     >
-      <div className="flex items-baseline justify-between gap-4">
-        <h3 className="font-semibold">Coach</h3>
+      <div className="flex items-center justify-between gap-4">
+        <h3 className="flex items-center gap-2 font-display text-lg font-semibold">
+          <span className="grid size-7 shrink-0 place-items-center rounded-full bg-course text-ink">
+            <AppGlyph name="bubble" className="size-4" />
+          </span>
+          Coach
+        </h3>
         {shown.length > 0 && (
-          <span className="text-sm text-zinc-600 dark:text-zinc-400">
+          <span className="text-sm text-ink-soft">
             Hint {shown.length} of {MAX_HINT_LEVEL}
           </span>
         )}
@@ -42,7 +52,7 @@ export function CoachPanel({ coach, example, onTryAgain }: CoachPanelProps) {
       <ol aria-live="polite" className="flex flex-col gap-3">
         {shown.map((turn) => (
           <li key={turn.level} className="flex flex-col gap-1">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">You: {turn.student}</p>
+            <p className="text-sm text-ink-soft">You: {turn.student}</p>
             <p className="leading-relaxed whitespace-pre-line">{turn.coach || "…"}</p>
           </li>
         ))}
@@ -53,7 +63,7 @@ export function CoachPanel({ coach, example, onTryAgain }: CoachPanelProps) {
             That was the last hint. Here is a problem like yours, with other numbers, worked out:
           </p>
           <p className="leading-relaxed">{example.text}</p>
-          <p className="font-mono text-xl">{example.equation}</p>
+          <Equation>{example.equation}</Equation>
           <StepList label="Example steps" steps={example.steps} />
           <p>Now do the same steps with your numbers.</p>
         </div>
@@ -74,20 +84,20 @@ export function CoachPanel({ coach, example, onTryAgain }: CoachPanelProps) {
               maxLength={300}
               autoComplete="off"
               placeholder="What have you tried?"
-              className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className={`${inputClass} w-full`}
             />
           </label>
-          <button type="submit" disabled={busy || draft.trim() === ""} className="btn-primary">
+          <Button type="submit" disabled={busy || draft.trim() === ""}>
             Send
-          </button>
+          </Button>
         </form>
       )}
       <div className="flex flex-wrap items-center gap-4">
-        <button type="button" onClick={onTryAgain} className="btn-secondary">
+        <Button variant="secondary" size="sm" onClick={onTryAgain}>
           Try again
-        </button>
+        </Button>
         {error && (
-          <p role="alert" className="text-sm font-medium text-red-700 dark:text-red-400">
+          <p role="alert" className="text-sm font-medium text-alert">
             {error}
           </p>
         )}

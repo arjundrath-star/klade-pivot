@@ -3,16 +3,19 @@
 import dynamic from "next/dynamic";
 import { useActionState, useEffect, useId, useRef } from "react";
 import { submitAnswer, type AnswerResult } from "./actions";
+import { answerInputClass, Equation } from "./equation";
 import { NOT_A_NUMBER_MESSAGE, useProgress } from "./session-runner";
 import { useCoach } from "./use-coach";
 import type { SimilarExample } from "@/coach/example";
 import type { CoachTurn } from "@/coach/turns";
+import { Button } from "@/components/ui/button";
+import { cardClass } from "@/components/ui/card";
 import { problemKey, type AnsweredBlockId } from "@/session/blocks";
 
 // The panel's code loads the first time a coach opens, so it stays out of the route's first load.
 const CoachPanel = dynamic(() => import("./coach-panel").then((m) => m.CoachPanel), {
   ssr: false,
-  loading: () => <p className="text-sm text-zinc-600 dark:text-zinc-400">Getting your coach…</p>,
+  loading: () => <p className="text-sm text-ink-soft">Getting your coach…</p>,
 });
 
 interface CoachProps {
@@ -52,9 +55,9 @@ function feedbackFor(result: AnswerResult): Feedback {
 }
 
 const TONES = {
-  good: "text-emerald-700 dark:text-emerald-400",
-  bad: "text-red-700 dark:text-red-400",
-  info: "text-zinc-600 dark:text-zinc-400",
+  good: "text-success",
+  bad: "text-alert",
+  info: "text-ink-soft",
 } as const;
 
 export function ProblemCard({ sessionId, block, index, text, equation, coach }: ProblemCardProps) {
@@ -95,9 +98,9 @@ export function ProblemCard({ sessionId, block, index, text, equation, coach }: 
   const shown = isSolved ? SOLVED : feedback;
 
   return (
-    <article className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
-      <p className="leading-relaxed">{text}</p>
-      {equation && <p className="font-mono text-xl">{equation}</p>}
+    <article className={`${cardClass()} flex flex-col gap-4`}>
+      <p className="text-lg leading-relaxed">{text}</p>
+      {equation && <Equation>{equation}</Equation>}
       {!isSolved && (
         <form action={submit} className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
@@ -111,20 +114,16 @@ export function ProblemCard({ sessionId, block, index, text, equation, coach }: 
               required
               autoComplete="off"
               maxLength={40}
-              className="w-40 rounded-md border border-zinc-300 px-3 py-2 font-mono dark:border-zinc-700 dark:bg-zinc-900"
+              className={answerInputClass}
             />
           </div>
-          <button type="submit" disabled={pending} className="btn-primary">
+          <Button type="submit" disabled={pending}>
             Check
-          </button>
+          </Button>
           {coach && !coachState.started && (
-            <button
-              type="button"
-              onClick={() => coachState.askForHelp(null)}
-              className="btn-secondary"
-            >
+            <Button variant="secondary" onClick={() => coachState.askForHelp(null)}>
               I&apos;m stuck
-            </button>
+            </Button>
           )}
         </form>
       )}

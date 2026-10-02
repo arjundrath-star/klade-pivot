@@ -16,10 +16,7 @@ export function CourseBreadcrumb({ contentKey }: { contentKey: string }) {
   if (!place) return null;
   const { unit, concept } = place;
   return (
-    <nav
-      aria-label="Breadcrumb"
-      className="flex flex-col gap-1 text-sm text-zinc-600 dark:text-zinc-400"
-    >
+    <nav aria-label="Breadcrumb" className="flex flex-col gap-1 text-sm text-ink-soft">
       <ol className="flex flex-wrap items-center">
         <li>
           {ALGEBRA1_TITLE}
@@ -30,7 +27,7 @@ export function CourseBreadcrumb({ contentKey }: { contentKey: string }) {
           <Separator />
         </li>
         <li>
-          <span aria-current="page" className="font-medium text-foreground">
+          <span aria-current="page" className="font-medium text-ink">
             {concept.title}
           </span>{" "}
           · {standardLabel(concept)}

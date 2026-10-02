@@ -15,6 +15,10 @@ import {
   type ExplainError,
   type ExplainResult,
 } from "@/coach/rubric";
+import { Button } from "@/components/ui/button";
+import { cardClass } from "@/components/ui/card";
+import { inputClass } from "@/components/ui/field";
+import { MicGlyph } from "@/components/ui/glyphs";
 
 // The Web Speech API is not in TypeScript's DOM types, and Chrome only ships it prefixed. These
 // are the parts the panel uses.
@@ -191,9 +195,7 @@ export function ExplainPanel({ sessionId, initialResults }: ExplainPanelProps) {
       {explainBack === "retry" && !retrying && (
         <div className="flex flex-col items-start gap-2">
           <p>You need one more try. Use the feedback above and explain it again.</p>
-          <button type="button" onClick={tryAgain} className="btn-primary">
-            Try once more
-          </button>
+          <Button onClick={tryAgain}>Try once more</Button>
         </div>
       )}
 
@@ -208,7 +210,7 @@ export function ExplainPanel({ sessionId, initialResults }: ExplainPanelProps) {
           <label htmlFor={fieldId} className="font-medium">
             Explain why each step works
           </label>
-          <p id={hintId} className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p id={hintId} className="text-sm text-ink-soft">
             Walk through your solution. For each step, say what you did and why it is allowed.
             {speechSupported && " You can speak or type."}
           </p>
@@ -226,38 +228,38 @@ export function ExplainPanel({ sessionId, initialResults }: ExplainPanelProps) {
             }}
             maxLength={MAX_EXPLANATION_LENGTH}
             rows={6}
-            className="rounded-md border border-zinc-300 px-3 py-2 leading-relaxed dark:border-zinc-700 dark:bg-zinc-900"
+            className={`${inputClass} w-full leading-relaxed`}
           />
           {listening && (
-            <p aria-live="polite" className="min-h-5 text-sm text-zinc-600 dark:text-zinc-400">
+            <p aria-live="polite" className="min-h-5 text-sm text-ink-soft">
               Listening… {interim}
             </p>
           )}
           <div className="flex flex-wrap items-center gap-3">
             {/* Chrome delivers the last words after stop(), so the student stops before submitting. */}
-            <button type="submit" disabled={pending || listening} className="btn-primary">
+            <Button type="submit" disabled={pending || listening}>
               {pending ? "Grading…" : "Submit"}
-            </button>
+            </Button>
             {speechSupported && (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 aria-pressed={listening}
                 onClick={listening ? stopListening : startListening}
                 disabled={pending}
-                className="btn-secondary"
               >
+                <MicGlyph className="size-4" />
                 {listening ? "Stop speaking" : "Speak"}
-              </button>
+              </Button>
             )}
-            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+            <span className="text-sm text-ink-soft tabular-nums">
               {draft.length} / {MAX_EXPLANATION_LENGTH}
             </span>
           </div>
-          <p role="status" className="min-h-5 text-sm text-zinc-600 dark:text-zinc-400">
+          <p role="status" className="min-h-5 text-sm text-ink-soft">
             {pending ? "Grading your explanation…" : micError}
           </p>
           {error && (
-            <p role="alert" className="text-sm font-medium text-red-700 dark:text-red-400">
+            <p role="alert" className="text-sm font-medium text-alert">
               {error}
             </p>
           )}
@@ -277,18 +279,16 @@ function ResultCard({ result }: { result: ExplainResult }) {
   return (
     <section
       aria-label={`Attempt ${result.attempt} result`}
-      className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800"
+      className={`${cardClass(passed ? "mentor" : "surface")} flex flex-col gap-3`}
     >
-      <p
-        className={`font-semibold ${passed ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}
-      >
+      <p className={`font-display text-xl font-semibold ${passed ? "text-success" : "text-alert"}`}>
         Score {totalScore(result.scores)} of {MAX_TOTAL_SCORE}. {verdictText(result)}
       </p>
       <dl className="grid grid-cols-3 gap-2 text-sm">
         {CRITERIA.map((criterion) => (
           <div key={criterion} className="flex flex-col">
-            <dt className="text-zinc-600 dark:text-zinc-400">{CRITERION_LABELS[criterion]}</dt>
-            <dd className="font-mono">
+            <dt className="text-ink-soft">{CRITERION_LABELS[criterion]}</dt>
+            <dd className="font-display text-lg font-semibold tabular-nums">
               {result.scores[criterion]} / {MAX_CRITERION_SCORE}
             </dd>
           </div>

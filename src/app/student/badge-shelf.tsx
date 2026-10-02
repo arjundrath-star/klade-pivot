@@ -1,3 +1,6 @@
+import { BadgeItem } from "./badge-item";
+import { Card } from "@/components/ui/card";
+import { PanelHeader } from "@/components/ui/panel-header";
 import { ALGEBRA1_BADGES } from "@/content/algebra1/badges";
 import { conceptBadgeKey } from "@/engine/progress";
 
@@ -19,32 +22,25 @@ export function BadgeShelf({ earned, currentKey }: BadgeShelfProps) {
     ALGEBRA1_BADGES.find((badge) => badge.key === todays && !earned.has(badge.key)) ??
     ALGEBRA1_BADGES.find((badge) => !earned.has(badge.key));
   return (
-    <section aria-labelledby="badges-heading" className="card flex flex-col gap-4">
-      <h2 id="badges-heading" className="font-display text-xl font-semibold">
-        Badges: {have.length} of {ALGEBRA1_BADGES.length}
-      </h2>
+    <Card aria-labelledby="badges-heading" className="flex flex-col gap-4">
+      <PanelHeader
+        id="badges-heading"
+        title={`Badges: ${have.length} of ${ALGEBRA1_BADGES.length}`}
+      />
       {have.length === 0 ? (
-        <p className="text-zinc-600 dark:text-zinc-400">
-          No badges yet. Your first comes with today&apos;s session.
-        </p>
+        <p className="text-ink-soft">No badges yet. Your first comes with today&apos;s session.</p>
       ) : (
         <ul aria-label="Badge shelf" className="flex flex-col gap-2">
           {have.map((badge) => (
-            <li
-              key={badge.key}
-              className="flex flex-col rounded-xl bg-marigold/20 px-3 py-2 dark:bg-marigold/15"
-            >
-              <span className="font-semibold">{badge.label}</span>
-              <span className="text-sm text-zinc-700 dark:text-zinc-300">{badge.detail}</span>
-            </li>
+            <BadgeItem key={badge.key} label={badge.label} detail={badge.detail} />
           ))}
         </ul>
       )}
       {next && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-ink-soft">
           Next up: {next.label}. {next.detail}
         </p>
       )}
-    </section>
+    </Card>
   );
 }

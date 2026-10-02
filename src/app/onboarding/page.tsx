@@ -12,7 +12,13 @@ export default async function OnboardingPage() {
   const now = new Date();
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-3xl font-semibold tracking-tight">Set up Algebra 1</h1>
+      <header className="flex flex-col gap-2">
+        <h1 className="font-display text-3xl font-bold tracking-tight">Set up Algebra 1</h1>
+        <p className="text-ink-soft">
+          Six short steps. You set the pace, the days and the phone rule once; the plan takes it
+          from there.
+        </p>
+      </header>
       <OnboardingForm today={calendarDay(now)} defaultTarget={nextMay(now)} />
     </div>
   );

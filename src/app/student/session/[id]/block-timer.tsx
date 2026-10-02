@@ -31,7 +31,7 @@ export function BlockTimer({ budgetSeconds, elapsedAtEntryMs }: BlockTimerProps)
     <p
       role="timer"
       aria-label={label}
-      className={`font-mono text-sm tabular-nums ${remaining !== null && remaining < 0 ? "text-amber-700 dark:text-amber-400" : ""}`}
+      className={`shrink-0 font-display text-sm font-semibold tabular-nums ${remaining !== null && remaining < 0 ? "text-alert" : "text-ink-soft"}`}
     >
       {reading}
     </p>

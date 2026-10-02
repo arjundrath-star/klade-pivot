@@ -2,6 +2,11 @@
 
 import { useEffect, useId, useRef, useState, useTransition, type FormEvent } from "react";
 import { completeOnboarding, type OnboardingError } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Choice, Field, inputClass, Legend } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
+import { ProgressBar } from "@/components/ui/progress";
 import { FAVORITES, INTEREST_LABELS } from "@/content/interests";
 import {
   addDays,
@@ -38,10 +43,7 @@ const STEPS = [
   "Phone rule",
 ] as const;
 
-const MUTED = "text-zinc-600 dark:text-zinc-400";
-const FIELD = "rounded-md border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700";
-const LEGEND = "mb-2 font-medium";
-const CHOICE = "flex items-start gap-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-800";
+const FIELD = `${inputClass} w-full`;
 
 const PACE_LABELS: Readonly<Record<PacePreset, string>> = {
   standard: "Standard",
@@ -97,10 +99,7 @@ function NameField({ label, value, onChange }: NameFieldProps) {
   const id = useId();
   const invalid = value.trim() !== "" && cleanName(value) === null;
   return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="font-medium">
-        {label}
-      </label>
+    <Field id={id} label={label} hint={`First name only. ${NAME_RULE}`} invalid={invalid}>
       <input
         id={id}
         className={FIELD}
@@ -110,15 +109,9 @@ function NameField({ label, value, onChange }: NameFieldProps) {
         autoComplete="off"
         required
         aria-invalid={invalid}
-        aria-describedby={`${id}-rule`}
+        aria-describedby={`${id}-hint`}
       />
-      <p
-        id={`${id}-rule`}
-        className={`text-sm ${invalid ? "text-red-700 dark:text-red-400" : MUTED}`}
-      >
-        First name only. {NAME_RULE}
-      </p>
-    </div>
+    </Field>
   );
 }
 
@@ -247,11 +240,23 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
-      <div className="flex flex-col gap-1">
-        <p className={`text-sm ${MUTED}`}>
+      <div className="flex flex-col gap-3">
+        <ProgressBar
+          label="Setup progress"
+          value={step + 1}
+          max={STEPS.length}
+          valueText={`Step ${step + 1} of ${STEPS.length}: ${STEPS[step]}`}
+          segmented
+          size="thin"
+        />
+        <p className="text-sm text-ink-soft">
           Step {step + 1} of {STEPS.length}
         </p>
-        <h2 ref={heading} tabIndex={-1} className="text-xl font-semibold outline-none">
+        <h2
+          ref={heading}
+          tabIndex={-1}
+          className="font-display text-2xl font-semibold tracking-tight outline-none"
+        >
           {STEPS[step]}
         </h2>
       </div>
@@ -267,10 +272,7 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
             value={studentName}
             onChange={setStudentName}
           />
-          <div className="flex flex-col gap-2">
-            <label htmlFor={`${ids}-grade`} className="font-medium">
-              Grade
-            </label>
+          <Field id={`${ids}-grade`} label="Grade">
             <select
               id={`${ids}-grade`}
               className={FIELD}
@@ -287,11 +289,8 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="flex flex-col gap-2">
-            <label htmlFor={`${ids}-pronoun`} className="font-medium">
-              Pronoun
-            </label>
+          </Field>
+          <Field id={`${ids}-pronoun`} label="Pronoun" hint="Used in the alerts we send you.">
             <select
               id={`${ids}-pronoun`}
               className={FIELD}
@@ -305,19 +304,13 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
                 </option>
               ))}
             </select>
-            <p id={`${ids}-pronoun-hint`} className={`text-sm ${MUTED}`}>
-              Used in the alerts we send you.
-            </p>
-          </div>
+          </Field>
         </div>
       )}
 
       {step === 2 && (
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-2">
-            <label htmlFor={`${ids}-target`} className="font-medium">
-              Finish Algebra 1 by
-            </label>
+          <Field id={`${ids}-target`} label="Finish Algebra 1 by">
             <input
               id={`${ids}-target`}
               type="date"
@@ -328,17 +321,17 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
               onChange={(event) => setTargetDate(event.target.value)}
               required
             />
-          </div>
+          </Field>
 
           <fieldset className="flex flex-col gap-2">
-            <legend className={LEGEND}>Pace</legend>
+            <Legend>Pace</Legend>
             {PACE_PRESETS.map((preset) => {
               const option = planFor(today, targetDate, preset);
               const finish = option?.ok
                 ? `${option.plan.onTime ? "Done" : "Too slow: done"} by ${formatDate(option.plan.finishDate)}`
                 : null;
               return (
-                <label key={preset} className={CHOICE}>
+                <Choice key={preset}>
                   <input
                     type="radio"
                     name="pace"
@@ -350,17 +343,18 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
                     <span className="font-medium">
                       {PACE_LABELS[preset]}: {PRESET_SESSIONS[preset]} a week
                     </span>
-                    {finish && <span className={`text-sm ${MUTED}`}>{finish}</span>}
+                    {finish && <span className="text-sm text-ink-soft">{finish}</span>}
                   </span>
-                </label>
+                </Choice>
               );
             })}
           </fieldset>
 
-          <section
+          <Card
             aria-label="Your plan"
             aria-live="polite"
-            className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800"
+            tone="today"
+            className="flex flex-col gap-3"
           >
             {planned === null && <p>Pick a finish date to see the plan.</p>}
             {planned?.ok === false &&
@@ -375,51 +369,53 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
             {plan && (
               <>
                 <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1">
-                  <dt className={MUTED}>Algebra 1</dt>
+                  <dt className="text-ink-soft">Algebra 1</dt>
                   <dd>
                     About {ALGEBRA1_SESSION_ESTIMATE} sessions of {SESSION_MINUTES} minutes
                     (estimate)
                   </dd>
-                  <dt className={MUTED}>Each week</dt>
+                  <dt className="text-ink-soft">Each week</dt>
                   <dd>
                     {sessionCount(plan.sessionsPerWeek)} a week,{" "}
                     {formatWeeklyTime(plan.weeklyMinutes)} a week
                   </dd>
-                  <dt className={MUTED}>Finish</dt>
+                  <dt className="text-ink-soft">Finish</dt>
                   <dd>
                     {formatDate(plan.finishDate)}, {plan.weeks} weeks from today
                   </dd>
                 </dl>
                 {!plan.onTime && (
-                  <p className="text-red-700 dark:text-red-400">
+                  <p className="font-medium text-alert">
                     This pace finishes after your date, which needs {plan.requiredPerWeek} sessions
                     a week. Pick a faster pace or a later date.
                   </p>
                 )}
-                <h3 className="font-medium">Milestones</h3>
+                <h3 className="font-semibold">Milestones</h3>
                 <ol className="flex flex-col gap-1 text-sm">
                   {plan.milestones.map(({ title, date }) => (
                     <li key={title} className="flex justify-between gap-4">
                       <span>{title}</span>
-                      <span className={MUTED}>{formatDate(date)}</span>
+                      <span className="text-ink-soft">{formatDate(date)}</span>
                     </li>
                   ))}
                 </ol>
               </>
             )}
-          </section>
+          </Card>
 
           {plan && (
             <fieldset aria-describedby={`${ids}-days-hint`}>
-              <legend className={LEGEND}>Session days</legend>
-              <p id={`${ids}-days-hint`} className={`mb-3 text-sm ${MUTED}`}>
-                Pick {plan.sessionsPerWeek}. These are the days a session is due.
-              </p>
+              <Legend
+                id={`${ids}-days-hint`}
+                hint={`Pick ${plan.sessionsPerWeek}. These are the days a session is due.`}
+              >
+                Session days
+              </Legend>
               <div className="flex flex-wrap gap-2">
                 {WEEKDAYS.map((day) => {
                   const on = sessionDays.includes(day);
                   return (
-                    <label key={day} className={`${CHOICE} items-center py-2`}>
+                    <Choice key={day} className="items-center py-2">
                       <input
                         type="checkbox"
                         checked={on}
@@ -427,35 +423,32 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
                         onChange={(event) => toggleDay(day, event.target.checked)}
                       />
                       {WEEKDAY_LABELS[day]}
-                    </label>
+                    </Choice>
                   );
                 })}
               </div>
             </fieldset>
           )}
 
-          <div className="flex flex-col gap-2">
-            <label htmlFor={`${ids}-time`} className="font-medium">
-              Session starts at
-            </label>
+          <Field id={`${ids}-time`} label="Session starts at">
             <input
               id={`${ids}-time`}
               type="time"
-              className={FIELD}
+              className={`${inputClass} w-40`}
               value={sessionTime}
               step={300}
               onChange={(event) => setSessionTime(event.target.value)}
               required
             />
-          </div>
+          </Field>
         </div>
       )}
 
       {step === 3 && (
         <fieldset className="flex flex-col gap-2" aria-describedby={`${ids}-timer-hint`}>
-          <legend className={LEGEND}>Does your child need extra time?</legend>
+          <Legend>Does your child need extra time?</Legend>
           {TIMER_OPTIONS.map(({ value, label }) => (
-            <label key={value} className={CHOICE}>
+            <Choice key={value}>
               <input
                 type="radio"
                 name="timer"
@@ -464,9 +457,9 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
                 onChange={() => setTimerMode(value)}
               />
               {label}
-            </label>
+            </Choice>
           ))}
-          <p id={`${ids}-timer-hint`} className={`text-sm ${MUTED}`}>
+          <p id={`${ids}-timer-hint`} className="text-sm text-ink-soft">
             Only the clocks change. Mastery takes the same work, and your view notes the setting.
           </p>
         </fieldset>
@@ -475,14 +468,12 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
       {step === 4 && (
         <div className="flex flex-col gap-6">
           <fieldset className="flex flex-col gap-2">
-            <legend className={LEGEND}>
-              Hand the screen to {name}. What are you into? Pick 1 or 2.
-            </legend>
+            <Legend>Hand the screen to {name}. What are you into? Pick 1 or 2.</Legend>
             <div className="grid gap-2 sm:grid-cols-2">
               {INTERESTS.map((interest) => {
                 const on = interests.includes(interest);
                 return (
-                  <label key={interest} className={`${CHOICE} items-center`}>
+                  <Choice key={interest} className="items-center">
                     <input
                       type="checkbox"
                       checked={on}
@@ -490,16 +481,17 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
                       onChange={(event) => toggleInterest(interest, event.target.checked)}
                     />
                     {INTEREST_LABELS[interest]}
-                  </label>
+                  </Choice>
                 );
               })}
             </div>
           </fieldset>
           {interests.map((interest) => (
-            <div key={interest} className="flex flex-col gap-2">
-              <label htmlFor={`${ids}-favorite-${interest}`} className="font-medium">
-                Favorite in {INTEREST_LABELS[interest].toLowerCase()} (optional)
-              </label>
+            <Field
+              key={interest}
+              id={`${ids}-favorite-${interest}`}
+              label={`Favorite in ${INTEREST_LABELS[interest].toLowerCase()} (optional)`}
+            >
               <select
                 id={`${ids}-favorite-${interest}`}
                 className={FIELD}
@@ -513,14 +505,14 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
                   </option>
                 ))}
               </select>
-            </div>
+            </Field>
           ))}
         </div>
       )}
 
       {step === 5 && (
         <div className="flex flex-col gap-6">
-          <p className={MUTED}>
+          <p className="text-ink-soft">
             Back to you. Lock {name}&apos;s apps on session days until the session is done. This is
             a prototype: it runs a phone shown in this app, not a real phone yet. Change it any time
             in settings, or skip it.
@@ -533,31 +525,22 @@ export function OnboardingForm({ today, defaultTarget }: OnboardingFormProps) {
         </div>
       )}
 
-      {error && (
-        <p role="alert" className="text-red-700 dark:text-red-400">
-          {ERROR_MESSAGES[error]}
-        </p>
-      )}
+      {error && <Notice role="alert">{ERROR_MESSAGES[error]}</Notice>}
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         {step > 0 && (
-          <button type="button" className="btn-secondary" onClick={() => go(step - 1)}>
+          <Button variant="secondary" onClick={() => go(step - 1)}>
             Back
-          </button>
+          </Button>
         )}
         {last && (
-          <button
-            type="button"
-            className="btn-secondary"
-            disabled={pending}
-            onClick={() => finish(null)}
-          >
+          <Button variant="secondary" disabled={pending} onClick={() => finish(null)}>
             Skip for now
-          </button>
+          </Button>
         )}
-        <button type="submit" className="btn-primary" disabled={!valid || pending}>
+        <Button type="submit" disabled={!valid || pending}>
           {last ? (pending ? "Saving…" : "Finish setup") : "Next"}
-        </button>
+        </Button>
       </div>
     </form>
   );

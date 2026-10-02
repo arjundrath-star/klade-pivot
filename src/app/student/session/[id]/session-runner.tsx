@@ -8,6 +8,7 @@ import { loadExitPanel } from "./exit-check";
 import { loadExplainPanel } from "./explain-back";
 import { moveBlock, type MoveError } from "./actions";
 import type { ExplainStatus } from "@/coach/rubric";
+import { Button } from "@/components/ui/button";
 import {
   BLOCK_IDS,
   BLOCKS,
@@ -25,9 +26,7 @@ import { blockBudgetSeconds, type TimerMode } from "@/session/timer";
 const loadSessionComplete = () => import("./session-complete");
 
 const SessionComplete = dynamic(() => loadSessionComplete().then((m) => m.SessionComplete), {
-  loading: () => (
-    <p className="text-sm text-zinc-600 dark:text-zinc-400">Adding up your session…</p>
-  ),
+  loading: () => <p className="text-sm text-ink-soft">Adding up your session…</p>,
 });
 
 interface ProgressState extends SessionProgress {
@@ -177,18 +176,18 @@ export function SessionRunner({
       <div className="flex flex-col gap-8">
         <header className="flex flex-col gap-4">
           <div className="flex items-baseline justify-between gap-4">
-            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+            <h1 className="font-display text-2xl font-bold tracking-tight">{title}</h1>
             <BlockTimer
               key={block}
               budgetSeconds={blockBudgetSeconds(block, timerMode)}
               elapsedAtEntryMs={at.elapsedMs}
             />
           </div>
-          <ProgressBar position={position} />
+          <BlockRail position={position} />
         </header>
 
         <section aria-labelledby="block-heading" className="flex flex-col gap-6">
-          <h2 id="block-heading" className="text-lg font-semibold">
+          <h2 id="block-heading" className="font-display text-xl font-semibold">
             {BLOCKS[block].label}
           </h2>
           {panels[block]}
@@ -196,24 +195,18 @@ export function SessionRunner({
 
         <footer className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-4">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => move("back")}
               disabled={position === 0 || block === "exit" || pending}
-              className="btn-secondary"
             >
               Back
-            </button>
-            <button
-              type="button"
-              onClick={() => move("next")}
-              disabled={!complete || pending}
-              className="btn-primary"
-            >
+            </Button>
+            <Button onClick={() => move("next")} disabled={!complete || pending}>
               {last ? "Finish" : "Next"}
-            </button>
+            </Button>
           </div>
-          <p aria-live="polite" className="min-h-5 text-sm text-zinc-600 dark:text-zinc-400">
+          <p aria-live="polite" className="min-h-5 text-sm text-ink-soft">
             {error ?? (complete ? "" : lockedMessage(block))}
           </p>
         </footer>
@@ -222,7 +215,8 @@ export function SessionRunner({
   );
 }
 
-function ProgressBar({ position }: { position: number }) {
+/** The five blocks as a rail with a label under each, the current one filled through. */
+function BlockRail({ position }: { position: number }) {
   return (
     <div
       role="progressbar"
@@ -235,11 +229,9 @@ function ProgressBar({ position }: { position: number }) {
       <ol className="grid grid-cols-5 gap-2">
         {BLOCK_IDS.map((id, i) => (
           <li key={id} className="flex flex-col gap-1.5">
+            <span className={`h-1.5 rounded-full ${i <= position ? "bg-primary" : "bg-track"}`} />
             <span
-              className={`h-1.5 rounded-full ${i <= position ? "bg-zinc-900 dark:bg-zinc-100" : "bg-zinc-200 dark:bg-zinc-800"}`}
-            />
-            <span
-              className={`text-xs ${i === position ? "font-semibold" : "text-zinc-600 dark:text-zinc-400"}`}
+              className={`text-xs ${i === position ? "font-semibold text-ink" : "text-ink-soft"}`}
             >
               {BLOCKS[id].label}
             </span>

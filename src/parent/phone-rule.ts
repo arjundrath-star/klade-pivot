@@ -32,8 +32,6 @@ export function ruleSummary(rule: LockRuleFields, name: string): string {
     ),
   );
   const weekend =
-    rule.weekendOff && days.some((day) => WEEKEND.includes(day))
-      ? " Weekends stay open."
-      : "";
+    rule.weekendOff && days.some((day) => WEEKEND.includes(day)) ? " Weekends stay open." : "";
   return `${when}, ${apps} lock at ${timeLabel(rule.startTime)} until ${name}'s session is done.${weekend}`;
 }

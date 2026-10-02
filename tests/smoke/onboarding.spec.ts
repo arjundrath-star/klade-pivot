@@ -71,8 +71,13 @@ test("a parent onboards a new student, whose first session is framed in their in
   // A new student starts on two-step equations too, with the dashboard's empty states.
   await expect(page.getByText("Solving two-step linear equations", { exact: true })).toBeVisible();
   await expect(page.getByText("0 of 49", { exact: true })).toBeVisible();
+  await page.goto("/student/progress");
   await expect(page.getByText("No badges yet.")).toBeVisible();
-  await expect(page.getByText("No sessions yet.")).toBeVisible();
+  // The calendar reads her plan: the next session is today or the first of her days to come.
+  await page.goto("/student/calendar");
+  await expect(page.getByRole("heading", { name: "Next session" })).toBeVisible();
+  await expect(page.getByText(/^(Today|\w{3}, \w{3} \d+), 5:00 PM$/)).toBeVisible();
+  await page.goto("/student");
   const sessionId = await startSession(page);
   await reachGuidedPractice(page, sessionId);
 

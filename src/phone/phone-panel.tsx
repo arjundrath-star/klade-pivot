@@ -12,9 +12,6 @@ import type { LockView } from "@/session/lock-status";
 const POLL_MS = 3000;
 const TOAST_MS = 10_000;
 
-const DUSK = "var(--color-dusk)";
-const AMBER = "var(--color-marigold)";
-
 type Toast = { kind: "session"; xp: number; streak: number } | { kind: "override" };
 
 /** The banner an unlock shows: what the session earned, or the parent's unlock. */
@@ -91,31 +88,24 @@ export function PhonePanel({ viewer, initial, sessionHref }: PhonePanelProps) {
   const categories = lock.rule?.categories ?? [];
 
   return (
-    <div className="relative h-full overflow-hidden rounded-[2.1rem] text-white">
+    <div className="tone-night relative h-full overflow-hidden rounded-2xl">
       <div
         aria-hidden="true"
-        className="absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none"
-        style={{
-          opacity: locked ? 1 : 0,
-          background: `radial-gradient(120% 55% at 50% 108%, rgba(242,179,61,0.5), transparent 70%), linear-gradient(170deg, var(--color-dusk-high) 0%, ${DUSK} 62%)`,
-        }}
+        className="bg-lock-glow absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none"
+        style={{ opacity: locked ? 1 : 0 }}
       />
       <div
         aria-hidden="true"
-        className="absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none"
-        style={{
-          opacity: locked ? 0 : 1,
-          background:
-            "radial-gradient(120% 55% at 50% 108%, rgba(134,239,198,0.45), transparent 70%), linear-gradient(170deg, #11605B 0%, #0B3B39 62%)",
-        }}
+        className="bg-open-glow absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none"
+        style={{ opacity: locked ? 0 : 1 }}
       />
 
       <div className="relative flex h-full flex-col px-3.5 pt-2.5 pb-3">
         <div aria-hidden="true" className="mx-auto h-[22px] w-[84px] rounded-full bg-black" />
 
         <p className="mt-5 flex flex-col items-center">
-          <span className="text-[13px] font-medium text-white/85">{lock.date}</span>
-          <span className="text-[58px] leading-none font-extralight tracking-tight tabular-nums">
+          <span className="text-[13px] font-medium text-ink-soft">{lock.date}</span>
+          <span className="font-display text-[58px] leading-none font-light tracking-tight tabular-nums">
             {lock.time}
           </span>
         </p>
@@ -138,10 +128,7 @@ export function PhonePanel({ viewer, initial, sessionHref }: PhonePanelProps) {
                     <AppGlyph name={app.glyph} className="size-6" />
                   </span>
                   {off && (
-                    <span
-                      className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full"
-                      style={{ background: AMBER, color: DUSK, boxShadow: `0 0 0 2px ${DUSK}` }}
-                    >
+                    <span className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-today text-ink ring-2 ring-night">
                       <AppGlyph name="lock" className="size-3" />
                     </span>
                   )}
@@ -157,28 +144,27 @@ export function PhonePanel({ viewer, initial, sessionHref }: PhonePanelProps) {
 
         <div aria-live="polite" className="mt-auto">
           {locked ? (
-            <div className="rounded-2xl bg-white/12 p-3.5 ring-1 ring-white/15 backdrop-blur-md">
+            <div className="rounded-xl bg-white/12 p-3.5 ring-1 ring-white/15 backdrop-blur-md">
               <p className="flex items-start gap-2 text-[13px] leading-snug font-medium">
-                <AppGlyph name="lock" className="mt-px size-4 shrink-0 text-marigold" />
+                <AppGlyph name="lock" className="mt-px size-4 shrink-0 text-today" />
                 Locked. Finish today&apos;s 30-minute session to unlock.
               </p>
               <Link
                 href={sessionHref}
-                className="mt-3 block rounded-full py-2 text-center text-[13px] font-semibold outline-offset-2 focus-visible:outline-2 focus-visible:outline-white"
-                style={{ background: AMBER, color: DUSK }}
+                className="focus-ring mt-3 block rounded-full bg-today py-2 text-center text-[13px] font-semibold text-ink"
               >
                 Open session
               </Link>
             </div>
           ) : (
-            <p className="rounded-2xl bg-white/12 px-3.5 py-3 text-[13px] leading-snug ring-1 ring-white/15">
+            <p className="rounded-xl bg-white/12 px-3.5 py-3 text-[13px] leading-snug ring-1 ring-white/15">
               {openMessage(lock)}
             </p>
           )}
 
           {toast && (
-            <div className="absolute inset-x-2 top-9 z-10 flex items-start gap-2.5 rounded-2xl bg-white p-3 text-[#16213A] shadow-[0_12px_30px_-8px_rgba(0,0,0,0.45)] motion-safe:animate-[phone-toast_480ms_cubic-bezier(0.2,0.9,0.3,1.15)]">
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#0E4D4A] text-white">
+            <div className="absolute inset-x-2 top-9 z-10 flex items-start gap-2.5 rounded-xl bg-white p-3 text-ink shadow-[0_12px_30px_-8px_rgba(0,0,0,0.45)] motion-safe:animate-phone-toast">
+              <span className="grid size-8 shrink-0 place-items-center rounded-sm bg-open-high text-white">
                 <AppGlyph name="open" className="size-[18px]" />
               </span>
               <p className="flex flex-col text-[12px] leading-snug">
@@ -197,7 +183,7 @@ export function PhonePanel({ viewer, initial, sessionHref }: PhonePanelProps) {
 
         <ul
           aria-label="Always allowed"
-          className="mt-3 grid grid-cols-4 justify-items-center rounded-[1.6rem] bg-white/15 p-2 backdrop-blur-md"
+          className="mt-3 grid grid-cols-4 justify-items-center rounded-xl bg-white/15 p-2 backdrop-blur-md"
         >
           {ALWAYS_ALLOWED_APPS.map((app) => (
             <li

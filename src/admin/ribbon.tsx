@@ -7,13 +7,11 @@ import {
   switchInterest,
 } from "@/app/admin/actions";
 import { ADMIN_NOTICES, NoticeParam } from "@/app/admin/notices";
+import { buttonClass } from "@/components/ui/button";
 import { INTEREST_LABELS } from "@/content/interests";
 import { INTERESTS } from "@/engine/types";
 
-const BUTTON =
-  "rounded-full bg-white/12 px-3 py-1 font-medium text-white hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marigold";
-
-const LINK = "underline underline-offset-4 hover:text-marigold";
+const BUTTON = buttonClass("light", "sm");
 
 interface AdminRibbonProps {
   /** From `adminControls`: null for a browser not signed in at the gate, which gets no ribbon. */
@@ -55,10 +53,10 @@ export function AdminRibbon({ controls, back, notice }: AdminRibbonProps) {
     <div
       role="region"
       aria-label="Admin"
-      className="flex flex-col gap-2 rounded-xl bg-dusk px-4 py-2 text-sm text-white"
+      className="tone-night flex flex-col gap-2 rounded-md bg-night px-4 py-2.5 text-sm"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="mr-1 font-semibold text-marigold">Admin</span>
+        <span className="mr-1 font-display font-semibold text-today">Admin</span>
         <RibbonAction action={simulateMissedSession} back={back} label="Simulate missed session" />
         <RibbonAction action={simulateSessionDay} back={back} label={controls.clockLabel} />
         <form action={switchInterest} className="flex items-center gap-2">
@@ -70,10 +68,10 @@ export function AdminRibbon({ controls, back, notice }: AdminRibbonProps) {
             id="ribbon-interest"
             name="interest"
             defaultValue={controls.interests[0]}
-            className="rounded-full bg-white/12 px-2.5 py-1 text-white"
+            className={BUTTON}
           >
             {INTERESTS.map((interest) => (
-              <option key={interest} value={interest} className="text-dusk">
+              <option key={interest} value={interest} className="text-ink">
                 {INTEREST_LABELS[interest]}
               </option>
             ))}
@@ -83,15 +81,15 @@ export function AdminRibbon({ controls, back, notice }: AdminRibbonProps) {
           </button>
         </form>
         <RibbonAction action={resetDemo} back="/student" label="Reset demo" />
-        <Link href="/parent" className={LINK}>
+        <Link href="/parent" className="link">
           Parent view
         </Link>
-        <Link href="/admin" className={LINK}>
+        <Link href="/admin" className="link">
           Admin panel
         </Link>
       </div>
       {shown.success && (
-        <p role="status" className="text-white/85">
+        <p role="status" className="text-ink-soft">
           {ADMIN_NOTICES[shown.data]}
         </p>
       )}

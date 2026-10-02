@@ -1,22 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Instrument_Sans } from "next/font/google";
 import "./globals.css";
+import { Wordmark } from "@/components/wordmark";
 import { APP_DESCRIPTION, APP_NAME, THEME_COLOR } from "@/config/app";
 import { APP_URL } from "@/config/app-url";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Body and interface text.
+const instrumentSans = Instrument_Sans({
+  variable: "--font-instrument",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
+// Headings, figures, equations and clocks, with its optical sizes.
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
   subsets: ["latin"],
+  axes: ["opsz"],
 });
 
 export const metadata: Metadata = {
@@ -34,9 +33,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
+      className={`${instrumentSans.variable} ${bricolage.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <header className="mx-auto flex w-full max-w-7xl items-center px-6 pt-5">
+          <Wordmark />
+        </header>
+        {children}
+      </body>
     </html>
   );
 }

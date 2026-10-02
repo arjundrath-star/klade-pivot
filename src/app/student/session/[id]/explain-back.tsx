@@ -8,5 +8,5 @@ export const loadExplainPanel = () => import("./explain-panel");
 
 export const ExplainBack = dynamic(() => loadExplainPanel().then((m) => m.ExplainPanel), {
   ssr: false,
-  loading: () => <p className="text-sm text-zinc-600 dark:text-zinc-400">Getting ready…</p>,
+  loading: () => <p className="text-sm text-ink-soft">Getting ready…</p>,
 });

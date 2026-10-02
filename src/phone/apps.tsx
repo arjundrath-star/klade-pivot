@@ -2,6 +2,7 @@
  * The mock phone's apps: made-up names and line glyphs, never a real app's name or logo. Plain
  * markup with no client code, so the phone panel and the rule forms share it.
  */
+import { StrokeGlyph } from "@/components/ui/stroke-glyph";
 import type { LockCategory } from "@/session/lock";
 
 type Glyph = readonly string[];
@@ -37,22 +38,7 @@ const GLYPHS = {
 export type GlyphName = keyof typeof GLYPHS;
 
 export function AppGlyph({ name, className }: { name: GlyphName; className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      {GLYPHS[name].map((d) => (
-        <path key={d} d={d} />
-      ))}
-    </svg>
-  );
+  return <StrokeGlyph paths={GLYPHS[name]} className={className} />;
 }
 
 interface PhoneApp {

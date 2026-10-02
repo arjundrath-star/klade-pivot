@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { z } from "zod";
+import { Equation } from "./equation";
 import { ExitAnswer } from "./exit-check";
 import { ExplainBack } from "./explain-back";
 import { ProblemCard } from "./problem-card";
@@ -12,6 +13,7 @@ import { AdminRibbon } from "@/admin/ribbon";
 import { coachConfigured } from "@/coach/client";
 import { exampleFor } from "@/coach/example";
 import { coachContext } from "@/coach/prompt";
+import { cardClass } from "@/components/ui/card";
 import { CourseBreadcrumb } from "@/course/breadcrumb";
 import {
   isBlockComplete,
@@ -29,7 +31,7 @@ import { sessionRewards } from "@/session/rewards";
 import { exitProblemSeconds, exitRemainingMs, formatClock, timeInBlock } from "@/session/timer";
 
 // Seen only while the runner refreshes on its way into block 4 or 5.
-const gettingReady = <p className="text-sm text-zinc-600 dark:text-zinc-400">Getting ready…</p>;
+const gettingReady = <p className="text-sm text-ink-soft">Getting ready…</p>;
 
 /**
  * Block 5: the next unanswered exit-check problem, one at a time. Rendering a problem starts its
@@ -50,18 +52,18 @@ async function exitPanel({ session, problems, counts, progress }: LoadedSession)
   const rendered = renderSessionProblem(problem, session.interests);
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-zinc-600 dark:text-zinc-400">
+      <p className="text-ink-soft">
         One try per problem, no coach, no hints.{" "}
         {limitSeconds === null
           ? "Take the time you need."
           : `${formatClock(limitSeconds)} for each problem.`}
       </p>
-      <article className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
-        <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+      <article className={`${cardClass()} flex flex-col gap-4`}>
+        <p className="text-sm font-semibold text-ink-soft">
           Problem {problem.index + 1} of {counts.exit}
         </p>
-        <p className="leading-relaxed">{rendered.text}</p>
-        {rendered.kind === "symbolic" && <p className="font-mono text-xl">{rendered.equation}</p>}
+        <p className="text-lg leading-relaxed">{rendered.text}</p>
+        {rendered.kind === "symbolic" && <Equation>{rendered.equation}</Equation>}
         <ExitAnswer
           key={problem.index}
           sessionId={session.id}
@@ -149,7 +151,7 @@ export default async function SessionPage({
     warmup: problemPanel("warmup"),
     learn: (
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-3 leading-relaxed">
+        <div className="flex flex-col gap-3 text-lg leading-relaxed">
           {learn.explanation.map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
@@ -164,14 +166,14 @@ export default async function SessionPage({
     guided: problemPanel("guided"),
     explain: explained ? (
       <div className="flex flex-col gap-6">
-        <article className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
-          <p className="leading-relaxed">{explained.problem.text}</p>
+        <article className={`${cardClass()} flex flex-col gap-3`}>
+          <p className="text-lg leading-relaxed">{explained.problem.text}</p>
           {explained.problem.kind === "symbolic" && (
-            <p className="font-mono text-xl">{explained.problem.equation}</p>
+            <Equation>{explained.problem.equation}</Equation>
           )}
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-ink-soft">
             You solved it:{" "}
-            <span className="font-mono">{explained.steps.at(-1)?.equationAfter}</span>
+            <Equation size="inline">{explained.steps.at(-1)?.equationAfter}</Equation>
           </p>
         </article>
         <ExplainBack sessionId={session.id} initialResults={explain.results} />

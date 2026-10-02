@@ -1,65 +1,176 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * The design tokens. A white base; ink for text; one primary accent for actions and links; a soft
+ * tint, a fill and a deep text color for each feature (today, course, calendar, progress, mentor);
+ * one success and one alert. Night is only the mock phone's screen.
+ */
+@theme {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --color-ink: #1b1838;
+  --color-ink-soft: #4b4868;
+  --color-ink-faint: #67647f;
+  --color-line: #e6e3ee;
+  --color-line-strong: #cfcbdb;
+  --color-well: #f6f5fb;
+  --color-track: #ebe9f3;
+
+  --color-primary: #4a3fd1;
+  --color-primary-deep: #3a30b0;
+  --color-primary-tint: #ecebfd;
+
+  --color-today: #f2b33d;
+  --color-today-deep: #8a5a00;
+  --color-today-tint: #fff3d1;
+  --color-course: #5ba4f5;
+  --color-course-deep: #1b5faa;
+  --color-course-tint: #e1f0ff;
+  --color-calendar: #2cb8a5;
+  --color-calendar-deep: #0f6e63;
+  --color-calendar-tint: #dcf3f0;
+  --color-progress: #f06ba8;
+  --color-progress-deep: #a8195e;
+  --color-progress-tint: #fce7f1;
+  --color-mentor: #86efc6;
+  --color-mentor-deep: #1e7a5a;
+  --color-mentor-tint: #e3f7eb;
+
+  --color-success: #1e7a5a;
+  --color-success-fill: #86efc6;
+  --color-success-tint: #e3f7eb;
+  --color-alert: #b8401f;
+  --color-alert-tint: #fbe7e0;
+
+  --color-night: #1b1838;
+  --color-night-high: #2b2660;
+  --color-open: #0f4d49;
+  --color-open-high: #14665f;
+
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.3rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.55rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.65rem;
+  --text-xl: 1.3125rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.625rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 2.0625rem;
+  --text-3xl--line-height: 2.3rem;
+  --text-4xl: 2.625rem;
+  --text-4xl--line-height: 2.8rem;
+  --text-5xl: 3.375rem;
+  --text-5xl--line-height: 3.5rem;
+
+  /* Radius grows with the surface: inputs, wells, cards, hero surfaces, the phone's screen. */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.125rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+
+  /* Only the phone floats. */
+  --shadow-phone: 0 0 0 1.5px #4a4a52, 0 32px 64px -24px rgb(27 24 56 / 0.5);
+
+  --animate-rise: rise 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-phone-toast: phone-toast 480ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes phone-toast {
+    from {
+      transform: translateY(-140%);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  /* Headings and figures on the student's dashboard and the course map. */
-  --font-display: var(--font-bricolage);
-  /* The prototype features' palette: the phone, the rewards panel, the mentor card. */
-  --color-dusk: #1b1838;
-  --color-dusk-high: #2b2660;
-  --color-marigold: #f2b33d;
-  --color-mint: #86efc6;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    var(--font-bricolage), var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: var(--color-white);
+    color: var(--color-ink);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex: none;
+    accent-color: var(--color-primary);
+  }
+
+  ::selection {
+    background-color: var(--color-today-tint);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+/*
+ * A night surface (the mock phone's screen, the admin ribbon): white text, and the soft text,
+ * line, track, well and primary tokens turned white, so the same utilities, links and focus
+ * rings read right on it. `ink` stays dark for text set on a marigold fill.
+ */
+@utility tone-night {
+  --color-ink-soft: rgb(255 255 255 / 0.74);
+  --color-ink-faint: rgb(255 255 255 / 0.62);
+  --color-line: rgb(255 255 255 / 0.16);
+  --color-line-strong: rgb(255 255 255 / 0.3);
+  --color-track: rgb(255 255 255 / 0.14);
+  --color-well: rgb(255 255 255 / 0.12);
+  --color-primary: #ffffff;
+  --color-primary-deep: #ffffff;
+  color: #ffffff;
 }
 
-@utility btn-primary {
-  @apply rounded-md bg-zinc-900 px-4 py-2 font-medium text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900;
-}
-
-/* The dashboard's quiet container: white, a hairline, soft corners. */
-@utility card {
-  @apply rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950;
-}
-
-@utility btn-secondary {
-  @apply rounded-md border border-zinc-300 px-4 py-2 font-medium disabled:opacity-40 dark:border-zinc-700;
-}
-
-/* The rewards panel and the waiting room: dusk with a marigold glow, like the locked phone. */
-@utility bg-dusk-glow {
+/* The locked phone: night, lit marigold from below. */
+@utility bg-lock-glow {
   background:
-    radial-gradient(100% 60% at 100% 0%, rgb(242 179 61 / 0.25), transparent 70%),
-    linear-gradient(170deg, var(--color-dusk-high) 0%, var(--color-dusk) 70%);
+    radial-gradient(120% 55% at 50% 108%, rgb(242 179 61 / 0.5), transparent 70%),
+    linear-gradient(170deg, var(--color-night-high) 0%, var(--color-night) 62%);
 }
 
-/* The phone panel's notification banner drops in from the top of the screen. */
-@keyframes phone-toast {
-  from {
-    transform: translateY(-140%);
-    opacity: 0;
-  }
-  to {
-    transform: none;
-    opacity: 1;
-  }
+/* The phone once it opens: the same night, lit mint. */
+@utility bg-open-glow {
+  background:
+    radial-gradient(120% 55% at 50% 108%, rgb(134 239 198 / 0.45), transparent 70%),
+    linear-gradient(170deg, var(--color-open-high) 0%, var(--color-open) 62%);
+}
+
+@utility focus-ring {
+  @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
+}
+
+/* Inline links: the primary accent, underlined. */
+@utility link {
+  @apply focus-ring rounded-sm font-medium text-primary underline decoration-primary/40 decoration-2 underline-offset-[3px] hover:text-primary-deep hover:decoration-primary-deep;
 }

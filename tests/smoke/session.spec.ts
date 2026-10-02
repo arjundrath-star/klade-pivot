@@ -38,21 +38,24 @@ test("a student walks all five blocks of a session and it is saved as they go", 
     String(SEEDED_SESSIONS),
   );
   await expect(page.getByText("10% of Algebra I. 1 of 9 units done.")).toBeVisible();
-  await expect(page.getByText("Level 2")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Level 2", exact: true })).toBeVisible();
   // The streak tile; the 5-session streak badge on the shelf carries the same words.
   await expect(
     page.getByRole("heading", { name: `${SEEDED_STREAK}-session streak`, exact: true }),
   ).toBeVisible();
+  // This week's strip: today is on her schedule and not done yet.
+  await expect(page.getByRole("region", { name: "This week" })).toContainText("today, scheduled");
+  // The badges and the course map have pages of their own in the shell.
+  await page.goto("/student/progress");
   await expect(page.getByText("Badges: 7 of 60")).toBeVisible();
+  await page.goto("/student/course");
   const map = page.getByRole("region", { name: "Course map" });
   await expect(map.getByRole("heading", { level: 3 })).toHaveCount(9);
   await expect(map.getByText("Mastered:")).toHaveCount(SEEDED_SESSIONS);
   await expect(map.getByText("Today:")).toHaveCount(1);
   await expect(map.getByText("Upcoming:")).toHaveCount(49 - SEEDED_SESSIONS - 1);
   await expect(map.getByRole("button", { name: "Go to today's session" })).toBeVisible();
-  const recent = page.getByRole("region", { name: "Recent sessions" });
-  await expect(recent.getByRole("row")).toHaveCount(SEEDED_SESSIONS + 1);
-  await expect(recent.getByRole("cell", { name: "Mastered" })).toHaveCount(SEEDED_SESSIONS);
+  await page.goto("/student");
   const sessionId = await startSession(page);
 
   // The breadcrumb names the unit, the concept and its standard.
@@ -218,7 +221,7 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   await expect(
     page.getByText(/^Next in the course: Equations with variables on both sides \(AI-A\.REI\.3\)/),
   ).toBeVisible();
-  await expect(page.getByText("Level 2")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Level 2", exact: true })).toBeVisible();
   await expect(page.getByText(`${xp * (SEEDED_SESSIONS + 1)} XP`, { exact: true })).toBeVisible();
   await expect(page.getByRole("progressbar", { name: "Course progress" })).toHaveAttribute(
     "aria-valuenow",
@@ -229,16 +232,20 @@ test("a student walks all five blocks of a session and it is saved as they go", 
     "2",
   );
   await expect(page.getByText(`${SEEDED_STREAK + 1}-session streak`)).toBeVisible();
+  await expect(page.getByRole("region", { name: "This week" })).toContainText("today, done");
+  await page.goto("/student/progress");
   await expect(page.getByText("Badges: 8 of 60")).toBeVisible();
-  await expect(map.getByText("Mastered:")).toHaveCount(SEEDED_SESSIONS + 1);
-  await expect(map.getByText("Today:")).toHaveCount(0);
   const rewards = page.getByRole("region", { name: "Your rewards" });
   await expect(rewards.getByRole("progressbar", { name: /^4-week streak/ })).toHaveAttribute(
     "aria-valuenow",
     String(streakReward.weeks),
   );
   await expect(rewards.getByText("Unlocked")).toHaveCount(streakReward.unlocked ? 1 : 0);
+  await page.goto("/student/course");
+  await expect(map.getByText("Mastered:")).toHaveCount(SEEDED_SESSIONS + 1);
+  await expect(map.getByText("Today:")).toHaveCount(0);
   // The mentor's note quotes the explanation word for word.
+  await page.goto("/student/mentor");
   const mentor = page.getByRole("region", { name: /^Your mentor/ });
   await expect(mentor.getByRole("blockquote")).toHaveText(explanation);
 
