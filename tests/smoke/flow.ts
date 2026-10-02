@@ -1,6 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 import { answersFor, recordPass } from "../helpers/answers";
-import { addDays } from "@/engine/pace";
+import { DEMO_MASTERED_KEYS } from "@/db/demo";
+import { addDays, weekdayOf } from "@/engine/pace";
 import { XP_TABLE } from "@/engine/progress";
 import { calendarDay } from "@/parent/progress";
 import type { AnsweredBlockId } from "@/session/blocks";
@@ -19,6 +20,22 @@ export function targetNextMay(): string {
 /** The XP a full session pays: the warm-up, every guided problem, the explain-back and the exit check. */
 export function sessionXp(guidedProblems: number): number {
   return XP_TABLE.warmup + XP_TABLE.guided * guidedProblems + XP_TABLE.explain + XP_TABLE.exit;
+}
+
+/** The demo persona's record: five sessions of the shipped shape, one per mastered concept. */
+export const SEEDED_SESSIONS = DEMO_MASTERED_KEYS.length;
+
+/** Her streak going into the demo day: every seeded session was on its day. */
+export const SEEDED_STREAK = SEEDED_SESSIONS;
+
+/**
+ * Where the 4-week streak reward stands once today's session is done. Her record spans two
+ * calendar weeks on top of one seeded week, so today's session completes the reward only when
+ * today starts a new week, a Monday; any other day it stays at 3 of 4.
+ */
+export function streakRewardAfterToday(): { weeks: number; unlocked: boolean } {
+  const unlocked = weekdayOf(calendarDay(new Date())) === "mon";
+  return { weeks: unlocked ? 4 : 3, unlocked };
 }
 
 /** The session page is on the block headed `label`, at `position` on the progress bar. */

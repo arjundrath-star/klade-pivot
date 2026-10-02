@@ -11,14 +11,21 @@ test("the parent sees a missed session and the admin switches the interest live"
   await page.goto("/parent");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Maya's progress");
   await expect(page.getByText("On track for May")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Mastery" })).toBeVisible();
-  await expect(page.getByRole("rowheader", { name: "Two-step equations" })).toBeVisible();
+  const map = page.getByRole("region", { name: "Course map" });
+  await expect(map).toContainText("Maya has mastered 5 of 49 concepts");
+  await expect(map).toContainText("Solving two-step linear equations");
+  await expect(map.getByText("Next session")).toBeVisible();
+  await expect(map.getByText("3 of 3 on the exit check")).toHaveCount(5);
   await expect(page.getByRole("heading", { name: "Session history" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "What Maya can explain" })).toBeVisible();
 
-  await page.goto("/admin");
-  await page.getByRole("button", { name: "Simulate missed session" }).click();
-  await expect(page.getByRole("status")).toHaveText(/marked missed/);
+  // The admin ribbon on the student's screen drives the demo and comes back to it.
+  await page.goto("/student");
+  const ribbon = page.getByRole("region", { name: "Admin" });
+  await ribbon.getByRole("button", { name: "Simulate missed session" }).click();
+  await expect(page).toHaveURL(/\/student\?notice=missed$/);
+  await expect(ribbon.getByRole("status")).toHaveText(/marked missed/);
+  await expect(page.getByRole("region", { name: "Recent sessions" })).toContainText("Missed");
 
   await page.goto("/parent");
   const alert = "Maya missed today's Algebra session. She's 1 session behind her May target.";

@@ -16,14 +16,25 @@ import type { BlockId } from "@/session/blocks";
 import type { SessionOutcome } from "@/session/mastery";
 import type { BlockTimes } from "@/session/timer";
 
-type TodaySession =
-  | { kind: "open"; sessionId: string; templateId: string; title: string; repeat: boolean }
-  | { kind: "next"; templateId: string; title: string; repeat: boolean }
+interface TodayConcept {
+  templateId: string;
+  title: string;
+  /** The session content key, which names the concept on the course map. */
+  contentKey: string;
+  /** The concept is a repeat: its last session did not reach mastery. */
+  repeat: boolean;
+}
+
+export type TodaySession =
+  | ({ kind: "open"; sessionId: string } & TodayConcept)
+  | ({ kind: "next" } & TodayConcept)
+  /** Every playable concept is mastered. */
   | { kind: "complete" };
 
 /**
  * The session the student should do today: the one in progress, else a concept marked Repeat,
- * else the first concept in course order not yet mastered. `repeat` says the concept is a repeat.
+ * else the first playable concept in course order not yet mastered. The course map lists every
+ * concept, but only a playable one has a session behind it.
  */
 export async function findTodaySession(studentId: string): Promise<TodaySession> {
   const db = await getDb();
@@ -38,6 +49,7 @@ export async function findTodaySession(studentId: string): Promise<TodaySession>
         id: sessionLogs.id,
         templateId: sessionLogs.sessionTemplateId,
         title: sessionTemplates.title,
+        contentKey: sessionTemplates.contentKey,
         repeat: isRepeat,
       })
       .from(sessionLogs)
@@ -45,19 +57,29 @@ export async function findTodaySession(studentId: string): Promise<TodaySession>
       .leftJoin(mastery, studentMastery)
       .where(and(eq(sessionLogs.studentId, studentId), eq(sessionLogs.status, "in_progress"))),
     db
-      .select({ id: sessionTemplates.id, title: sessionTemplates.title, repeat: isRepeat })
+      .select({
+        templateId: sessionTemplates.id,
+        title: sessionTemplates.title,
+        contentKey: sessionTemplates.contentKey,
+        repeat: isRepeat,
+      })
       .from(sessionTemplates)
       .innerJoin(units, eq(units.id, sessionTemplates.unitId))
       .leftJoin(mastery, studentMastery)
-      .where(or(isNull(mastery.status), ne(mastery.status, "mastered")))
+      .where(
+        and(
+          eq(sessionTemplates.playable, true),
+          or(isNull(mastery.status), ne(mastery.status, "mastered")),
+        ),
+      )
       .orderBy(desc(isRepeat), asc(units.position), asc(sessionTemplates.position))
       .limit(1),
   ]);
   if (open) {
-    const { id: sessionId, templateId, title, repeat } = open;
-    return { kind: "open", sessionId, templateId, title, repeat };
+    const { id: sessionId, ...concept } = open;
+    return { kind: "open", sessionId, ...concept };
   }
-  if (next) return { kind: "next", templateId: next.id, title: next.title, repeat: next.repeat };
+  if (next) return { kind: "next", ...next };
   return { kind: "complete" };
 }
 
@@ -188,6 +210,8 @@ interface Finish {
   sessionTemplateId: string;
   outcome: SessionOutcome;
   exitScore: number;
+  /** Exit-check problems the session had. */
+  exitTotal: number;
   explainBackId: string;
   blockElapsedMs: BlockTimes;
   completedAt: Date;
@@ -206,13 +230,14 @@ interface Finish {
  * session was not open on the exit check any more.
  */
 export async function finishSession(finish: Finish): Promise<boolean> {
-  const { sessionLogId, studentId, sessionTemplateId, outcome, exitScore, explainBackId } = finish;
-  const { completedAt, xp } = finish;
+  const { sessionLogId, studentId, sessionTemplateId, outcome, explainBackId } = finish;
+  const { exitScore, exitTotal, completedAt, xp } = finish;
   const db = await getDb();
   const evidence = {
     status: outcome,
     sessionLogId,
     exitScore,
+    exitTotal,
     explainBackId,
     updatedAt: completedAt,
   };

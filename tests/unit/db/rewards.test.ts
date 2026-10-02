@@ -97,8 +97,7 @@ describe("a full session", () => {
       alreadyCounted: false,
     });
     expect(rewards.badges.map((badge) => badge.label)).toEqual([
-      "Two-step equations mastered",
-      "Unit 1 Mastered",
+      "Solving two-step linear equations mastered",
       "Explained it perfectly",
     ]);
 
@@ -121,7 +120,6 @@ describe("a full session", () => {
     expect(await badgeKeys()).toEqual([
       "concept:algebra1/linear-equations/s1",
       "explained-perfectly",
-      "unit:1",
     ]);
     const earnings = await studentEarnings(DEMO_STUDENT_ID);
     expect(earnings.xp).toBe(110);

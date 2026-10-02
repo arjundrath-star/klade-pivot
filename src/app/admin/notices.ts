@@ -1,4 +1,6 @@
-/** What an admin action did, passed back to `/admin` in the query string after the redirect. */
+import { z } from "zod";
+
+/** What an admin action did, passed back in the query string after the redirect. */
 export const ADMIN_NOTICES = {
   missed: "Today's session is marked missed and the alert is on the parent view.",
   "done-today": "Today's session is already done, so it cannot be missed.",
@@ -15,10 +17,13 @@ export const ADMIN_NOTICES = {
   "clock-done":
     "Demo clock set, but today's session is already done, so the phone stays open. Reset demo to rehearse the lock again.",
   reset:
-    "Demo reset. Maya has no history, today is on her schedule, her phone rule is on, the clock is real and this browser is Maya again.",
+    "Demo reset. Maya is back on two-step equations with her record behind her, today is on her schedule, her phone rule is on, the clock is real and this browser is Maya again.",
   invalid: "That request was not valid.",
 } as const;
 
 export type AdminNotice = keyof typeof ADMIN_NOTICES;
 
 export const NOTICE_KEYS = Object.keys(ADMIN_NOTICES) as [AdminNotice, ...AdminNotice[]];
+
+/** The `notice` query parameter, as a page reads it. */
+export const NoticeParam = z.enum(NOTICE_KEYS);

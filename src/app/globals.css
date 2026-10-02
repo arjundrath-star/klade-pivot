@@ -10,6 +10,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Headings and figures on the student's dashboard and the course map. */
+  --font-display: var(--font-bricolage);
   /* The prototype features' palette: the phone, the rewards panel, the mentor card. */
   --color-dusk: #1b1838;
   --color-dusk-high: #2b2660;
@@ -32,6 +34,11 @@ body {
 
 @utility btn-primary {
   @apply rounded-md bg-zinc-900 px-4 py-2 font-medium text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900;
+}
+
+/* The dashboard's quiet container: white, a hairline, soft corners. */
+@utility card {
+  @apply rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950;
 }
 
 @utility btn-secondary {

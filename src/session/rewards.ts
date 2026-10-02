@@ -1,5 +1,6 @@
 import { MAX_TOTAL_SCORE, totalScore } from "@/coach/rubric";
-import { ALGEBRA1_BADGES, ALGEBRA1_CONTENT } from "@/content/algebra1/concepts";
+import { ALGEBRA1_BADGES } from "@/content/algebra1/badges";
+import { ALGEBRA1_COURSE } from "@/content/algebra1/course";
 import { masteredConcepts, sessionEarnings, type XpGrant } from "@/db/queries/rewards";
 import {
   reachedRewards,
@@ -162,7 +163,7 @@ export async function sessionAwards(
   const done = [...record.earlier, record.day];
   const span = streakSpan(record.schedule, done, record.day, change.after.count);
   if (outcome === "mastered") mastered.add(session.contentKey);
-  const badges = earnedBadges(ALGEBRA1_CONTENT, {
+  const badges = earnedBadges(ALGEBRA1_COURSE, {
     mastered,
     streak: change.after.count,
     perfectExplanation: explainedPerfectly(loaded),

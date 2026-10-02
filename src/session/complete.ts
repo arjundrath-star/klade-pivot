@@ -86,6 +86,7 @@ export async function completeSession(
     sessionTemplateId: session.sessionTemplateId,
     outcome,
     exitScore: score,
+    exitTotal: counts.exit,
     explainBackId,
     blockElapsedMs: leaveBlock(session.blockElapsedMs, "exit", session.blockStartedAt),
     completedAt,

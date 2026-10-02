@@ -15,6 +15,8 @@ const PARENT_FACING = [
   "src/content/rewards.ts",
   "src/rewards",
   "src/mentor",
+  // The course map renders on the parent view too.
+  "src/course",
 ];
 
 function files(target: string): string[] {

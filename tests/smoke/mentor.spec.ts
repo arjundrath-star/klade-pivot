@@ -53,7 +53,7 @@ test("with the prototype rows missing, the core pages render without them", asyn
 
   await page.goto("/parent");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Maya's progress");
-  await expect(page.getByRole("heading", { name: "Mastery" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Course map" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Maya's rewards" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: /mentor/ })).toHaveCount(0);
   expect(errors).toEqual([]);

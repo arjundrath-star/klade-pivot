@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { s1 } from "@/content/algebra1/linear-equations/s1";
-import { S1_KEY, sessionContent } from "@/content/sessions";
+import { S1_KEY } from "@/content/keys";
+import { sessionContent } from "@/content/sessions";
 import { problemCounts, problemSeed, sessionProblems } from "@/session/problems";
 
 describe("sessionProblems", () => {

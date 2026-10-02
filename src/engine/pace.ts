@@ -4,7 +4,12 @@
  * each unit should be done by. Pure: dates are calendar days (YYYY-MM-DD) with no time zone.
  */
 
-/** Sessions in Algebra 1. [Estimate] memo §6.3: about 120, to be validated with teachers. */
+/**
+ * Sessions in Algebra 1. [Estimate] memo §6.3: about 120, to be validated with teachers. The
+ * course has 49 concepts (src/content/algebra1/course.ts), so this budgets about two and a half
+ * sessions a concept: a first pass, a repeat where the exit check fails, and review. The course
+ * file spreads it across the units, and a test keeps the unit counts adding up to it.
+ */
 export const ALGEBRA1_SESSION_ESTIMATE = 120;
 
 /** Every session is 30 minutes (spec §3.2). */

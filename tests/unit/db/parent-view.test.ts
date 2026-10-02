@@ -127,19 +127,27 @@ describe("a finished session on the parent view", () => {
 
     const [latest] = await familyAlerts(DEMO_FAMILY_ID);
     expect(latest).toMatchObject({
-      message: "Maya mastered two-step equations, with 3 of 3 on the timed exit check.",
+      message:
+        "Maya mastered solving two-step linear equations, with 3 of 3 on the timed exit check.",
     });
   });
 
   it("shows the student's own explanation and the mastery at once", async () => {
     expect(await latestExplanation(DEMO_STUDENT_ID)).toMatchObject({
-      concept: "Two-step equations",
+      concept: "Solving two-step linear equations",
       text: "Same thing to both sides keeps it balanced.",
       source: "typed",
       verdict: "pass",
     });
-    expect(await masteryGrid(DEMO_STUDENT_ID)).toEqual([
-      expect.objectContaining({ title: "Two-step equations", status: "mastered", exitScore: 3 }),
+    // The grid lists every concept of the course; only two-step equations has a status.
+    const grid = await masteryGrid(DEMO_STUDENT_ID);
+    expect(grid).toHaveLength(49);
+    expect(grid.filter((row) => row.status !== null)).toEqual([
+      expect.objectContaining({
+        title: "Solving two-step linear equations",
+        status: "mastered",
+        exitScore: 3,
+      }),
     ]);
   });
 

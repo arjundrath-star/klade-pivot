@@ -92,7 +92,9 @@ test("a parent sets the phone rule, the demo clock locks the phone, and Unlock t
   await settingsNotice(settings, /Phone rule off/);
   await page.goto("/student");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hi, Maya");
-  await expect(page.getByText("The phone rule is off.")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Your phone" }).getByText("The phone rule is off."),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Start" })).toBeVisible();
   expect(errors).toEqual([]);
 });

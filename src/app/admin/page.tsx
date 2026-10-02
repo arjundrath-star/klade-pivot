@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { z } from "zod";
 import {
   overrideExplanation,
   resetDemo,
@@ -9,7 +8,8 @@ import {
   simulateSessionDay,
   switchInterest,
 } from "./actions";
-import { ADMIN_NOTICES, NOTICE_KEYS } from "./notices";
+import { ADMIN_NOTICES, NoticeParam } from "./notices";
+import { demoClockLabel } from "@/admin/controls";
 import { costCents, type TokenUsage } from "@/coach/pricing";
 import { lockSettings } from "@/db/queries/lock";
 import { getStudent } from "@/db/queries/students";
@@ -26,8 +26,6 @@ export const metadata: Metadata = { title: "Admin · Klade" };
 const SECTION = "flex flex-col gap-4 rounded-lg border border-zinc-200 p-6 dark:border-zinc-800";
 const HEADING = "text-lg font-semibold";
 const MUTED = "text-zinc-600 dark:text-zinc-400";
-
-const NoticeParam = z.enum(NOTICE_KEYS);
 
 type UsageRow = Awaited<ReturnType<typeof usageBySession>>[number];
 
@@ -142,7 +140,7 @@ export default async function AdminPanel({ searchParams }: PageProps<"/admin">) 
         </p>
         <form action={simulateSessionDay}>
           <button type="submit" className="btn-primary">
-            Simulate: session day, {timeLabel(demoClock.time)}
+            {demoClockLabel(phone)}
           </button>
         </form>
       </section>

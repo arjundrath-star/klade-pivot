@@ -7,9 +7,12 @@ import { ProblemCard } from "./problem-card";
 import { SessionComplete } from "./session-complete";
 import { SessionRunner } from "./session-runner";
 import { WorkedExample } from "./worked-example";
+import { adminControls } from "@/admin/controls";
+import { AdminRibbon } from "@/admin/ribbon";
 import { coachConfigured } from "@/coach/client";
 import { exampleFor } from "@/coach/example";
 import { coachContext } from "@/coach/prompt";
+import { CourseBreadcrumb } from "@/course/breadcrumb";
 import {
   isBlockComplete,
   isCoachedBlock,
@@ -70,20 +73,36 @@ async function exitPanel({ session, problems, counts, progress }: LoadedSession)
   );
 }
 
-export default async function SessionPage({ params }: PageProps<"/student/session/[id]">) {
+export default async function SessionPage({
+  params,
+  searchParams,
+}: PageProps<"/student/session/[id]">) {
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
 
-  const loaded = await loadSession(id, await currentStudentId());
+  const [loaded, controls, { notice }] = await Promise.all([
+    loadSession(id, await currentStudentId()),
+    adminControls(),
+    searchParams,
+  ]);
   if (!loaded) notFound();
   const { session, content, problems, counts, progress, coach, explain } = loaded;
+  const frame = (body: ReactNode) => (
+    <div className="flex flex-col gap-6">
+      <AdminRibbon controls={controls} back={`/student/session/${id}`} notice={notice} />
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <CourseBreadcrumb contentKey={session.contentKey} />
+        {body}
+      </div>
+    </div>
+  );
   if (session.status === "done") {
     const { outcome, completedAt } = session;
     const summary =
       outcome && completedAt
         ? sessionSummary(loaded, outcome, await sessionRewards(session, completedAt))
         : undefined;
-    return <SessionComplete title={session.title} summary={summary} />;
+    return frame(<SessionComplete title={session.title} summary={summary} />);
   }
   if (session.status !== "in_progress") notFound();
 
@@ -163,7 +182,7 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
     exit: await exitPanel(loaded),
   };
 
-  return (
+  return frame(
     <SessionRunner
       // A server refresh after the session moved elsewhere remounts the runner with fresh state.
       // The explain-back status is in the key too, so a result another tab recorded shows up.
@@ -183,6 +202,6 @@ export default async function SessionPage({ params }: PageProps<"/student/sessio
       initialExplainBack={progress.explainBack}
       exitAnswered={progress.exitAnswered}
       panels={panels}
-    />
+    />,
   );
 }

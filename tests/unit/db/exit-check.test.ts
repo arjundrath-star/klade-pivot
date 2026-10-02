@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { moveBlock, submitExitAnswer } from "@/app/student/session/[id]/actions";
 import { getDb } from "@/db/client";
+import { S1_KEY } from "@/content/keys";
 import { DEMO_STUDENT_ID, S1_TEMPLATE_ID } from "@/db/demo";
 import { markExitShown } from "@/db/queries/exit";
 import { findTodaySession, getSession, openTodaySession } from "@/db/queries/sessions";
@@ -164,7 +165,8 @@ describe("answering the exit check", () => {
     expect(await findTodaySession(DEMO_STUDENT_ID)).toEqual({
       kind: "next",
       templateId: S1_TEMPLATE_ID,
-      title: "Two-step equations",
+      title: "Solving two-step linear equations",
+      contentKey: S1_KEY,
       repeat: true,
     });
     const reopened = await openTodaySession(DEMO_STUDENT_ID, 7);
@@ -277,17 +279,33 @@ describe("completion (D33)", () => {
 });
 
 describe("session planner", () => {
-  it("puts a concept marked Repeat ahead of the next new one", async () => {
+  it("puts a concept marked Repeat ahead of the next new one, and skips concepts not built", async () => {
     const db = await getDb();
     const unitId = "algebra-1-linear-equations";
+    // Two playable concepts after the course's seven, and one on the map with no session.
     await db.insert(sessionTemplates).values([
-      { id: "planner-s2", unitId, title: "Variables on both sides", position: 2, contentKey: "p2" },
-      { id: "planner-s3", unitId, title: "Distributing first", position: 3, contentKey: "p3" },
+      {
+        id: "planner-s2",
+        unitId,
+        title: "Variables on both sides",
+        position: 8,
+        contentKey: "p2",
+        playable: true,
+      },
+      {
+        id: "planner-s3",
+        unitId,
+        title: "Distributing first",
+        position: 9,
+        contentKey: "p3",
+        playable: true,
+      },
     ]);
     expect(await findTodaySession(DEMO_STUDENT_ID)).toEqual({
       kind: "next",
       templateId: "planner-s2",
       title: "Variables on both sides",
+      contentKey: "p2",
       repeat: false,
     });
 

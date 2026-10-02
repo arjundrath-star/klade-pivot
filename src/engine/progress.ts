@@ -120,7 +120,8 @@ export interface UnitOutline {
   concepts: readonly ConceptOutline[];
 }
 
-function unitMastered(unit: UnitOutline, mastered: ReadonlySet<string>): boolean {
+/** Every concept of the unit is mastered; a unit with no concepts never is. */
+export function unitMastered(unit: UnitOutline, mastered: ReadonlySet<string>): boolean {
   return unit.concepts.length > 0 && unit.concepts.every((concept) => mastered.has(concept.key));
 }
 
@@ -168,10 +169,20 @@ interface BadgeRule {
   earned: (evidence: BadgeEvidence) => boolean;
 }
 
+/** The key of the badge for mastering a concept. */
+export function conceptBadgeKey(conceptKey: string): string {
+  return `concept:${conceptKey}`;
+}
+
+/** The key of the badge for mastering a unit. */
+export function unitBadgeKey(unitNumber: number): string {
+  return `unit:${unitNumber}`;
+}
+
 function conceptRule(concept: ConceptOutline): BadgeRule {
   return {
     badge: {
-      key: `concept:${concept.key}`,
+      key: conceptBadgeKey(concept.key),
       label: `${concept.title} mastered`,
       detail: "Passed the exit check and the explain-back.",
     },
@@ -185,7 +196,7 @@ function unitRule(unit: UnitOutline): BadgeRule {
   const count = unit.concepts.length;
   return {
     badge: {
-      key: `unit:${unit.number}`,
+      key: unitBadgeKey(unit.number),
       label: `Unit ${unit.number} Mastered`,
       detail: `Every concept Unit ${unit.number} has so far: ${count} of ${count}.`,
     },

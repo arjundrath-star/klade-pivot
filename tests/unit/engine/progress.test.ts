@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ALGEBRA1_CONTENT } from "@/content/algebra1/concepts";
-import { S1_KEY } from "@/content/sessions";
+import { ALGEBRA1_COURSE } from "@/content/algebra1/course";
+import { S1_KEY } from "@/content/keys";
 import { scheduleDays, type ScheduleSlot } from "@/engine/pace";
 import { freezeLabel, streakLabel } from "@/parent/progress";
 import {
@@ -137,17 +137,24 @@ describe("badges", () => {
   const none = { mastered: new Set<string>(), streak: 0, perfectExplanation: false };
 
   it("earns nothing before anything is done", () => {
-    expect(earnedBadges(ALGEBRA1_CONTENT, none)).toEqual([]);
+    expect(earnedBadges(ALGEBRA1_COURSE, none)).toEqual([]);
   });
 
-  it("with one concept shipped, mastering it earns the concept and the unit together", () => {
-    const earned = earnedBadges(ALGEBRA1_CONTENT, { ...none, mastered: new Set([S1_KEY]) });
+  it("mastering two-step equations earns its badge, not Unit 2's, which has six more concepts", () => {
+    const earned = earnedBadges(ALGEBRA1_COURSE, { ...none, mastered: new Set([S1_KEY]) });
     expect(earned.map((badge) => badge.label)).toEqual([
-      "Two-step equations mastered",
-      "Unit 1 Mastered",
+      "Solving two-step linear equations mastered",
     ]);
-    // The unit badge says how much of the unit there is, nothing more.
-    expect(earned[1].detail).toBe("Every concept Unit 1 has so far: 1 of 1.");
+  });
+
+  it("earns a unit's badge once every concept in it is mastered", () => {
+    const unit1 = ALGEBRA1_COURSE[0].concepts.map((concept) => concept.key);
+    const earned = earnedBadges(ALGEBRA1_COURSE, { ...none, mastered: new Set(unit1) });
+    expect(earned.at(-1)).toEqual({
+      key: "unit:1",
+      label: "Unit 1 Mastered",
+      detail: "Every concept Unit 1 has so far: 4 of 4.",
+    });
   });
 
   it("waits for every concept in a unit before the unit badge", () => {
@@ -162,9 +169,9 @@ describe("badges", () => {
   });
 
   it("earns the streak badge at five and the explanation badge on 3 of 3", () => {
-    expect(earnedBadges(ALGEBRA1_CONTENT, { ...none, streak: 4 })).toEqual([]);
-    expect(keys(earnedBadges(ALGEBRA1_CONTENT, { ...none, streak: 5 }))).toEqual(["streak-5"]);
-    expect(keys(earnedBadges(ALGEBRA1_CONTENT, { ...none, perfectExplanation: true }))).toEqual([
+    expect(earnedBadges(ALGEBRA1_COURSE, { ...none, streak: 4 })).toEqual([]);
+    expect(keys(earnedBadges(ALGEBRA1_COURSE, { ...none, streak: 5 }))).toEqual(["streak-5"]);
+    expect(keys(earnedBadges(ALGEBRA1_COURSE, { ...none, perfectExplanation: true }))).toEqual([
       "explained-perfectly",
     ]);
   });
@@ -172,7 +179,8 @@ describe("badges", () => {
   it("lists every badge once on the shelf", () => {
     const shelf = keys(allBadges(TWO_CONCEPTS));
     expect(shelf).toEqual(["concept:a", "concept:b", "unit:1", "streak-5", "explained-perfectly"]);
-    expect(new Set(keys(allBadges(ALGEBRA1_CONTENT))).size).toBe(4);
+    // 49 concepts, 9 units, the streak and the perfect explanation.
+    expect(new Set(keys(allBadges(ALGEBRA1_COURSE))).size).toBe(60);
   });
 });
 
@@ -180,7 +188,9 @@ describe("levels", () => {
   it("is 1 plus the units mastered", () => {
     expect(level(TWO_CONCEPTS, new Set(["a"]))).toBe(1);
     expect(level(TWO_CONCEPTS, new Set(["a", "b"]))).toBe(2);
-    expect(level(ALGEBRA1_CONTENT, new Set([S1_KEY]))).toBe(2);
+    expect(level(ALGEBRA1_COURSE, new Set([S1_KEY]))).toBe(1);
+    const unit1 = ALGEBRA1_COURSE[0].concepts.map((concept) => concept.key);
+    expect(level(ALGEBRA1_COURSE, new Set([...unit1, S1_KEY]))).toBe(2);
   });
 
   it("skips a unit with no concepts yet", () => {
@@ -191,10 +201,17 @@ describe("levels", () => {
 
   it("tracks the unit in progress, and the last unit once all are done", () => {
     expect(currentUnit(TWO_CONCEPTS, new Set(["a"]))).toEqual({ number: 1, mastered: 1, total: 2 });
-    expect(currentUnit(ALGEBRA1_CONTENT, new Set([S1_KEY]))).toEqual({
+    // A student who only mastered two-step equations is still on Unit 1 for levels.
+    expect(currentUnit(ALGEBRA1_COURSE, new Set([S1_KEY]))).toEqual({
       number: 1,
+      mastered: 0,
+      total: 4,
+    });
+    const unit1 = ALGEBRA1_COURSE[0].concepts.map((concept) => concept.key);
+    expect(currentUnit(ALGEBRA1_COURSE, new Set([...unit1, S1_KEY]))).toEqual({
+      number: 2,
       mastered: 1,
-      total: 1,
+      total: 7,
     });
   });
 });

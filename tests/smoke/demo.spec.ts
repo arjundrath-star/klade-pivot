@@ -6,9 +6,11 @@ import {
   LOCKED,
   passExplainBack,
   reachGuidedPractice,
+  SEEDED_STREAK,
   sessionXp,
   solveBlock,
   startSession,
+  streakRewardAfterToday,
   targetNextMay,
 } from "./flow";
 import { SMOKE_ADMIN_PASSWORD } from "./password";
@@ -128,17 +130,18 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   await answerExitCheck(student, sessionId, [true, true, true]);
   await student.getByRole("button", { name: "Finish" }).click();
 
-  // Mastered: XP, "Unit 1 Mastered", the streak, and the 4-week streak reward.
+  // Mastered: XP, the concept badge, the streak, and the 4-week streak reward in a new week.
   const xp = sessionXp(guided.length);
+  const streakReward = streakRewardAfterToday();
   await expect(student.getByRole("heading", { level: 1, name: "Mastered" })).toBeVisible();
   const earned = student.getByRole("region", { name: "This session" });
   await expect(earned.getByText(`+${xp} XP`)).toBeVisible();
   await expect(earned.getByRole("list", { name: "Badges earned" })).toContainText(
-    "Unit 1 Mastered",
+    "Solving two-step linear equations mastered",
   );
-  await expect(earned.getByText("1-session streak")).toBeVisible();
-  await expect(earned.getByRole("list", { name: "Rewards unlocked" })).toContainText(
-    "Pick your mentor for a free check-in",
+  await expect(earned.getByText(`${SEEDED_STREAK + 1}-session streak`)).toBeVisible();
+  await expect(earned.getByRole("list", { name: "Rewards unlocked" })).toHaveCount(
+    streakReward.unlocked ? 1 : 0,
   );
 
   // The phone in the parent's tab unlocks live, within one poll, with what the session earned.
@@ -147,14 +150,19 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   await expect(phone.getByText("Today's session is done. Everything is open.")).toBeVisible();
   expect(studentErrors).toEqual([]);
 
-  // 5. The parent view: her words, the reward line, the mentor card.
+  // 5. The parent view: her words, the reward lines, the course map, the mentor card.
   await page.reload();
   await expect(page.getByText("On track for May")).toBeVisible();
-  await expect(page.getByText("1-session streak")).toBeVisible();
+  await expect(page.getByText(`${SEEDED_STREAK + 1}-session streak`)).toBeVisible();
   await expect(explain.getByRole("blockquote")).toHaveText(EXPLANATION);
   await expect(explain.getByText(/^Feedback Maya saw:/)).toBeVisible();
-  await expect(page.getByText("Earned: one free mentor check-in")).toBeVisible();
-  await expect(streak).toHaveAttribute("aria-valuenow", "4");
+  await expect(page.getByText("Earned: one free mentor check-in")).toHaveCount(
+    streakReward.unlocked ? 1 : 0,
+  );
+  await expect(streak).toHaveAttribute("aria-valuenow", String(streakReward.weeks));
+  await expect(page.getByRole("region", { name: "Course map" })).toContainText(
+    "Maya has mastered 6 of 49 concepts",
+  );
   const mentor = page.getByRole("region", { name: "Maya's mentor: Jordan · NYU '28" });
   await expect(mentor.getByText(/^Next check-in Thu, /)).toBeVisible();
 

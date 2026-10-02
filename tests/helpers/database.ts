@@ -56,6 +56,13 @@ export async function answerExit(sessionId: string, correct: readonly boolean[])
   }
 }
 
+/** A FormData from a record, as a form would post it. */
+export function formOf(fields: Record<string, string>): FormData {
+  const form = new FormData();
+  for (const [name, value] of Object.entries(fields)) form.set(name, value);
+  return form;
+}
+
 /** Server actions that end in a redirect throw Next's redirect error; this reads its target. */
 export async function redirectOf(action: () => Promise<unknown>): Promise<string> {
   try {

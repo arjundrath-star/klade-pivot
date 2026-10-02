@@ -1,4 +1,4 @@
-import { ALGEBRA1_UNITS } from "@/content/algebra1/units";
+import { ALGEBRA1_COURSE } from "@/content/algebra1/course";
 import {
   ALGEBRA1_SESSION_ESTIMATE,
   daysBetween,
@@ -20,7 +20,7 @@ export function planAlgebra1(start: string, target: string, preset: PacePreset):
   if (daysBetween(start, target) > MAX_TARGET_DAYS) return { ok: false, error: "target-too-far" };
   return planPace({
     totalSessions: ALGEBRA1_SESSION_ESTIMATE,
-    units: ALGEBRA1_UNITS,
+    units: ALGEBRA1_COURSE,
     start,
     target,
     pace: { preset },

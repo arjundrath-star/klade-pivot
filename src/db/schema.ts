@@ -97,8 +97,17 @@ export const sessionTemplates = sqliteTable(
     position: integer("position").notNull(),
     /** Key of the typed session content in `src/content/sessions.ts`. */
     contentKey: text("content_key").notNull().unique(),
+    /**
+     * The concept has session content a student can do today. The course map shows every concept;
+     * the planner opens only these. Written by the seed from `playable` in src/content.
+     */
+    playable: integer("playable", { mode: "boolean" }).notNull().default(false),
   },
-  (t) => [index("session_templates_unit_id_idx").on(t.unitId)],
+  (t) => [
+    index("session_templates_unit_id_idx").on(t.unitId),
+    // The planner reads the playable templates in course order.
+    index("session_templates_playable_idx").on(t.playable),
+  ],
 );
 
 export const sessionLogs = sqliteTable(
@@ -250,8 +259,10 @@ export const mastery = sqliteTable(
       .references(() => sessionTemplates.id),
     status: text("status", { enum: MASTERY_STATUSES }).notNull(),
     sessionLogId: text("session_log_id").references(() => sessionLogs.id),
-    /** Exit-check problems answered correctly in that session. */
+    /** Exit-check problems answered correctly in that session, out of `exitTotal`. */
     exitScore: integer("exit_score"),
+    /** Exit-check problems that session had, so the score reads right if the content changes. */
+    exitTotal: integer("exit_total"),
     /** The session's final explain-back attempt. */
     explainBackId: text("explain_back_id").references(() => explainBacks.id),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })

@@ -55,18 +55,19 @@ async function endConcept(end: "first" | "last"): Promise<string> {
     .select({ id: sessionTemplates.id })
     .from(sessionTemplates)
     .innerJoin(units, eq(units.id, sessionTemplates.unitId))
+    .where(eq(sessionTemplates.playable, true))
     .orderBy(order(units.position), order(sessionTemplates.position))
     .limit(1);
-  if (!concept) throw new Error("The curriculum has no sessions");
+  if (!concept) throw new Error("The curriculum has no playable sessions");
   return concept.id;
 }
 
-/** The course's first concept, where a new student's schedule starts. */
+/** The course's first playable concept, where a new student's schedule starts. */
 export function firstConcept(): Promise<string> {
   return endConcept("first");
 }
 
-/** The course's last concept, for a schedule row once every concept is mastered. */
+/** The course's last playable concept, for a schedule row once every one is mastered. */
 export function lastConcept(): Promise<string> {
   return endConcept("last");
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ALGEBRA1_UNITS } from "@/content/algebra1/units";
+import { ALGEBRA1_COURSE } from "@/content/algebra1/course";
 import {
   addDays,
   ALGEBRA1_SESSION_ESTIMATE,
@@ -11,13 +11,14 @@ import {
   scheduleDays,
   weekdayOf,
   type Pace,
+  type UnitEstimate,
 } from "@/engine/pace";
 
 // A Thursday. "Next May" from here is May 31, 2027: 243 days, 34 whole weeks.
 const START = "2026-10-01";
 const NEXT_MAY = "2027-05-31";
 
-function plan(pace: Pace, target = NEXT_MAY, units = ALGEBRA1_UNITS) {
+function plan(pace: Pace, target = NEXT_MAY, units: readonly UnitEstimate[] = ALGEBRA1_COURSE) {
   return planPace({ totalSessions: ALGEBRA1_SESSION_ESTIMATE, units, start: START, target, pace });
 }
 
@@ -77,9 +78,12 @@ describe("planPace", () => {
 
   it("dates each unit at the end of the week its last session falls in", () => {
     const { milestones, finishDate } = okPlan({ preset: "on-track" });
-    expect(milestones).toHaveLength(ALGEBRA1_UNITS.length);
-    // 14 sessions at 4 a week end in week 4: Oct 1 + 27 days.
-    expect(milestones[0]).toEqual({ title: "Linear equations in one variable", date: "2026-10-28" });
+    expect(milestones).toHaveLength(ALGEBRA1_COURSE.length);
+    // 8 sessions at 4 a week end in week 2: Oct 1 + 13 days.
+    expect(milestones[0]).toEqual({
+      title: "Numbers, quantities, and expressions",
+      date: "2026-10-14",
+    });
     expect(milestones.at(-1)?.date).toBe(finishDate);
     const dates = milestones.map((m) => m.date);
     expect(dates).toEqual([...dates].sort());
@@ -90,14 +94,20 @@ describe("planPace", () => {
     expect(() => plan({ sessionsPerWeek: 0 })).toThrow(RangeError);
     expect(() => plan({ sessionsPerWeek: 2.5 })).toThrow(RangeError);
     expect(() =>
-      planPace({ totalSessions: 0, units: [], start: START, target: NEXT_MAY, pace: { preset: "standard" } }),
+      planPace({
+        totalSessions: 0,
+        units: [],
+        start: START,
+        target: NEXT_MAY,
+        pace: { preset: "standard" },
+      }),
     ).toThrow(RangeError);
   });
 });
 
 describe("the Algebra 1 outline", () => {
   it("adds up to the course estimate", () => {
-    const total = ALGEBRA1_UNITS.reduce((sum, unit) => sum + unit.sessions, 0);
+    const total = ALGEBRA1_COURSE.reduce((sum, unit) => sum + unit.sessions, 0);
     expect(total).toBe(ALGEBRA1_SESSION_ESTIMATE);
   });
 });

@@ -8,8 +8,9 @@ import {
   totalScore,
   type RubricScores,
 } from "@/coach/rubric";
+import { ALGEBRA1_COURSE, ALGEBRA1_TITLE } from "@/content/algebra1/course";
 import { rewardBoard } from "@/content/rewards";
-import { sessionContent } from "@/content/sessions";
+import { CourseMap } from "@/course/course-map";
 import { familyAlerts } from "@/db/queries/alerts";
 import { coachTurnsFor } from "@/db/queries/coach";
 import { mentorFor } from "@/db/queries/mentor";
@@ -20,8 +21,11 @@ import {
   sessionHistory,
 } from "@/db/queries/parent";
 import { rewardRows } from "@/db/queries/reward-progress";
+import { findTodaySession } from "@/db/queries/sessions";
 import { gatedFamily } from "@/gate/server";
 import { getStudent } from "@/db/queries/students";
+import { courseProgress } from "@/engine/course";
+import { HistoryTable } from "@/parent/history-table";
 import {
   calendarDay,
   formatDate,
@@ -37,7 +41,6 @@ import { MentorCard } from "@/mentor/mentor-card";
 import { PhoneSection } from "@/phone/phone-section";
 import { RewardsPanel } from "@/rewards/rewards-panel";
 import { lockView } from "@/session/lock-status";
-import type { MasteryStatus } from "@/session/mastery";
 import { studentStanding } from "@/session/pace";
 
 export const metadata: Metadata = { title: "Parent view · Klade" };
@@ -46,35 +49,27 @@ const SECTION = "flex flex-col gap-4 rounded-lg border border-zinc-200 p-6 dark:
 const HEADING = "text-sm font-medium tracking-wide text-zinc-600 uppercase dark:text-zinc-400";
 const MUTED = "text-zinc-600 dark:text-zinc-400";
 
-const MASTERY_LABELS: Readonly<Record<MasteryStatus, string>> = {
-  mastered: "Mastered",
-  in_progress: "In progress",
-  repeat: "Repeat",
-};
-
-type HistoryRow = Awaited<ReturnType<typeof sessionHistory>>[number];
-
-function historyDay(row: HistoryRow): string {
-  if (row.scheduledFor !== null) return row.scheduledFor;
-  const at = row.completedAt ?? row.startedAt;
-  return at ? calendarDay(at) : "";
-}
-
-function historyResult(row: HistoryRow): string {
-  if (row.status === "missed") return "Missed";
-  if (row.status === "in_progress") return "In progress";
-  return row.outcome === "repeat" ? "Repeat" : "Done";
-}
-
-function minutes(row: HistoryRow): number {
-  const ms = Object.values(row.blockElapsedMs).reduce((sum, value) => sum + (value ?? 0), 0);
-  return Math.round(ms / 60_000);
-}
-
 function rubricLine(verdict: "pass" | "fail", scores: RubricScores): string {
   const parts = CRITERIA.map((c) => `${CRITERION_LABELS[c].toLowerCase()} ${scores[c]}`);
   const total = `${totalScore(scores)} of ${MAX_TOTAL_SCORE}`;
   return `${verdict === "pass" ? "Passed" : "Did not pass"} the rubric, ${total}: ${parts.join(", ")}.`;
+}
+
+type GridRow = Awaited<ReturnType<typeof masteryGrid>>[number];
+
+/** What the map says under a concept the student has a status on: the score, or that it repeats. */
+function masteryNote({ status, exitScore, exitTotal }: GridRow): string | undefined {
+  const score = exitScore !== null && exitTotal !== null ? `${exitScore} of ${exitTotal}` : null;
+  switch (status) {
+    case "mastered":
+      return score ? `${score} on the exit check` : undefined;
+    case "repeat":
+      return score ? `repeats, ${score} on the last exit check` : "repeats";
+    case "in_progress":
+      return "in progress";
+    default:
+      return undefined;
+  }
 }
 
 /** The latest decided explanation and the coach conversation from the same session. */
@@ -100,6 +95,7 @@ export default async function ParentView() {
     phone,
     rewardProgress,
     mentor,
+    today,
   ] = await Promise.all([
     getStudent(studentId),
     studentStanding(studentId, now),
@@ -111,6 +107,7 @@ export default async function ParentView() {
     lockView(studentId, now),
     rewardRows(studentId),
     mentorFor(studentId),
+    findTodaySession(studentId),
   ]);
 
   if (!student) return <p>No student yet. Run npm run db:seed to add the demo student.</p>;
@@ -118,9 +115,15 @@ export default async function ParentView() {
   const { behind, streak } = standing;
   const { rule } = phone;
   const rewards = rewardBoard(rewardProgress, standing);
-  const rows = history
-    .map((row) => ({ row, day: historyDay(row) }))
-    .sort((a, b) => b.day.localeCompare(a.day));
+  // The map's inputs from the grid: the concepts mastered, and a note on each with a status.
+  const mastered = new Set<string>();
+  const notes = new Map<string, string>();
+  for (const concept of grid) {
+    if (concept.status === "mastered") mastered.add(concept.contentKey);
+    const note = masteryNote(concept);
+    if (note) notes.set(concept.contentKey, note);
+  }
+  const progress = courseProgress(ALGEBRA1_COURSE, mastered);
 
   return (
     <div className="flex flex-col gap-8">
@@ -256,80 +259,29 @@ export default async function ParentView() {
         )}
       </section>
 
-      <section aria-labelledby="mastery-heading" className={SECTION}>
-        <h2 id="mastery-heading" className={HEADING}>
-          Mastery
+      <section aria-labelledby="map-heading" className={SECTION}>
+        <h2 id="map-heading" className={HEADING}>
+          Course map
         </h2>
-        <table className="w-full text-left">
-          <thead>
-            <tr className={`text-sm ${MUTED}`}>
-              <th scope="col" className="pb-2 font-medium">
-                Concept
-              </th>
-              <th scope="col" className="pb-2 font-medium">
-                Status
-              </th>
-              <th scope="col" className="pb-2 font-medium">
-                Exit check
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {grid.map((concept) => (
-              <tr key={concept.id} className="border-t border-zinc-200 dark:border-zinc-800">
-                <th scope="row" className="py-2 font-normal">
-                  {concept.title}
-                </th>
-                <td className="py-2">
-                  {concept.status ? MASTERY_LABELS[concept.status] : "Not started"}
-                </td>
-                <td className="py-2">
-                  {concept.exitScore === null
-                    ? ""
-                    : `${concept.exitScore} of ${sessionContent(concept.contentKey).exit.length}`}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <p>
+          {name} has mastered {progress.mastered} of {progress.total} concepts in {ALGEBRA1_TITLE},{" "}
+          {progress.unitsDone} of {plural(progress.units, "unit")} done. Each concept carries its
+          New York State standard code, so you can match it to the school&apos;s syllabus.
+        </p>
+        <CourseMap
+          units={ALGEBRA1_COURSE}
+          mastered={mastered}
+          currentKey={today.kind === "complete" ? null : today.contentKey}
+          notes={notes}
+          condensed
+        />
       </section>
 
       <section aria-labelledby="history-heading" className={SECTION}>
         <h2 id="history-heading" className={HEADING}>
           Session history
         </h2>
-        {rows.length === 0 ? (
-          <p className={MUTED}>No sessions yet.</p>
-        ) : (
-          <table className="w-full text-left">
-            <thead>
-              <tr className={`text-sm ${MUTED}`}>
-                <th scope="col" className="pb-2 font-medium">
-                  Date
-                </th>
-                <th scope="col" className="pb-2 font-medium">
-                  Session
-                </th>
-                <th scope="col" className="pb-2 font-medium">
-                  Result
-                </th>
-                <th scope="col" className="pb-2 text-right font-medium">
-                  Minutes
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ row, day }) => (
-                <tr key={row.id} className="border-t border-zinc-200 dark:border-zinc-800">
-                  <td className="py-2">{day ? formatDay(day) : ""}</td>
-                  <td className="py-2">{row.title}</td>
-                  <td className="py-2">{historyResult(row)}</td>
-                  <td className="py-2 text-right font-mono">{minutes(row)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <HistoryTable rows={history} />
       </section>
     </div>
   );

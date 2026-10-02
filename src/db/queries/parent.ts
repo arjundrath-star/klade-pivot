@@ -11,32 +11,34 @@ const IMPLAUSIBLE_TYPING_CPS = 15;
 /** The student's sessions and missed schedule days, most recent first. */
 export async function sessionHistory(studentId: string, limit = 30) {
   const db = await getDb();
-  return db
-    .select({
-      id: sessionLogs.id,
-      title: sessionTemplates.title,
-      status: sessionLogs.status,
-      outcome: sessionLogs.outcome,
-      scheduledFor: sessionLogs.scheduledFor,
-      startedAt: sessionLogs.startedAt,
-      completedAt: sessionLogs.completedAt,
-      blockElapsedMs: sessionLogs.blockElapsedMs,
-    })
-    .from(sessionLogs)
-    .innerJoin(sessionTemplates, eq(sessionTemplates.id, sessionLogs.sessionTemplateId))
-    .where(
-      and(
-        eq(sessionLogs.studentId, studentId),
-        inArray(sessionLogs.status, ["in_progress", "done", "missed"]),
-      ),
-    )
-    // A schedule row is written ahead of time, so it sorts by its day; a session by when it started.
-    .orderBy(
-      desc(
-        sql`coalesce(${sessionLogs.startedAt}, unixepoch(${sessionLogs.scheduledFor}) * 1000, ${sessionLogs.createdAt})`,
-      ),
-    )
-    .limit(limit);
+  return (
+    db
+      .select({
+        id: sessionLogs.id,
+        title: sessionTemplates.title,
+        status: sessionLogs.status,
+        outcome: sessionLogs.outcome,
+        scheduledFor: sessionLogs.scheduledFor,
+        startedAt: sessionLogs.startedAt,
+        completedAt: sessionLogs.completedAt,
+        blockElapsedMs: sessionLogs.blockElapsedMs,
+      })
+      .from(sessionLogs)
+      .innerJoin(sessionTemplates, eq(sessionTemplates.id, sessionLogs.sessionTemplateId))
+      .where(
+        and(
+          eq(sessionLogs.studentId, studentId),
+          inArray(sessionLogs.status, ["in_progress", "done", "missed"]),
+        ),
+      )
+      // A schedule row is written ahead of time, so it sorts by its day; a session by when it started.
+      .orderBy(
+        desc(
+          sql`coalesce(${sessionLogs.startedAt}, unixepoch(${sessionLogs.scheduledFor}) * 1000, ${sessionLogs.createdAt})`,
+        ),
+      )
+      .limit(limit)
+  );
 }
 
 /** Every concept in course order with the student's status on it, if any. */
@@ -49,6 +51,7 @@ export async function masteryGrid(studentId: string) {
       contentKey: sessionTemplates.contentKey,
       status: mastery.status,
       exitScore: mastery.exitScore,
+      exitTotal: mastery.exitTotal,
     })
     .from(sessionTemplates)
     .innerJoin(units, eq(units.id, sessionTemplates.unitId))

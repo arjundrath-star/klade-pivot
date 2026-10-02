@@ -26,7 +26,7 @@ test("a parent onboards a new student, whose first session is framed in their in
   await page.getByRole("radio", { name: /On track: 4 a week/ }).check();
   const plan = page.getByRole("region", { name: "Your plan" });
   await expect(plan).toContainText("4 sessions a week, 2 hours a week");
-  await expect(plan).toContainText("Linear equations in one variable");
+  await expect(plan).toContainText("Numbers, quantities, and expressions");
   for (const day of ["Mon", "Tue", "Thu", "Sun"]) {
     await expect(page.getByRole("checkbox", { name: day, exact: true })).toBeChecked();
   }
@@ -68,7 +68,11 @@ test("a parent onboards a new student, whose first session is framed in their in
   // AC 1: the whole setup takes well under a minute; the automation does it in under 20 s.
   expect(Date.now() - started).toBeLessThan(20_000);
 
-  await expect(page.getByText("Two-step equations", { exact: true })).toBeVisible();
+  // A new student starts on two-step equations too, with the dashboard's empty states.
+  await expect(page.getByText("Solving two-step linear equations", { exact: true })).toBeVisible();
+  await expect(page.getByText("0 of 49", { exact: true })).toBeVisible();
+  await expect(page.getByText("No badges yet.")).toBeVisible();
+  await expect(page.getByText("No sessions yet.")).toBeVisible();
   const sessionId = await startSession(page);
   await reachGuidedPractice(page, sessionId);
 

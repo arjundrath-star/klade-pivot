@@ -49,7 +49,7 @@ describe("session flow", () => {
   it("offers session 1, then opens exactly one log for it", async () => {
     expect(await findTodaySession(DEMO_STUDENT_ID)).toMatchObject({
       kind: "next",
-      title: "Two-step equations",
+      title: "Solving two-step linear equations",
     });
     const opened = await openTodaySession(DEMO_STUDENT_ID, 1234);
     if (opened === null) throw new Error("no session opened");
