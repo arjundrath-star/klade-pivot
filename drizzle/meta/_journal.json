@@ -85,6 +85,13 @@
       "when": 1790958081828,
       "tag": "0011_exit_total",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1790975992399,
+      "tag": "0012_session_notes",
+      "breakpoints": true
     }
   ]
 }

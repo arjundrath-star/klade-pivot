@@ -155,6 +155,8 @@ describe("session 1 interest framing", () => {
 describe("session 1 lesson", () => {
   it("works 3x + 5 = 20, the equation its reasons and check were written for", () => {
     expect(s1.learn.example).toEqual({
+      text: "Solve for x.",
+      kind: "symbolic",
       equation: "3x + 5 = 20",
       steps: [
         expect.objectContaining({ label: "Subtract 5 from both sides", equation: "3x = 15" }),

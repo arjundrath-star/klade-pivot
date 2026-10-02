@@ -19,6 +19,10 @@ export const PROBLEM_BLOCK_IDS = ["warmup", "guided", "exit"] as const;
 
 export type ProblemBlockId = (typeof PROBLEM_BLOCK_IDS)[number];
 
+export function isProblemBlock(block: BlockId): block is ProblemBlockId {
+  return (PROBLEM_BLOCK_IDS as readonly BlockId[]).includes(block);
+}
+
 /**
  * Practice blocks: answers retry until right, and Next waits for a correct attempt on every problem.
  * The exit check takes answers too but is not one of these: it takes one attempt per problem, and
@@ -28,7 +32,7 @@ export const ANSWERED_BLOCK_IDS = ["warmup", "guided"] as const satisfies readon
 
 export type AnsweredBlockId = (typeof ANSWERED_BLOCK_IDS)[number];
 
-function isAnsweredBlock(block: BlockId): block is AnsweredBlockId {
+export function isAnsweredBlock(block: BlockId): block is AnsweredBlockId {
   return (ANSWERED_BLOCK_IDS as readonly BlockId[]).includes(block);
 }
 
@@ -48,6 +52,18 @@ export function problemKey(block: ProblemBlockId, index: number): string {
 
 /** How many problems each problem block holds. */
 export type ProblemCounts = Readonly<Record<ProblemBlockId, number>>;
+
+/** The first problem in `block` without a correct answer, or null once every one has. */
+export function firstUnsolved(
+  block: AnsweredBlockId,
+  counts: ProblemCounts,
+  solved: ReadonlySet<string>,
+): number | null {
+  for (let index = 0; index < counts[block]; index += 1) {
+    if (!solved.has(problemKey(block, index))) return index;
+  }
+  return null;
+}
 
 /** What the student has done so far in a session, as stored on the server. */
 export interface SessionProgress {
@@ -75,10 +91,7 @@ export function isBlockComplete(
   if (block === "explain") return isExplainFinal(progress.explainBack);
   if (block === "exit") return progress.exitAnswered >= counts.exit;
   if (!isAnsweredBlock(block)) return true;
-  for (let index = 0; index < counts[block]; index += 1) {
-    if (!progress.solved.has(problemKey(block, index))) return false;
-  }
-  return true;
+  return firstUnsolved(block, counts, progress.solved) === null;
 }
 
 export type Direction = "next" | "back";

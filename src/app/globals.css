@@ -215,6 +215,27 @@
     linear-gradient(170deg, var(--color-open-high) 0%, var(--color-open) 62%);
 }
 
+/*
+ * The notebook's paper. Ruled: a faint line under every line the student types, scrolling with
+ * the text (the rules start where the text does). Dotted: the stylus pad's grid.
+ */
+@utility paper-ruled {
+  --rule: 1.75rem;
+  line-height: var(--rule);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--rule) - 1px),
+    var(--color-line) calc(var(--rule) - 1px) var(--rule)
+  );
+  background-origin: content-box;
+  background-attachment: local;
+}
+
+@utility paper-dotted {
+  background-image: radial-gradient(var(--color-line-strong) 1px, transparent 1.5px);
+  background-size: 1rem 1rem;
+}
+
 @utility focus-ring {
   @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
 }

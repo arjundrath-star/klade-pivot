@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ExplainStatus } from "@/coach/rubric";
 import {
   BLOCK_IDS,
+  firstUnsolved,
   isBlockComplete,
   problemKey,
   step,
@@ -110,5 +111,18 @@ describe("resume", () => {
       ok: false,
       error: "incomplete",
     });
+  });
+});
+
+describe("firstUnsolved", () => {
+  it("names the first problem without a correct answer, in order, and null once all have one", () => {
+    const solved = (keys: string[]) => new Set(keys);
+    expect(firstUnsolved("guided", counts, solved([]))).toBe(0);
+    expect(firstUnsolved("guided", counts, solved([problemKey("guided", 0)]))).toBe(1);
+    expect(firstUnsolved("guided", counts, solved([problemKey("guided", 1)]))).toBe(0);
+    expect(
+      firstUnsolved("guided", counts, solved([0, 1, 2].map((i) => problemKey("guided", i)))),
+    ).toBeNull();
+    expect(firstUnsolved("warmup", counts, solved([problemKey("guided", 0)]))).toBe(0);
   });
 });

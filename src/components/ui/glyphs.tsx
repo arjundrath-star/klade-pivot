@@ -1,4 +1,4 @@
-/** The few marks the system draws itself: a check, a cross, a chevron, a flame, a star, a microphone. */
+/** The few marks the system draws itself: a check, a cross, a chevron, a flame, a star, a microphone, a play mark. */
 
 interface GlyphProps {
   className: string;
@@ -57,6 +57,15 @@ export function MicGlyph({ className }: GlyphProps) {
     >
       <rect x="9" y="3" width="6" height="11" rx="3" />
       <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
+    </svg>
+  );
+}
+
+/** A play mark, on the chapter's video cards. */
+export function PlayGlyph({ className }: GlyphProps) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={`fill-current ${className}`}>
+      <path d="M8 5.5v13l11-6.5-11-6.5Z" />
     </svg>
   );
 }

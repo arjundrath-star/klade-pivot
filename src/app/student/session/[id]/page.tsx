@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { z } from "zod";
+import { ChapterContents, ChapterSections, KeyLearnings } from "./chapter";
 import { Equation } from "./equation";
 import { ExitAnswer } from "./exit-check";
 import { ExplainBack } from "./explain-back";
 import { ProblemCard } from "./problem-card";
 import { SessionComplete } from "./session-complete";
 import { SessionRunner } from "./session-runner";
-import { WorkedExample } from "./worked-example";
 import { adminControls } from "@/admin/controls";
 import { AdminRibbon } from "@/admin/ribbon";
 import { coachConfigured } from "@/coach/client";
@@ -15,14 +15,14 @@ import { exampleFor } from "@/coach/example";
 import { coachContext } from "@/coach/prompt";
 import { cardClass } from "@/components/ui/card";
 import { CourseBreadcrumb } from "@/course/breadcrumb";
+import { markExitShown } from "@/db/queries/exit";
+import { sessionNotes } from "@/db/queries/notes";
 import {
   isBlockComplete,
   isCoachedBlock,
   problemKey,
   type AnsweredBlockId,
-  type BlockId,
 } from "@/session/blocks";
-import { markExitShown } from "@/db/queries/exit";
 import { sessionSummary } from "@/session/complete";
 import { currentStudentId } from "@/session/current-student";
 import { loadSession, type LoadedSession } from "@/session/load";
@@ -51,17 +51,14 @@ async function exitPanel({ session, problems, counts, progress }: LoadedSession)
   const remainingMs = exitRemainingMs(Date.now() - shownAt.getTime(), session.timerMode);
   const rendered = renderSessionProblem(problem, session.interests);
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <p className="text-ink-soft">
         One try per problem, no coach, no hints.{" "}
         {limitSeconds === null
           ? "Take the time you need."
           : `${formatClock(limitSeconds)} for each problem.`}
       </p>
-      <article className={`${cardClass()} flex flex-col gap-4`}>
-        <p className="text-sm font-semibold text-ink-soft">
-          Problem {problem.index + 1} of {counts.exit}
-        </p>
+      <article aria-label="Problem" className="flex flex-col gap-5">
         <p className="text-lg leading-relaxed">{rendered.text}</p>
         {rendered.kind === "symbolic" && <Equation>{rendered.equation}</Equation>}
         <ExitAnswer
@@ -82,20 +79,19 @@ export default async function SessionPage({
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
 
-  const [loaded, controls, { notice }] = await Promise.all([
-    loadSession(id, await currentStudentId()),
+  const studentId = await currentStudentId();
+  const [loaded, notes, controls, { notice }] = await Promise.all([
+    loadSession(id, studentId),
+    sessionNotes(id, studentId),
     adminControls(),
     searchParams,
   ]);
   if (!loaded) notFound();
   const { session, content, problems, counts, progress, coach, explain } = loaded;
   const frame = (body: ReactNode) => (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-1 flex-col gap-4">
       <AdminRibbon controls={controls} back={`/student/session/${id}`} notice={notice} />
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-        <CourseBreadcrumb contentKey={session.contentKey} />
-        {body}
-      </div>
+      {body}
     </div>
   );
   if (session.status === "done") {
@@ -104,85 +100,50 @@ export default async function SessionPage({
       outcome && completedAt
         ? sessionSummary(loaded, outcome, await sessionRewards(session, completedAt))
         : undefined;
-    return frame(<SessionComplete title={session.title} summary={summary} />);
+    return frame(
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <CourseBreadcrumb contentKey={session.contentKey} />
+        <SessionComplete title={session.title} summary={summary} />
+      </div>,
+    );
   }
   if (session.status !== "in_progress") notFound();
 
   // Problems render on the server so the answers never reach the browser. The coach's worked
   // example is a different instance, so its numbers can.
-  const problemPanel = (block: AnsweredBlockId) => (
-    <div className="flex flex-col gap-4">
-      {problems
-        .filter((p) => p.block === block)
-        .map((p) => {
-          const rendered = renderSessionProblem(p, session.interests);
-          const key = problemKey(block, p.index);
-          return (
-            <ProblemCard
-              key={p.index}
-              sessionId={session.id}
-              block={block}
-              index={p.index}
-              text={rendered.text}
-              equation={rendered.kind === "symbolic" ? rendered.equation : undefined}
-              coach={
-                isCoachedBlock(block) && !progress.solved.has(key)
-                  ? {
-                      available: coachConfigured(),
-                      example: exampleFor(p, session.interests),
-                      initialTurns: coach.turns.get(key) ?? [],
-                    }
-                  : undefined
-              }
-            />
-          );
-        })}
-    </div>
-  );
+  const problemNodes = (block: AnsweredBlockId) =>
+    problems
+      .filter((p) => p.block === block)
+      .map((p) => {
+        const rendered = renderSessionProblem(p, session.interests);
+        const key = problemKey(block, p.index);
+        return (
+          <ProblemCard
+            key={p.index}
+            sessionId={session.id}
+            block={block}
+            index={p.index}
+            text={rendered.text}
+            equation={rendered.kind === "symbolic" ? rendered.equation : undefined}
+            coach={
+              isCoachedBlock(block) && !progress.solved.has(key)
+                ? {
+                    available: coachConfigured(),
+                    example: exampleFor(p, session.interests),
+                    initialTurns: coach.turns.get(key) ?? [],
+                  }
+                : undefined
+            }
+          />
+        );
+      });
 
-  const { learn } = content;
+  const { chapter } = content.learn;
   // Block 4 shows a solved problem and its answer, so it renders only once guided practice is
   // finished. Until then its panel is never on screen and must not carry an answer.
   const explained = isBlockComplete("guided", counts, progress)
     ? coachContext(explain.problem, session.interests)
     : undefined;
-
-  const panels: Record<BlockId, ReactNode> = {
-    warmup: problemPanel("warmup"),
-    learn: (
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-3 text-lg leading-relaxed">
-          {learn.explanation.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
-        </div>
-        <WorkedExample
-          sessionId={session.id}
-          equation={learn.example.equation}
-          steps={learn.example.steps}
-        />
-      </div>
-    ),
-    guided: problemPanel("guided"),
-    explain: explained ? (
-      <div className="flex flex-col gap-6">
-        <article className={`${cardClass()} flex flex-col gap-3`}>
-          <p className="text-lg leading-relaxed">{explained.problem.text}</p>
-          {explained.problem.kind === "symbolic" && (
-            <Equation>{explained.problem.equation}</Equation>
-          )}
-          <p className="text-ink-soft">
-            You solved it:{" "}
-            <Equation size="inline">{explained.steps.at(-1)?.equationAfter}</Equation>
-          </p>
-        </article>
-        <ExplainBack sessionId={session.id} initialResults={explain.results} />
-      </div>
-    ) : (
-      gettingReady
-    ),
-    exit: await exitPanel(loaded),
-  };
 
   return frame(
     <SessionRunner
@@ -203,7 +164,36 @@ export default async function SessionPage({
       initialLessonRead={progress.lessonRead}
       initialExplainBack={progress.explainBack}
       exitAnswered={progress.exitAnswered}
-      panels={panels}
+      crumb={<CourseBreadcrumb contentKey={session.contentKey} />}
+      problems={{ warmup: problemNodes("warmup"), guided: problemNodes("guided") }}
+      chapter={{
+        title: chapter.title,
+        contents: <ChapterContents chapter={chapter} />,
+        sections: <ChapterSections chapter={chapter} />,
+        keyLearnings: <KeyLearnings chapter={chapter} />,
+        examples: chapter.sections.filter((section) => section.example).length,
+      }}
+      panels={{
+        explain: explained ? (
+          <div className="flex flex-col gap-6">
+            <article className={`${cardClass()} flex flex-col gap-3`}>
+              <p className="text-lg leading-relaxed">{explained.problem.text}</p>
+              {explained.problem.kind === "symbolic" && (
+                <Equation>{explained.problem.equation}</Equation>
+              )}
+              <p className="text-ink-soft">
+                You solved it:{" "}
+                <Equation size="inline">{explained.steps.at(-1)?.equationAfter}</Equation>
+              </p>
+            </article>
+            <ExplainBack sessionId={session.id} initialResults={explain.results} />
+          </div>
+        ) : (
+          gettingReady
+        ),
+        exit: await exitPanel(loaded),
+      }}
+      initialNotes={notes}
     />,
   );
 }

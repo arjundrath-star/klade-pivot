@@ -3,11 +3,14 @@ import { expect, test } from "./fixtures";
 import {
   answerExitCheck,
   expectBlock,
+  expectProblem,
   passExplainBack,
+  revealExamples,
   SEEDED_SESSIONS,
   SEEDED_STREAK,
   sessionXp,
   solveBlock,
+  solveShown,
   startSession,
 } from "./flow";
 import { answersFor, renderedFor, sessionAtExit, setTimerMode } from "../helpers/answers";
@@ -65,22 +68,30 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   );
   await expect(breadcrumb).toContainText("Concept 6 of 49");
 
+  // The workspace: one problem at a time, counted in the strip beside the clock, with the
+  // notebook at the side. The notebook has no chapter tab until guided practice.
   await expectBlock(page, "Warm-up", 1);
+  await expectProblem(page, 1, 3);
   const timer = page.getByRole("timer");
   await expect(timer).toHaveText(/^\d+:\d\d left$/);
   const firstReading = await timer.textContent();
   await expect(timer).not.toHaveText(firstReading ?? "");
+  const notebook = page.getByRole("complementary", { name: "Notebook" });
+  await expect(notebook.getByRole("tab")).toHaveText(["Notes", "Write with a stylus"]);
 
-  const next = page.getByRole("button", { name: "Next" });
-  await expect(next).toBeDisabled();
+  const next = page.getByRole("button", { name: "Next", exact: true });
+  const nextProblem = page.getByRole("button", { name: "Next problem" });
+  await expect(nextProblem).toBeDisabled();
   const [answer] = await answersFor(sessionId, "warmup");
-  const card = page.getByRole("article").first();
-  await card.getByLabel("Your answer").fill(String(answer + 1));
-  await card.getByRole("button", { name: "Check" }).click();
-  await expect(card.getByText("Not quite. Try again.")).toBeVisible();
-  await expect(next).toBeDisabled();
+  const problem = page.getByRole("article", { name: "Problem" });
+  await expect(problem).toHaveCount(1);
+  await problem.getByLabel("Your answer").fill(String(answer + 1));
+  await problem.getByRole("button", { name: "Check" }).click();
+  await expect(problem.getByText("Not quite. Try again.")).toBeVisible();
+  await expect(nextProblem).toBeDisabled();
 
   await solveBlock(page, sessionId, "warmup");
+  await expectProblem(page, 3, 3);
   await next.click();
   await expectBlock(page, "Learn", 2);
 
@@ -88,11 +99,30 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   await page.reload();
   await expectBlock(page, "Learn", 2);
 
-  // Every step of the worked example comes one click at a time, then the student confirms.
+  // The chapter: its contents list the required sections, its first worked example comes one
+  // step per click, and the student confirms the reading at the end.
   await expect(next).toBeDisabled();
-  const steps = page.getByRole("list", { name: "Steps" }).getByRole("listitem");
+  const contents = page.getByRole("navigation", { name: "Chapter contents" });
+  await expect(contents.getByRole("link")).toHaveText([
+    "What a two-step equation is",
+    "The balance idea",
+    "The two undo moves, in order",
+    "Worked example 1: a positive coefficient",
+    "Worked example 2: a negative coefficient",
+    "Worked example 3: a word problem",
+    "Common mistakes",
+    "Check your answer",
+    "Key learnings",
+    "What comes next",
+  ]);
+  await expect(
+    page.getByRole("img", { name: /^Left pan: 3 bags of x and 5 weights/ }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: /opens on YouTube/ })).toHaveCount(3);
+  await expect(page.getByText("Wrong:")).toHaveCount(5);
+  const steps = page.getByRole("list", { name: "Steps" }).first().getByRole("listitem");
   await expect(steps).toHaveCount(0);
-  await page.getByRole("button", { name: "Show the first step" }).click();
+  await page.getByRole("button", { name: "Show the first step" }).first().click();
   await expect(steps).toHaveCount(1);
   const more = page.getByRole("button", { name: "Show the next step" });
   while (await more.isVisible()) {
@@ -102,24 +132,53 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   }
   await expect(steps.last()).toContainText("Check");
   await expect(next).toBeDisabled();
-  await page.getByRole("button", { name: "I've read this" }).click();
+  // One example worked through is not enough: the gate waits for all three.
+  const confirm = page.getByRole("button", { name: "I've read this" });
+  await expect(confirm).toBeDisabled();
+  await revealExamples(page);
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
   await expect(next).toBeEnabled();
 
   await next.click();
   await expectBlock(page, "Guided practice", 3);
-  await expect(next).toBeDisabled();
+  await expectProblem(page, 1, 5);
+  await expect(nextProblem).toBeDisabled();
 
-  // Maya likes sports and music, so every guided word problem is framed as one of them.
+  // Notes are the student's own desk: typed here, saved as they go, there again after a reload.
+  const notes = notebook.getByRole("textbox", { name: "Notes" });
+  await notes.fill("undo the + first, then divide");
+  await expect(notebook.getByRole("status")).toHaveText("Saved");
+  await page.reload();
+  await expectBlock(page, "Guided practice", 3);
+  await expect(notebook.getByRole("textbox", { name: "Notes" })).toHaveValue(
+    "undo the + first, then divide",
+  );
+
+  // The key learnings open beside the problem, and the chapter behind them, without leaving it.
+  await notebook.getByRole("tab", { name: "Key learnings" }).click();
+  const reference = notebook.getByRole("tabpanel", { name: "Key learnings" });
+  await expect(reference).toContainText("Whatever you do to one side, do to the other side.");
+  await expect(problem).toBeVisible();
+  await reference.getByRole("button", { name: "Open the chapter" }).click();
+  await expect(reference.getByRole("navigation", { name: "Chapter contents" })).toBeVisible();
+  await expect(reference.getByRole("heading", { name: "The balance idea" })).toBeVisible();
+  await expect(problem).toBeVisible();
+  await notebook.getByRole("tab", { name: "Notes" }).click();
+
+  // Maya likes sports and music, so every guided word problem is framed as one of them, and each
+  // comes to the desk in turn.
   const guided = await renderedFor(sessionId, "guided");
-  const cards = page.getByRole("article");
-  await expect(cards).toHaveCount(5);
-  const framed = guided.flatMap((problem, i) => (problem.kind === "word" ? [{ problem, i }] : []));
+  const framed = guided.filter((p) => p.kind === "word");
   expect(framed.length).toBeGreaterThanOrEqual(3);
-  for (const { problem, i } of framed) {
-    expect(["sports", "music"]).toContain(problem.kind === "word" && problem.variant);
-    await expect(cards.nth(i)).toContainText(problem.text);
+  const answers = await answersFor(sessionId, "guided");
+  for (const [i, rendered] of guided.entries()) {
+    await expectProblem(page, i + 1, guided.length);
+    await expect(problem).toContainText(rendered.text);
+    if (rendered.kind === "word") expect(["sports", "music"]).toContain(rendered.variant);
+    await solveShown(page, answers[i]);
+    if (i < guided.length - 1) await nextProblem.click();
   }
-  await solveBlock(page, sessionId, "guided");
   await next.click();
 
   await expectBlock(page, "Explain-back", 4);

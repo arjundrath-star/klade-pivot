@@ -9,7 +9,7 @@ function Separator() {
 /**
  * Where a session sits in the course, above its blocks: "Algebra I › Unit 2: Linear equations and
  * inequalities in one variable › Solving two-step linear equations · AI-A.REI.3", and the
- * concept's place in course order. Server-rendered.
+ * concept's place in course order, on one line where it fits. Server-rendered.
  */
 export function CourseBreadcrumb({ contentKey }: { contentKey: string }) {
   const place = conceptPlace(ALGEBRA1_COURSE, contentKey);
@@ -18,7 +18,7 @@ export function CourseBreadcrumb({ contentKey }: { contentKey: string }) {
   return (
     <nav
       aria-label="Breadcrumb"
-      className="flex min-w-0 flex-1 flex-col gap-1 text-sm text-ink-soft"
+      className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-ink-soft"
     >
       <ol className="flex flex-wrap items-center">
         <li>

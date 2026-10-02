@@ -1,6 +1,6 @@
 import { watchConsole } from "./console";
 import { expect, test } from "./fixtures";
-import { reachGuidedPractice, startSession, targetNextMay } from "./flow";
+import { openProblem, reachGuidedPractice, startSession, targetNextMay } from "./flow";
 import { renderedFor } from "../helpers/answers";
 
 test("a parent onboards a new student, whose first session is framed in their interests", async ({
@@ -87,6 +87,7 @@ test("a parent onboards a new student, whose first session is framed in their in
   const word = guided.findIndex((problem) => problem.kind === "word");
   const first = guided[word];
   expect(first.kind === "word" && first.variant).toMatch(/^(gaming|animals)$/);
-  await expect(page.getByRole("article").nth(word)).toContainText(first.text);
+  await openProblem(page, sessionId, "guided", word);
+  await expect(page.getByRole("article", { name: "Problem" })).toContainText(first.text);
   expect(errors).toEqual([]);
 });

@@ -132,6 +132,11 @@ export const sessionLogs = sqliteTable(
       .default({}),
     /** When the student confirmed they read the lesson. Next out of the learn block waits for it. */
     lessonReadAt: integer("lesson_read_at", { mode: "timestamp_ms" }),
+    /**
+     * What the student typed in the session's notes panel: plain text, theirs alone. Read only by
+     * the session page; never by the parent view, the alerts, a log line or a prompt to the model.
+     */
+    notes: text("notes"),
     /** The mastery verdict, set when the session is done. */
     outcome: text("outcome", { enum: SESSION_OUTCOMES }),
     /**

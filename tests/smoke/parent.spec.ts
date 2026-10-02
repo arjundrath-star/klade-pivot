@@ -1,5 +1,6 @@
 import { watchConsole } from "./console";
 import { expect, test } from "./fixtures";
+import { openProblem } from "./flow";
 import { renderedFor, sessionAt } from "../helpers/answers";
 
 // From the demo seed: today is on Maya's schedule and nothing is done, so it can be missed.
@@ -52,6 +53,7 @@ test("the parent sees a missed session and the admin switches the interest live"
   const word = gaming.findIndex((problem) => problem.kind === "word");
   expect(gaming[word].text).not.toBe(sports[word].text);
   await page.goto(`/student/session/${sessionId}`);
-  await expect(page.getByRole("article").nth(word)).toContainText(gaming[word].text);
+  await openProblem(page, sessionId, "guided", word);
+  await expect(page.getByRole("article", { name: "Problem" })).toContainText(gaming[word].text);
   expect(errors).toEqual([]);
 });

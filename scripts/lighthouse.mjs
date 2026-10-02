@@ -34,9 +34,13 @@ const THRESHOLDS = { performance: 0.9, accessibility: 0.9, "best-practices": 0.9
 // route gets up to this many performance runs and passes if any one meets the
 // threshold. Accessibility and best-practices are deterministic: one run.
 const PERFORMANCE_RUNS = 3;
-// Next 16's build output no longer prints route sizes, so the 150 KB rule for
-// first-load JS is measured here: script bytes over the wire on a cold load.
+// Next 16's build output no longer prints route sizes, so the first-load JS
+// rule is measured here: script bytes over the wire on a cold load. 150 KB for
+// every route; 175 KB for the session, a full-screen workspace (decision D48).
 const FIRST_LOAD_JS_BUDGET = 150 * 1000;
+const SESSION_FIRST_LOAD_JS_BUDGET = 175 * 1000;
+const budgetFor = (route) =>
+  route.startsWith("/student/session/") ? SESSION_FIRST_LOAD_JS_BUDGET : FIRST_LOAD_JS_BUDGET;
 const OUT_DIR = "lighthouse";
 
 const { values: args } = parseArgs({ options: { base: { type: "string" } } });
@@ -208,9 +212,9 @@ try {
       line.push(`${cat}=${pct(best)}${detail}${ok ? "" : ` (below ${pct(min)})`}`);
     }
     const js = scriptBytes(report);
-    const jsOk = js > 0 && js <= FIRST_LOAD_JS_BUDGET;
+    const jsOk = js > 0 && js <= budgetFor(route);
     if (!jsOk) failed = true;
-    const budget = jsOk ? "" : ` (over ${FIRST_LOAD_JS_BUDGET / 1000} KB or not measured)`;
+    const budget = jsOk ? "" : ` (over ${budgetFor(route) / 1000} KB or not measured)`;
     line.push(`first-load-js=${(js / 1000).toFixed(1)}KB${budget}`);
     console.log(`${route}: ${line.join("  ")}`);
   }

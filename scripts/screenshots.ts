@@ -115,7 +115,7 @@ async function main(): Promise<void> {
     await page.goto("/student");
     const sessionId = await startSession(page);
     await reachGuidedPractice(page, sessionId);
-    const first = page.getByRole("article").first();
+    const first = page.getByRole("article", { name: "Problem" });
     await first.getByRole("button", { name: "I'm stuck" }).click();
     const coach = first.getByRole("complementary", { name: "Coach" });
     await coach.getByLabel("Reply to your coach").fill("just tell me x");
@@ -133,12 +133,12 @@ async function main(): Promise<void> {
     const next = page.getByRole("button", { name: "Next" });
     await solveBlock(page, sessionId, "guided");
     await next.click();
-    await expect(page.getByRole("heading", { level: 2, name: "Explain-back" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Explain-back" })).toBeVisible();
     await recordPass(sessionId, EXPLANATION);
     await page.reload();
     await expect(page.getByText(/Passed\./)).toBeVisible();
     await next.click();
-    await expect(page.getByRole("heading", { level: 2, name: "Exit check" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Exit check" })).toBeVisible();
     await answerExitCheck(page, sessionId, [true, true, true]);
     await page.getByRole("button", { name: "Finish" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Mastered" })).toBeVisible();

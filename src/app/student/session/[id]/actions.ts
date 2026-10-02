@@ -17,6 +17,7 @@ import {
 import { recordAttempt, recordExitAttempt } from "@/db/queries/attempts";
 import { exitShownAt } from "@/db/queries/exit";
 import { graderCalls, recordExplainBack, recordGraderCalls } from "@/db/queries/explain";
+import { saveSessionNotes } from "@/db/queries/notes";
 import { markLessonRead, moveSession } from "@/db/queries/sessions";
 import { checkAnswer } from "@/engine/check";
 import { generateInstance } from "@/engine/generate";
@@ -33,6 +34,7 @@ import { completeSession, type CompleteError, type SessionSummary } from "@/sess
 import { currentStudentId } from "@/session/current-student";
 import { loadSession, openProblem, type OpenProblemError } from "@/session/load";
 import { findProblem } from "@/session/problems";
+import { NOTES_MAX_LENGTH, normalizeNotes } from "@/session/notes";
 import { blockXp } from "@/session/rewards";
 import { attemptMs, isExitAnswerLate, leaveBlock } from "@/session/timer";
 
@@ -88,6 +90,13 @@ export type ExplainSubmitResult =
 const LessonInput = z.object({ sessionId: z.uuid() });
 
 export type LessonResult = { ok: true } | { ok: false; error: "invalid" | "closed" };
+
+const NotesInput = z.object({
+  sessionId: z.uuid(),
+  notes: z.string().transform(normalizeNotes).pipe(z.string().max(NOTES_MAX_LENGTH)),
+});
+
+export type NotesResult = { ok: true } | { ok: false; error: "invalid" | "closed" };
 
 const MoveInput = z.object({
   sessionId: z.uuid(),
@@ -199,6 +208,19 @@ export async function confirmLesson(input: z.input<typeof LessonInput>): Promise
   if (!parsed.success) return { ok: false, error: "invalid" };
   const marked = await markLessonRead(parsed.data.sessionId, await currentStudentId());
   return marked ? { ok: true } : { ok: false, error: "closed" };
+}
+
+/**
+ * Saves what the student typed in the notes panel of their open session. The notes are plain text
+ * and the student's own: this is the only place they are written, and the session page is the
+ * only place they are read. "closed" means the session is not theirs or not open any more.
+ */
+export async function saveNotes(input: z.input<typeof NotesInput>): Promise<NotesResult> {
+  const parsed = NotesInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid" };
+  const { sessionId, notes } = parsed.data;
+  const saved = await saveSessionNotes(sessionId, await currentStudentId(), notes);
+  return saved ? { ok: true } : { ok: false, error: "closed" };
 }
 
 /**

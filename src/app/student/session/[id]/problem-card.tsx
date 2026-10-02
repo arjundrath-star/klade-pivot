@@ -9,7 +9,6 @@ import { useCoach } from "./use-coach";
 import type { SimilarExample } from "@/coach/example";
 import type { CoachTurn } from "@/coach/turns";
 import { Button } from "@/components/ui/button";
-import { cardClass } from "@/components/ui/card";
 import { problemKey, type AnsweredBlockId } from "@/session/blocks";
 
 // The panel's code loads the first time a coach opens, so it stays out of the route's first load.
@@ -98,7 +97,7 @@ export function ProblemCard({ sessionId, block, index, text, equation, coach }: 
   const shown = isSolved ? SOLVED : feedback;
 
   return (
-    <article className={`${cardClass()} flex flex-col gap-4`}>
+    <article aria-label="Problem" className="flex flex-col gap-5">
       <p className="text-lg leading-relaxed">{text}</p>
       {equation && <Equation>{equation}</Equation>}
       {!isSolved && (

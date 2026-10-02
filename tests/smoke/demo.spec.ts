@@ -4,6 +4,7 @@ import {
   answerExitCheck,
   expectBlock,
   LOCKED,
+  openProblem,
   passExplainBack,
   reachGuidedPractice,
   SEEDED_STREAK,
@@ -115,7 +116,8 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   const wordIndex = guided.findIndex((problem) => problem.kind === "word");
   const word = guided[wordIndex];
   expect(word.kind === "word" && ["sports", "music"].includes(word.variant)).toBe(true);
-  const card = student.getByRole("article").nth(wordIndex);
+  await openProblem(student, sessionId, "guided", wordIndex);
+  const card = student.getByRole("article", { name: "Problem" });
   await expect(card).toContainText(word.text);
   await card.getByRole("button", { name: "I'm stuck" }).click();
   const coach = card.getByRole("complementary", { name: "Coach" });
@@ -126,7 +128,7 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   await coach.getByRole("button", { name: "Send" }).click();
   await expect(reply).toHaveValue("");
   await expect(coach.getByRole("alert")).toHaveText(offline);
-  await solveBlock(student, sessionId, "guided");
+  await solveBlock(student, sessionId, "guided", wordIndex);
   await studentNext.click();
 
   // 4. Explain-back, then the exit check. Finish.

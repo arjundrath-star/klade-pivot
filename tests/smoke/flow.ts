@@ -41,8 +41,13 @@ export function streakRewardBeforeToday(): number {
 
 /** The session page is on the block headed `label`, at `position` on the progress bar. */
 export async function expectBlock(page: Page, label: string, position: number) {
-  await expect(page.getByRole("heading", { level: 2, name: label })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: label })).toBeVisible();
   await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(position));
+}
+
+/** The workspace strip says this is problem `index` (1-based) of `count`. */
+export async function expectProblem(page: Page, index: number, count: number) {
+  await expect(page.getByText(`Problem ${index} of ${count}`)).toBeVisible();
 }
 
 /** Presses Start on the student's page and returns the new session's id from its URL. */
@@ -52,29 +57,62 @@ export async function startSession(page: Page): Promise<string> {
   return page.url().split("/").pop() ?? "";
 }
 
-/** Reveals the worked example one step at a time, then confirms the lesson was read. */
+/** Steps through every worked example still to be revealed, one click at a time. */
+export async function revealExamples(page: Page) {
+  const reveal = page.getByRole("button", { name: /^Show the (first|next) step$/ }).first();
+  while (await reveal.isVisible()) await reveal.click();
+  await expect(reveal).toHaveCount(0);
+}
+
+/** Reveals the chapter's worked examples, then confirms the reading. */
 export async function readLesson(page: Page) {
-  const steps = page.getByRole("list", { name: "Steps" }).getByRole("listitem");
-  await page.getByRole("button", { name: "Show the first step" }).click();
-  const more = page.getByRole("button", { name: "Show the next step" });
-  while (await more.isVisible()) {
-    const shown = await steps.count();
-    await more.click();
-    await expect(steps).toHaveCount(shown + 1);
-  }
+  await revealExamples(page);
   await page.getByRole("button", { name: "I've read this" }).click();
 }
 
-/** Answers every problem in the block correctly, one card at a time. */
-export async function solveBlock(page: Page, sessionId: string, block: AnsweredBlockId) {
+/** Answers the problem on the desk correctly. */
+export async function solveShown(page: Page, answer: number) {
+  const problem = page.getByRole("article", { name: "Problem" });
+  await problem.getByLabel("Your answer").fill(String(answer));
+  await problem.getByRole("button", { name: "Check" }).click();
+  await expect(problem.getByText("Correct.")).toBeVisible();
+}
+
+/**
+ * Answers the block's problems from `from` up to `to` (0-based, exclusive) correctly, one at a
+ * time, pressing Next problem after each one that has a problem after it, and checks the counter
+ * names the problem left on the desk.
+ */
+async function solveProblems(
+  page: Page,
+  sessionId: string,
+  block: AnsweredBlockId,
+  from: number,
+  to: number,
+) {
   const answers = await answersFor(sessionId, block);
-  const cards = page.getByRole("article");
-  await expect(cards).toHaveCount(answers.length);
-  for (const [i, answer] of answers.entries()) {
-    await cards.nth(i).getByLabel("Your answer").fill(String(answer));
-    await cards.nth(i).getByRole("button", { name: "Check" }).click();
-    await expect(cards.nth(i).getByText("Correct.")).toBeVisible();
+  const last = answers.length - 1;
+  for (let i = from; i < Math.min(to, answers.length); i += 1) {
+    await expectProblem(page, i + 1, answers.length);
+    await solveShown(page, answers[i]);
+    if (i < last) await page.getByRole("button", { name: "Next problem" }).click();
   }
+  await expectProblem(page, Math.min(to, last) + 1, answers.length);
+}
+
+/** Solves every problem in the block from problem `from`; the block's own Next is the caller's. */
+export async function solveBlock(page: Page, sessionId: string, block: AnsweredBlockId, from = 0) {
+  await solveProblems(page, sessionId, block, from, Number.MAX_SAFE_INTEGER);
+}
+
+/** Solves the problems before `index` in the block, so that problem is the one on the desk. */
+export async function openProblem(
+  page: Page,
+  sessionId: string,
+  block: AnsweredBlockId,
+  index: number,
+) {
+  await solveProblems(page, sessionId, block, 0, index);
 }
 
 /** From a session's first screen through the warm-up and the lesson to guided practice. */
@@ -110,8 +148,8 @@ export async function passExplainBack(page: Page, sessionId: string, text: strin
 export async function answerExitCheck(page: Page, sessionId: string, correct: readonly boolean[]) {
   const answers = await answersFor(sessionId, "exit");
   for (const [i, right] of correct.entries()) {
-    const card = page.getByRole("article");
-    await expect(card).toContainText(`Problem ${i + 1} of 3`);
+    await expectProblem(page, i + 1, 3);
+    const card = page.getByRole("article", { name: "Problem" });
     await expect(card.getByRole("button", { name: "I'm stuck" })).toHaveCount(0);
     await card.getByLabel("Your answer").fill(String(right ? answers[i] : answers[i] + 1));
     await card.getByRole("button", { name: "Submit" }).click();
