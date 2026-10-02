@@ -23,6 +23,7 @@ const STATUS: Readonly<Record<CoachError, number>> = {
   closed: 409,
   "wrong-block": 409,
   solved: 409,
+  skipped: 409,
   exhausted: 409,
   "rate-limited": 429,
   unavailable: 503,

@@ -2,9 +2,10 @@ import type { ComponentPropsWithoutRef } from "react";
 
 /**
  * primary: the one action a screen is about, in the primary accent. secondary: an outlined action
- * beside it.
+ * beside it. demo: a control for driving a demo, in the admin ribbon's dashed outline, so it never
+ * reads as part of the product.
  */
-type ButtonVariant = "primary" | "secondary";
+type ButtonVariant = "primary" | "secondary" | "demo";
 type ButtonSize = "md" | "sm";
 
 const BASE =
@@ -19,6 +20,7 @@ const SIZES: Readonly<Record<ButtonSize, string>> = {
 const VARIANTS: Readonly<Record<ButtonVariant, string>> = {
   primary: "bg-primary text-white hover:bg-primary-deep",
   secondary: "border border-line-strong bg-white text-ink hover:border-ink hover:bg-well",
+  demo: "border border-dashed border-line-strong bg-well text-ink-soft hover:border-ink hover:text-ink",
 };
 
 /** The button's classes, for links and other elements that look like a button. */

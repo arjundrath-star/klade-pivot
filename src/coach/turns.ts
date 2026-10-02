@@ -35,6 +35,7 @@ export const COACH_ERRORS = [
   "closed",
   "wrong-block",
   "solved",
+  "skipped",
   "exhausted",
   "rate-limited",
 ] as const;

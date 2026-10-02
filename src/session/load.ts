@@ -1,7 +1,7 @@
 import { explainStatus, type ExplainResult } from "@/coach/rubric";
 import type { CoachTurn } from "@/coach/turns";
 import { sessionContent } from "@/content/sessions";
-import { exitAttemptsFor, solvedProblems } from "@/db/queries/attempts";
+import { exitAttemptsFor, settledAttempts } from "@/db/queries/attempts";
 import { coachTurnsFor } from "@/db/queries/coach";
 import { explainBacksFor } from "@/db/queries/explain";
 import { getSession } from "@/db/queries/sessions";
@@ -30,22 +30,26 @@ function turnsByProblem(rows: readonly CoachTurnRow[]): ReadonlyMap<string, Coac
 
 /**
  * The solved problem the student explains in block 4: the one already explained if there is one,
- * else the guided problem that took the most coach hints (the latest on a tie). Guided practice is
- * all solved before block 4 opens and the coach only helps on unsolved problems, so the choice
- * does not change once the student gets there.
+ * else the solved guided problem that took the most coach hints (the latest on a tie). A problem
+ * skipped in a demo was never solved, so it is a candidate only when every guided problem was
+ * skipped. Guided practice is all settled before block 4 opens and the coach only helps on
+ * unsettled problems, so the choice does not change once the student gets there.
  */
 function explainProblem(
   problems: readonly SessionProblem[],
   turns: ReadonlyMap<string, readonly CoachTurn[]>,
   explained: readonly ExplainBackRow[],
+  solved: ReadonlySet<string>,
 ): SessionProblem {
   const [first] = explained;
   const recorded = first && findProblem(problems, first.block, first.problemIndex);
   if (recorded) return recorded;
+  const guided = problems.filter((p) => p.block === "guided");
+  const solvedGuided = guided.filter((p) => solved.has(problemKey(p.block, p.index)));
   const hints = (p: SessionProblem) => turns.get(problemKey(p.block, p.index))?.length ?? 0;
   let chosen: SessionProblem | undefined;
-  for (const p of problems) {
-    if (p.block === "guided" && (!chosen || hints(p) >= hints(chosen))) chosen = p;
+  for (const p of solvedGuided.length > 0 ? solvedGuided : guided) {
+    if (!chosen || hints(p) >= hints(chosen)) chosen = p;
   }
   if (!chosen) throw new Error("Session content has no guided problems to explain");
   return chosen;
@@ -61,9 +65,9 @@ function explainResult(row: ExplainBackRow): ExplainResult {
  * coach has said so far, in one round trip. Undefined when the student has no log with that id.
  */
 export async function loadSession(id: string, studentId: string) {
-  const [session, solved, turns, explained, exitAttempts] = await Promise.all([
+  const [session, settled, turns, explained, exitAttempts] = await Promise.all([
     getSession(id, studentId),
-    solvedProblems(id),
+    settledAttempts(id),
     coachTurnsFor(id),
     explainBacksFor(id),
     exitAttemptsFor(id),
@@ -72,13 +76,21 @@ export async function loadSession(id: string, studentId: string) {
   const content = sessionContent(session.contentKey);
   const problems = sessionProblems(content, session.seed);
   const coachTurns = turnsByProblem(turns);
+  const keysOf = (skipped: boolean) =>
+    new Set(
+      settled.filter((p) => p.skipped === skipped).map((p) => problemKey(p.block, p.problemIndex)),
+    );
+  const solved = keysOf(false);
+  // A problem with a correct attempt is solved, even if a skip from another tab landed too.
+  const skipped = new Set([...keysOf(true)].filter((key) => !solved.has(key)));
   return {
     session,
     content,
     problems,
     counts: problemCounts(content),
     progress: {
-      solved: new Set(solved.map((p) => problemKey(p.block, p.problemIndex))),
+      solved,
+      skipped,
       lessonRead: session.lessonReadAt !== null,
       explainBack: explainStatus(explained.map((row) => row.verdict)),
       exitAnswered: exitAttempts.length,
@@ -90,7 +102,7 @@ export async function loadSession(id: string, studentId: string) {
       turns: coachTurns,
     },
     explain: {
-      problem: explainProblem(problems, coachTurns, explained),
+      problem: explainProblem(problems, coachTurns, explained, solved),
       /**
        * Graded attempts, first attempt first. After an admin override the student sees none: the
        * override is never shown to them, and a lone failing card beside an unlocked Next would
@@ -111,16 +123,20 @@ export async function loadSession(id: string, studentId: string) {
 
 export type LoadedSession = NonNullable<Awaited<ReturnType<typeof loadSession>>>;
 
-export type OpenProblemError = "not-found" | "closed" | "wrong-block" | "invalid" | "solved";
+export type OpenProblemError =
+  "not-found" | "closed" | "wrong-block" | "invalid" | "solved" | "skipped";
 
-export type OpenProblem =
-  | { ok: true; loaded: LoadedSession; problem: SessionProblem }
-  | { ok: false; error: OpenProblemError };
+export interface OpenedProblem {
+  loaded: LoadedSession;
+  problem: SessionProblem;
+}
+
+export type OpenProblem = ({ ok: true } & OpenedProblem) | { ok: false; error: OpenProblemError };
 
 /**
  * The student's open session and one problem in it that can still take work: the session is
- * theirs, in progress and on `block`, and the problem exists and is not solved yet. Answering and
- * coaching both start here.
+ * theirs, in progress and on `block`, and the problem exists and is neither solved nor skipped.
+ * Answering, skipping and coaching all start here.
  */
 export async function openProblem(
   sessionId: string,
@@ -134,6 +150,8 @@ export async function openProblem(
   if (loaded.session.currentBlock !== block) return { ok: false, error: "wrong-block" };
   const problem = findProblem(loaded.problems, block, index);
   if (!problem) return { ok: false, error: "invalid" };
-  if (loaded.progress.solved.has(problemKey(block, index))) return { ok: false, error: "solved" };
+  const key = problemKey(block, index);
+  if (loaded.progress.solved.has(key)) return { ok: false, error: "solved" };
+  if (loaded.progress.skipped.has(key)) return { ok: false, error: "skipped" };
   return { ok: true, loaded, problem };
 }

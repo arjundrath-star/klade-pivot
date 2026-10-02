@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { DEMO_STUDENT_ID } from "@/db/demo";
-import { httpOnlyCookie } from "@/session/cookies";
+import { httpOnlyCookie, SCHOOL_YEAR_SECONDS } from "@/session/cookies";
 
 /**
  * Sign-in is not built yet. Onboarding sets this cookie to the new student's id, and the student
@@ -11,9 +11,6 @@ import { httpOnlyCookie } from "@/session/cookies";
 const STUDENT_COOKIE = "klade_student";
 
 const StudentId = z.uuid();
-
-// About a school year, long enough to outlast the MVP pilot.
-const STUDENT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 /** The student the student pages, the session actions and the coach act as. */
 export async function currentStudentId(): Promise<string> {
@@ -26,7 +23,7 @@ export async function rememberStudent(studentId: string): Promise<void> {
   (await cookies()).set(
     STUDENT_COOKIE,
     StudentId.parse(studentId),
-    httpOnlyCookie(STUDENT_COOKIE_MAX_AGE),
+    httpOnlyCookie(SCHOOL_YEAR_SECONDS),
   );
 }
 

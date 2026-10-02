@@ -5,7 +5,6 @@ import {
   expectBlock,
   expectProblem,
   passExplainBack,
-  revealExamples,
   SEEDED_SESSIONS,
   SEEDED_STREAK,
   sessionXp,
@@ -132,12 +131,8 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   }
   await expect(steps.last()).toContainText("Check");
   await expect(next).toBeDisabled();
-  // One example worked through is not enough: the gate waits for all three.
-  const confirm = page.getByRole("button", { name: "I've read this" });
-  await expect(confirm).toBeDisabled();
-  await revealExamples(page);
-  await expect(confirm).toBeEnabled();
-  await confirm.click();
+  // The reveal is a reading aid: the gate asks for the confirmation and nothing else.
+  await page.getByRole("button", { name: "I've read this" }).click();
   await expect(next).toBeEnabled();
 
   await next.click();

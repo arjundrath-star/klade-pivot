@@ -21,6 +21,7 @@ import {
   isBlockComplete,
   isCoachedBlock,
   problemKey,
+  settledProblems,
   type AnsweredBlockId,
 } from "@/session/blocks";
 import { sessionSummary } from "@/session/complete";
@@ -109,6 +110,7 @@ export default async function SessionPage({
   }
   if (session.status !== "in_progress") notFound();
 
+  const settled = settledProblems(progress);
   // Problems render on the server so the answers never reach the browser. The coach's worked
   // example is a different instance, so its numbers can.
   const problemNodes = (block: AnsweredBlockId) =>
@@ -125,8 +127,9 @@ export default async function SessionPage({
             index={p.index}
             text={rendered.text}
             equation={rendered.kind === "symbolic" ? rendered.equation : undefined}
+            skippable={controls?.studentId === session.studentId}
             coach={
-              isCoachedBlock(block) && !progress.solved.has(key)
+              isCoachedBlock(block) && !settled.has(key)
                 ? {
                     available: coachConfigured(),
                     example: exampleFor(p, session.interests),
@@ -161,6 +164,7 @@ export default async function SessionPage({
       timerMode={session.timerMode}
       counts={counts}
       initialSolved={[...progress.solved]}
+      initialSkipped={[...progress.skipped]}
       initialLessonRead={progress.lessonRead}
       initialExplainBack={progress.explainBack}
       exitAnswered={progress.exitAnswered}
@@ -171,7 +175,6 @@ export default async function SessionPage({
         contents: <ChapterContents chapter={chapter} />,
         sections: <ChapterSections chapter={chapter} />,
         keyLearnings: <KeyLearnings chapter={chapter} />,
-        examples: chapter.sections.filter((section) => section.example).length,
       }}
       panels={{
         explain: explained ? (
@@ -182,7 +185,10 @@ export default async function SessionPage({
                 <Equation>{explained.problem.equation}</Equation>
               )}
               <p className="text-ink-soft">
-                You solved it:{" "}
+                {/* Only when every guided problem was skipped in a demo is this one unsolved. */}
+                {progress.solved.has(problemKey(explain.problem.block, explain.problem.index))
+                  ? "You solved it:"
+                  : "Its answer:"}{" "}
                 <Equation size="inline">{explained.steps.at(-1)?.equationAfter}</Equation>
               </p>
             </article>

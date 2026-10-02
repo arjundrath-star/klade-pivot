@@ -40,3 +40,8 @@ export function historyMinutes(row: HistoryRow): number {
   const ms = Object.values(row.blockElapsedMs).reduce((sum, value) => sum + (value ?? 0), 0);
   return Math.round(ms / 60_000);
 }
+
+/** "2 skipped (demo)" for a session where a demo driver skipped problems, else null. */
+export function skippedNote(skipped: number): string | null {
+  return skipped === 0 ? null : `${skipped} skipped (demo)`;
+}

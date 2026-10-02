@@ -57,16 +57,8 @@ export async function startSession(page: Page): Promise<string> {
   return page.url().split("/").pop() ?? "";
 }
 
-/** Steps through every worked example still to be revealed, one click at a time. */
-export async function revealExamples(page: Page) {
-  const reveal = page.getByRole("button", { name: /^Show the (first|next) step$/ }).first();
-  while (await reveal.isVisible()) await reveal.click();
-  await expect(reveal).toHaveCount(0);
-}
-
-/** Reveals the chapter's worked examples, then confirms the reading. */
+/** Confirms the chapter as read, which is all the learn block's gate asks. */
 export async function readLesson(page: Page) {
-  await revealExamples(page);
   await page.getByRole("button", { name: "I've read this" }).click();
 }
 

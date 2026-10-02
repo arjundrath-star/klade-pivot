@@ -46,6 +46,44 @@ in the service's environment file is user-scoped and the API rejects it without 
 so the deployed coach answers "didn't answer" until a workspace-scoped key replaces it and the app is
 redeployed.
 
+## Demo controls
+
+Signed in at the gate (the same sign-in as `/admin`), the session page has controls for driving a
+recording. A browser that is not signed in sees none of them.
+
+- **Skip (demo)** sits beside Check on every warm-up and guided problem. It moves past the problem
+  without solving it. The skip is stored as a skipped attempt: never correct, no XP, and it counts
+  for nothing but letting the block move on. A warm-up with a skip pays no warm-up XP, and guided
+  practice pays 5 XP for each problem actually solved, so the end screen shows less than +110 XP
+  after skips (two warm-up skips and one guided skip: +95). The explain-back and the exit check have
+  no skip. The server refuses a skip from a browser that is not signed in. The parent's history
+  marks a session with skips.
+- **Hide** on the admin ribbon folds it into a small "Admin" pill, so the recording shows the
+  student's screen. This browser remembers the choice; press the pill to bring the ribbon back.
+- The Learn block opens on "I've read this" alone. Stepping through the worked examples is a
+  reading aid, not a gate.
+
+## Demo problems
+
+After Reset demo, Start opens Maya's session with the same problems on every run: her session seed
+is `DEMO_SESSION_SEED` in `src/db/demo.ts`, and her interests are sports and music. The table is
+written by `npm run docs:demo-problems` from the code that draws the session, and a unit test fails
+when it drifts.
+
+| Block           | Problem | Text                                                                                                                                                                            | Equation      | Answer |
+| --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------ |
+| Warm-up         | 1       | Solve for x.                                                                                                                                                                    | x + 3 = 16    | x = 13 |
+| Warm-up         | 2       | Solve for x.                                                                                                                                                                    | 5x = -40      | x = -8 |
+| Warm-up         | 3       | Solve for x.                                                                                                                                                                    | -5x = -10     | x = 2  |
+| Guided practice | 1       | Solve for x.                                                                                                                                                                    | 2x + 17 = 31  | x = 7  |
+| Guided practice | 2       | Your playlist has 12 songs. You add every song from 3 new EPs, and each EP has the same number of songs. Now your playlist has 24 songs. How many songs are on each EP?         | 3x + 12 = 24  | x = 4  |
+| Guided practice | 3       | You can juggle a soccer ball 6 times in a row. Every week you practice, your record goes up by 3. How many weeks will it take to reach 21 juggles in a row?                     | 3x + 6 = 21   | x = 5  |
+| Guided practice | 4       | Solve for x.                                                                                                                                                                    | -9x - 8 = -89 | x = 9  |
+| Guided practice | 5       | You buy 2 pairs of soccer socks and a water bottle that costs $6. You pay $18 in all. Each pair of socks costs the same. How many dollars is one pair?                          | 2x + 6 = 18   | x = 6  |
+| Exit check      | 1       | Solve for x.                                                                                                                                                                    | 2x + 11 = -3  | x = -7 |
+| Exit check      | 2       | Your school band has 26 music stands. The director sets up 2 rows with the same number of stands in each row, and 8 stands stay in the closet. How many stands are in each row? | 2x + 8 = 26   | x = 9  |
+| Exit check      | 3       | You have $36 saved for new soccer cleats that cost $51. You save $5 every week. How many weeks until you have exactly enough?                                                   | 5x + 36 = 51  | x = 3  |
+
 ## Rehearsal order
 
 Reset demo, Simulate (demo clock), `/parent` shows the phone locked, run the session in the other

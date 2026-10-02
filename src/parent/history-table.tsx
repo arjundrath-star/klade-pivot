@@ -1,8 +1,15 @@
-import { historyMinutes, historyResult, sortedHistory, type HistoryRow } from "./history";
+import {
+  historyMinutes,
+  historyResult,
+  skippedNote,
+  sortedHistory,
+  type HistoryRow,
+} from "./history";
 import { formatDay } from "./progress";
 
 interface HistoryTableProps {
-  rows: readonly (HistoryRow & { id: string; title: string })[];
+  /** `skipped`: problems a demo driver skipped, which the outcome cell marks. */
+  rows: readonly (HistoryRow & { id: string; title: string; skipped: number })[];
 }
 
 /** The outcome's color: green for mastery, red for a miss, ink for the rest. */
@@ -13,9 +20,9 @@ function resultClass(result: string): string {
 }
 
 /**
- * Sessions and missed days, latest first: date, concept, outcome, minutes. The cells' spacing is
- * `table-stack` in globals.css, which under 480px stacks the rows with each cell labelled by its
- * heading.
+ * Sessions and missed days, latest first: date, concept, outcome (with any demo skips under it),
+ * minutes. The cells' spacing is `table-stack` in globals.css, which under 480px stacks the rows
+ * with each cell labelled by its heading.
  */
 export function HistoryTable({ rows }: HistoryTableProps) {
   const sorted = sortedHistory(rows);
@@ -47,6 +54,7 @@ export function HistoryTable({ rows }: HistoryTableProps) {
       <tbody>
         {sorted.map(({ row, day }) => {
           const result = historyResult(row);
+          const skipped = skippedNote(row.skipped);
           return (
             <tr key={row.id} className="border-t border-line">
               <td data-label="Date" className="whitespace-nowrap">
@@ -58,6 +66,9 @@ export function HistoryTable({ rows }: HistoryTableProps) {
                 className={`font-medium whitespace-nowrap ${resultClass(result)}`}
               >
                 {result}
+                {skipped && (
+                  <span className="block text-xs font-normal text-ink-soft">{skipped}</span>
+                )}
               </td>
               <td data-label="Minutes" className="text-right tabular-nums">
                 {historyMinutes(row)}

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { attempts } from "@/db/schema";
 
@@ -9,13 +9,25 @@ export async function recordAttempt(attempt: NewAttempt): Promise<void> {
   await db.insert(attempts).values(attempt);
 }
 
-/** The problems in a session that have at least one correct attempt. */
-export async function solvedProblems(sessionLogId: string) {
+/**
+ * The problems in a session that have a correct attempt (`skipped` false) or a demo skip
+ * (`skipped` true). A skipped attempt is never correct, so a problem can show up once each way.
+ */
+export async function settledAttempts(sessionLogId: string) {
   const db = await getDb();
   return db
-    .selectDistinct({ block: attempts.block, problemIndex: attempts.problemIndex })
+    .selectDistinct({
+      block: attempts.block,
+      problemIndex: attempts.problemIndex,
+      skipped: attempts.skipped,
+    })
     .from(attempts)
-    .where(and(eq(attempts.sessionLogId, sessionLogId), eq(attempts.correct, true)));
+    .where(
+      and(
+        eq(attempts.sessionLogId, sessionLogId),
+        or(eq(attempts.correct, true), eq(attempts.skipped, true)),
+      ),
+    );
 }
 
 /**

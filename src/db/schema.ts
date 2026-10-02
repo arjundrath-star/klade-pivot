@@ -183,6 +183,11 @@ export const attempts = sqliteTable(
     correct: integer("correct", { mode: "boolean" }).notNull(),
     timeMs: integer("time_ms").notNull(),
     hintsUsed: integer("hints_used").notNull().default(0),
+    /**
+     * A demo driver signed in at the gate skipped the problem: never correct, worth no XP, and it
+     * settles the problem only so the block can move on.
+     */
+    skipped: integer("skipped", { mode: "boolean" }).notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [

@@ -19,6 +19,7 @@ import {
   isBlockComplete,
   isProblemBlock,
   problemKey,
+  settledProblems,
   type AnsweredBlockId,
   type BlockId,
   type Direction,
@@ -39,6 +40,7 @@ const SessionComplete = dynamic(() => loadSessionComplete().then((m) => m.Sessio
 
 interface ProgressState extends SessionProgress {
   markSolved: (key: string) => void;
+  markSkipped: (key: string) => void;
   markLessonRead: () => void;
   setExplainBack: (status: ExplainStatus) => void;
 }
@@ -60,7 +62,7 @@ export const NOT_A_NUMBER_MESSAGE = "Enter a number, like 4, -3, or 1/2.";
 function lockedMessage(block: BlockId): string {
   switch (block) {
     case "learn":
-      return "Step through every worked example, then confirm you've read the chapter, to unlock Next.";
+      return "Confirm you've read the chapter to unlock Next.";
     case "explain":
       return "Get your explanation graded to unlock Next.";
     case "exit":
@@ -93,6 +95,8 @@ interface SessionRunnerProps {
   timerMode: TimerMode;
   counts: ProblemCounts;
   initialSolved: readonly string[];
+  /** Problems skipped in a demo; they settle the block's gate like a solved one. */
+  initialSkipped: readonly string[];
   initialLessonRead: boolean;
   initialExplainBack: ExplainStatus;
   /** Read live from each render: an exit answer refreshes the page with the new count. */
@@ -116,6 +120,7 @@ export function SessionRunner({
   timerMode,
   counts,
   initialSolved,
+  initialSkipped,
   initialLessonRead,
   initialExplainBack,
   exitAnswered,
@@ -132,11 +137,13 @@ export function SessionRunner({
     { block: BlockId; elapsedMs: number } | { block: "done"; summary: SessionSummary }
   >({ block: initialBlock, elapsedMs: initialElapsedMs });
   const [solved, setSolved] = useState<ReadonlySet<string>>(() => new Set(initialSolved));
-  // The problem on the desk in each answered block: the first one still to solve on arrival, or
+  const [skipped, setSkipped] = useState<ReadonlySet<string>>(() => new Set(initialSkipped));
+  const settled = settledProblems({ solved, skipped });
+  // The problem on the desk in each answered block: the first one still to settle on arrival, or
   // the last one when the block is already done.
   const [cursor, setCursor] = useState<Readonly<Record<AnsweredBlockId, number>>>(() => {
     const onDesk = (block: AnsweredBlockId) =>
-      firstUnsolved(block, counts, solved) ?? Math.max(counts[block] - 1, 0);
+      firstUnsolved(block, counts, settled) ?? Math.max(counts[block] - 1, 0);
     return { warmup: onDesk("warmup"), guided: onDesk("guided") };
   });
   const [lessonRead, setLessonRead] = useState(initialLessonRead);
@@ -148,6 +155,7 @@ export function SessionRunner({
   const flushNotes = useRef<() => Promise<void>>(async () => {});
 
   const markSolved = (key: string) => setSolved((prev) => new Set(prev).add(key));
+  const markSkipped = (key: string) => setSkipped((prev) => new Set(prev).add(key));
   const markLessonRead = () => setLessonRead(true);
 
   if (at.block === "done") return <SessionComplete title={title} summary={at.summary} />;
@@ -155,6 +163,7 @@ export function SessionRunner({
   const position = BLOCK_IDS.indexOf(block);
   const complete = isBlockComplete(block, counts, {
     solved,
+    skipped,
     lessonRead,
     explainBack,
     exitAnswered,
@@ -206,12 +215,12 @@ export function SessionRunner({
     panels[block]
   );
 
-  // The way forward: the next problem after a correct answer while the block has more, else the
+  // The way forward: the next problem after a correct answer (or a demo skip) while the block has more, else the
   // block's own Next (Finish on the last block).
   const nextProblem = isAnsweredBlock(block) && cursor[block] < counts[block] - 1 ? block : null;
   const forwardLabel = nextProblem ? "Next problem" : last ? "Finish" : "Next";
   const forwardLocked = nextProblem
-    ? !solved.has(problemKey(nextProblem, cursor[nextProblem]))
+    ? !settled.has(problemKey(nextProblem, cursor[nextProblem]))
     : !complete;
   const forward = () => {
     if (!nextProblem) {
@@ -226,10 +235,12 @@ export function SessionRunner({
     <ProgressContext
       value={{
         solved,
+        skipped,
         lessonRead,
         explainBack,
         exitAnswered,
         markSolved,
+        markSkipped,
         markLessonRead,
         setExplainBack,
       }}

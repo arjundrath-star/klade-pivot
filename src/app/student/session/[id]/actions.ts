@@ -20,6 +20,7 @@ import { graderCalls, recordExplainBack, recordGraderCalls } from "@/db/queries/
 import { saveSessionNotes } from "@/db/queries/notes";
 import { markLessonRead, moveSession } from "@/db/queries/sessions";
 import { checkAnswer } from "@/engine/check";
+import { signedInFamily } from "@/gate/server";
 import { generateInstance } from "@/engine/generate";
 import { rational } from "@/engine/rational";
 import {
@@ -32,7 +33,12 @@ import {
 } from "@/session/blocks";
 import { completeSession, type CompleteError, type SessionSummary } from "@/session/complete";
 import { currentStudentId } from "@/session/current-student";
-import { loadSession, openProblem, type OpenProblemError } from "@/session/load";
+import {
+  loadSession,
+  openProblem,
+  type OpenedProblem,
+  type OpenProblemError,
+} from "@/session/load";
 import { findProblem } from "@/session/problems";
 import { NOTES_MAX_LENGTH, normalizeNotes } from "@/session/notes";
 import { blockXp } from "@/session/rewards";
@@ -49,7 +55,7 @@ const AnswerInput = z.object({
   timeMs: elapsedMs,
 });
 
-type AnswerError = "invalid" | "closed" | "wrong-block" | "already-solved";
+type AnswerError = "invalid" | "closed" | "wrong-block" | "already-solved" | "skipped";
 
 export type AnswerResult =
   | { ok: true; verdict: "correct" | "incorrect" | "not-a-number" }
@@ -62,7 +68,18 @@ const ANSWER_ERRORS: Readonly<Record<OpenProblemError, AnswerError>> = {
   "wrong-block": "wrong-block",
   invalid: "invalid",
   solved: "already-solved",
+  skipped: "skipped",
 };
+
+const SkipInput = z.object({
+  sessionId: z.uuid(),
+  // The answered blocks only: the exit check and the explain-back have no skip.
+  block: z.enum(ANSWERED_BLOCK_IDS),
+  index: z.int().nonnegative(),
+  timeMs: elapsedMs,
+});
+
+export type SkipResult = { ok: true } | { ok: false; error: AnswerError | "refused" };
 
 const ExitAnswerInput = z.object({
   sessionId: z.uuid(),
@@ -121,6 +138,19 @@ const COMPLETE_ERRORS: Readonly<Record<CompleteError, MoveError>> = {
   aided: "invalid",
 };
 
+/** The fields of an attempt row that come from the problem it is on. */
+function attemptOn({ loaded, problem }: OpenedProblem) {
+  return {
+    studentId: loaded.session.studentId,
+    sessionLogId: loaded.session.id,
+    block: problem.block,
+    problemIndex: problem.index,
+    templateKey: problem.template.key,
+    seed: problem.seed,
+    hintsUsed: loaded.coach.turns.get(problemKey(problem.block, problem.index))?.length ?? 0,
+  };
+}
+
 async function loadOpenSession(sessionId: string) {
   const loaded = await loadSession(sessionId, await currentStudentId());
   return loaded?.session.status === "in_progress" ? loaded : undefined;
@@ -134,25 +164,39 @@ export async function submitAnswer(input: z.input<typeof AnswerInput>): Promise<
 
   const opened = await openProblem(sessionId, await currentStudentId(), block, index);
   if (!opened.ok) return { ok: false, error: ANSWER_ERRORS[opened.error] };
-  const { loaded, problem } = opened;
 
-  const instance = generateInstance(problem.template, problem.seed);
-  const check = checkAnswer(answer, rational(instance.solution));
+  const { solution } = generateInstance(opened.problem.template, opened.problem.seed);
+  const check = checkAnswer(answer, rational(solution));
   if (check.normalized === null) return { ok: true, verdict: "not-a-number" };
 
   await recordAttempt({
-    studentId: loaded.session.studentId,
-    sessionLogId: sessionId,
-    block,
-    problemIndex: index,
-    templateKey: instance.templateKey,
-    seed: instance.seed,
+    ...attemptOn(opened),
     answer: answer.trim(),
     correct: check.correct,
     timeMs,
-    hintsUsed: loaded.coach.turns.get(problemKey(block, index))?.length ?? 0,
   });
   return { ok: true, verdict: check.correct ? "correct" : "incorrect" };
+}
+
+/**
+ * A demo control, never a learning path: a browser signed in at the gate (the admin ribbon's own
+ * check) and acting as the demo student skips a warm-up or guided problem so a recording can move
+ * on. The skip is stored as an
+ * attempt with `skipped` set, never correct; it settles the problem for the block's gate and earns
+ * nothing (`blockXp` pays solved problems only). Any other browser, or another student, is refused.
+ */
+export async function skipProblem(input: z.input<typeof SkipInput>): Promise<SkipResult> {
+  const [family, studentId] = await Promise.all([signedInFamily(), currentStudentId()]);
+  if (family?.studentId !== studentId) return { ok: false, error: "refused" };
+  const parsed = SkipInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid" };
+  const { sessionId, block, index, timeMs } = parsed.data;
+
+  const opened = await openProblem(sessionId, studentId, block, index);
+  if (!opened.ok) return { ok: false, error: ANSWER_ERRORS[opened.error] };
+
+  await recordAttempt({ ...attemptOn(opened), answer: "", correct: false, skipped: true, timeMs });
+  return { ok: true };
 }
 
 /**

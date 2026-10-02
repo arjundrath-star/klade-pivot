@@ -22,7 +22,7 @@ import {
   type XpAward,
 } from "@/engine/progress";
 import { calendarDay } from "@/parent/progress";
-import { isBlockComplete, type BlockId } from "@/session/blocks";
+import { isBlockComplete, solvedCount, type BlockId } from "@/session/blocks";
 import type { LoadedSession } from "@/session/load";
 import { EXIT_PASS_MARK, type SessionOutcome } from "@/session/mastery";
 import { scheduleRecord } from "@/session/pace";
@@ -50,8 +50,9 @@ export interface SessionRewards {
 
 /**
  * The XP that leaving `block` with Next pays, judged from the stored progress: the warm-up once
- * every problem is solved, guided practice per problem solved (all of them, once it is complete),
- * the explain-back only when it passed.
+ * every problem is solved, guided practice per problem solved, the explain-back only when it
+ * passed. A problem skipped in a demo settles the block's gate but was never solved, so it pays
+ * nothing: a warm-up with a skip pays no XP, and guided practice pays for its solved problems only.
  */
 export function blockXp(
   block: BlockId,
@@ -63,8 +64,14 @@ export function blockXp(
     sessionLogId: session.id,
     ...award,
   });
-  if (block === "warmup") return grant(xpAward("warmup"));
-  if (block === "guided") return grant(xpAward("guided", counts.guided));
+  if (block === "warmup") {
+    const all = solvedCount(block, counts, progress.solved) === counts.warmup;
+    return all ? grant(xpAward("warmup")) : null;
+  }
+  if (block === "guided") {
+    const solved = solvedCount(block, counts, progress.solved);
+    return solved > 0 ? grant(xpAward("guided", solved)) : null;
+  }
   if (block === "explain" && progress.explainBack === "passed") return grant(xpAward("explain"));
   return null;
 }

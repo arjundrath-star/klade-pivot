@@ -53,7 +53,7 @@ export function problemKey(block: ProblemBlockId, index: number): string {
 /** How many problems each problem block holds. */
 export type ProblemCounts = Readonly<Record<ProblemBlockId, number>>;
 
-/** The first problem in `block` without a correct answer, or null once every one has. */
+/** The first problem in `block` not in `solved`, or null once every one is. */
 export function firstUnsolved(
   block: AnsweredBlockId,
   counts: ProblemCounts,
@@ -65,10 +65,25 @@ export function firstUnsolved(
   return null;
 }
 
+/** How many problems in `block` are in `solved`. */
+export function solvedCount(
+  block: AnsweredBlockId,
+  counts: ProblemCounts,
+  solved: ReadonlySet<string>,
+): number {
+  let count = 0;
+  for (let index = 0; index < counts[block]; index += 1) {
+    if (solved.has(problemKey(block, index))) count += 1;
+  }
+  return count;
+}
+
 /** What the student has done so far in a session, as stored on the server. */
 export interface SessionProgress {
   /** `problemKey`s of the problems with a correct attempt. */
   solved: ReadonlySet<string>;
+  /** `problemKey`s of the problems a demo driver skipped without solving them. */
+  skipped: ReadonlySet<string>;
   /** The student confirmed they read the lesson. */
   lessonRead: boolean;
   /** Where the explain-back stands, from the graded attempts on the server. */
@@ -78,9 +93,21 @@ export interface SessionProgress {
 }
 
 /**
+ * The problems that no longer hold the student up: solved, or skipped in a demo. A skip settles a
+ * problem for the block's gate and for nothing else.
+ */
+export function settledProblems({
+  solved,
+  skipped,
+}: Pick<SessionProgress, "solved" | "skipped">): ReadonlySet<string> {
+  return skipped.size === 0 ? solved : new Set([...solved, ...skipped]);
+}
+
+/**
  * A block is complete when its gate is met: the lesson confirmed as read for learn, every problem
- * solved for an answered block, a final explain-back result (a pass, or the retry graded either
- * way) for explain, an attempt on every problem for the exit check.
+ * settled (solved, or skipped in a demo) for an answered block, a final explain-back result (a
+ * pass, or the retry graded either way) for explain, an attempt on every problem for the exit
+ * check.
  */
 export function isBlockComplete(
   block: BlockId,
@@ -91,7 +118,7 @@ export function isBlockComplete(
   if (block === "explain") return isExplainFinal(progress.explainBack);
   if (block === "exit") return progress.exitAnswered >= counts.exit;
   if (!isAnsweredBlock(block)) return true;
-  return firstUnsolved(block, counts, progress.solved) === null;
+  return firstUnsolved(block, counts, settledProblems(progress)) === null;
 }
 
 export type Direction = "next" | "back";

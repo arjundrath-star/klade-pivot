@@ -40,6 +40,7 @@ import {
   type Weekday,
 } from "@/engine/pace";
 import { earnedBadges, streakSpan, XP_KINDS, xpAward } from "@/engine/progress";
+import type { Interest } from "@/engine/types";
 import { calendarDay, familyMoment } from "@/parent/progress";
 import { BLOCK_IDS, BLOCKS, type BlockId } from "@/session/blocks";
 import { defaultRule } from "@/session/lock";
@@ -50,6 +51,22 @@ export const DEMO_STUDENT_ID = "demo-student-maya";
 
 /** The demo student's family: the parent pages and the admin panel act for it. */
 export const DEMO_FAMILY_ID = "demo-family";
+
+/** Maya's interests as the seed writes them; the demo's word problems are framed in them. */
+export const DEMO_INTERESTS: readonly Interest[] = ["sports", "music"];
+
+/**
+ * The session seed of every session the demo student opens, in place of a random one, so the
+ * recorded demo shows the same problems on every run. Each problem's own seed still comes from
+ * `problemSeed`, so stored attempts replay as for any session. The runbook's "Demo problems" table
+ * lists what it draws (`demoProblemCells`).
+ */
+export const DEMO_SESSION_SEED = 20261002;
+
+/** The seed for a session `studentId` opens: the fixed demo seed for Maya, else random. */
+export function sessionSeedFor(studentId: string): number {
+  return studentId === DEMO_STUDENT_ID ? DEMO_SESSION_SEED : randomSeed();
+}
 
 const COURSE_ID = "algebra-1";
 
@@ -210,7 +227,7 @@ function profileStatements(
     ...MAYA_PLAN,
     pronoun: "she" as const,
     timerMode: "standard" as const,
-    interests: ["sports" as const, "music" as const],
+    interests: [...DEMO_INTERESTS],
     favorites: {},
   };
   const checkIn = {

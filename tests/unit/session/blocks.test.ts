@@ -5,6 +5,7 @@ import {
   firstUnsolved,
   isBlockComplete,
   problemKey,
+  settledProblems,
   step,
   type BlockId,
   type ProblemCounts,
@@ -18,8 +19,15 @@ function progress(
   lessonRead = false,
   explainBack: ExplainStatus = "pending",
   exitAnswered = 0,
+  skippedKeys: Iterable<string> = [],
 ): SessionProgress {
-  return { solved: new Set(solvedKeys), lessonRead, explainBack, exitAnswered };
+  return {
+    solved: new Set(solvedKeys),
+    skipped: new Set(skippedKeys),
+    lessonRead,
+    explainBack,
+    exitAnswered,
+  };
 }
 
 describe("block order", () => {
@@ -52,6 +60,17 @@ describe("block order", () => {
 describe("gating", () => {
   it("refuses Next until the current block is complete", () => {
     expect(step("warmup", "next", false)).toEqual({ ok: false, error: "incomplete" });
+  });
+
+  it("completes an answered block once every problem is solved or skipped in a demo", () => {
+    const mixed = progress([problemKey("warmup", 0)], false, "pending", 0, [
+      problemKey("warmup", 1),
+    ]);
+    expect(isBlockComplete("warmup", counts, mixed)).toBe(true);
+    expect([...settledProblems(mixed)].toSorted()).toEqual(["warmup:0", "warmup:1"]);
+    // A skip never stands in for the exit check's attempts.
+    const exit = progress([], false, "pending", 2, ["exit:2"]);
+    expect(isBlockComplete("exit", counts, exit)).toBe(false);
   });
 
   it("completes an answered block only when every problem is solved", () => {

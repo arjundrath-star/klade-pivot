@@ -21,7 +21,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
     "db:reset": "tsx scripts/seed.ts --fresh",
-    "coach:redteam": "tsx scripts/coach-redteam.ts"
+    "coach:redteam": "tsx scripts/coach-redteam.ts",
+    "docs:demo-problems": "tsx scripts/demo-problems.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",

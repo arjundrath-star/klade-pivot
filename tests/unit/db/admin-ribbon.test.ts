@@ -1,4 +1,7 @@
+import { cookies } from "next/headers";
 import { describe, expect, it } from "vitest";
+import { adminControls } from "@/admin/controls";
+import { RIBBON_COOKIE, ribbonCookie, ribbonHidden } from "@/admin/ribbon-cookie";
 import { resetDemo, simulateMissedSession, switchInterest } from "@/app/admin/actions";
 import { DEMO_STUDENT_ID } from "@/db/demo";
 import { getStudent } from "@/db/queries/students";
@@ -39,5 +42,25 @@ describe("the admin ribbon's actions", () => {
     expect(await redirectOf(() => resetDemo(formOf({ back: "/student" })))).toBe(
       "/student?notice=reset",
     );
+  });
+});
+
+describe("the ribbon's Hide", () => {
+  it("is remembered in a cookie that folds the ribbon into its pill until it is forgotten", async () => {
+    expect(await adminControls()).toMatchObject({ hidden: false });
+    const jar = await cookies();
+    jar.set(RIBBON_COOKIE, "hidden");
+    expect(await adminControls()).toMatchObject({ hidden: true });
+    jar.set(RIBBON_COOKIE, "anything else");
+    expect(await adminControls()).toMatchObject({ hidden: false });
+  });
+
+  it("writes and clears the cookie for the whole site", () => {
+    expect(ribbonCookie(true)).toBe(
+      `${RIBBON_COOKIE}=hidden; Path=/; Max-Age=31536000; SameSite=Lax`,
+    );
+    expect(ribbonCookie(false)).toBe(`${RIBBON_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`);
+    expect(ribbonHidden("hidden")).toBe(true);
+    expect(ribbonHidden(undefined)).toBe(false);
   });
 });

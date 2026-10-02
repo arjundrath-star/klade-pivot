@@ -1,10 +1,13 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, expect, vi } from "vitest";
 import { submitAnswer, submitExitAnswer } from "@/app/student/session/[id]/actions";
+import { getDb } from "@/db/client";
 import { seedDemo } from "@/db/demo";
 import { markExitShown } from "@/db/queries/exit";
+import { xpEvents } from "@/db/schema";
 import type { AnsweredBlockId } from "@/session/blocks";
 import { answersFor } from "./answers";
 
@@ -54,6 +57,16 @@ export async function answerExit(sessionId: string, correct: readonly boolean[])
       verdict: "recorded",
     });
   }
+}
+
+/** The XP a session has paid so far, in the order it was paid. */
+export async function xpRows(sessionId: string) {
+  const db = await getDb();
+  return db
+    .select({ kind: xpEvents.kind, amount: xpEvents.amount })
+    .from(xpEvents)
+    .where(eq(xpEvents.sessionLogId, sessionId))
+    .orderBy(xpEvents.createdAt);
 }
 
 /** A FormData from a record, as a form would post it. */

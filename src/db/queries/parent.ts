@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { explainBacks, mastery, sessionLogs, sessionTemplates, units } from "@/db/schema";
+import { attempts, explainBacks, mastery, sessionLogs, sessionTemplates, units } from "@/db/schema";
 
 /**
  * Typed explanations faster than this many characters a second count as implausibly fast (spec
@@ -8,7 +8,18 @@ import { explainBacks, mastery, sessionLogs, sessionTemplates, units } from "@/d
  */
 const IMPLAUSIBLE_TYPING_CPS = 15;
 
-/** The student's sessions and missed schedule days, most recent first. */
+/**
+ * How many problems a demo driver skipped in the session and nobody solved (a skip and an answer
+ * can both land from two tabs); the attempts' session index serves it.
+ */
+const skippedProblems = sql<number>`(select count(*) from (select 1 from ${attempts} where ${eq(
+  attempts.sessionLogId,
+  sessionLogs.id,
+)} group by ${attempts.block}, ${attempts.problemIndex} having max(${attempts.skipped}) = 1 and max(${attempts.correct}) = 0))`.mapWith(
+  Number,
+);
+
+/** The student's sessions and missed schedule days, most recent first, with their demo skips. */
 export async function sessionHistory(studentId: string, limit = 30) {
   const db = await getDb();
   return (
@@ -22,6 +33,7 @@ export async function sessionHistory(studentId: string, limit = 30) {
         startedAt: sessionLogs.startedAt,
         completedAt: sessionLogs.completedAt,
         blockElapsedMs: sessionLogs.blockElapsedMs,
+        skipped: skippedProblems,
       })
       .from(sessionLogs)
       .innerJoin(sessionTemplates, eq(sessionTemplates.id, sessionLogs.sessionTemplateId))

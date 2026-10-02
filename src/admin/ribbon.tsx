@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { AdminControls } from "./controls";
+import { RibbonFrame } from "./ribbon-frame";
 import {
   resetDemo,
   simulateMissedSession,
@@ -45,17 +46,14 @@ function RibbonAction({
  * The admin panel's demo controls as a thin bar on the student's screens, so the demo can be
  * driven without leaving the student view. Rendered only with `controls`, which a page gets for a
  * browser signed in at the gate; every action checks the gate again. Server-rendered forms, on
- * the page's own light surface so the demo's controls never read as part of the product.
+ * the page's own light surface so the demo's controls never read as part of the product, inside
+ * `RibbonFrame`, whose Hide folds them into a pill this browser remembers.
  */
 export function AdminRibbon({ controls, back, notice }: AdminRibbonProps) {
   if (!controls) return null;
   const shown = NoticeParam.safeParse(notice);
   return (
-    <div
-      role="region"
-      aria-label="Admin"
-      className="flex flex-col gap-2 rounded-md border border-dashed border-line-strong bg-well px-4 py-2.5 text-sm"
-    >
+    <RibbonFrame initialHidden={controls.hidden}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className="mr-1 font-display font-semibold text-primary-deep">Admin</span>
         <RibbonAction action={simulateMissedSession} back={back} label="Simulate missed session" />
@@ -94,6 +92,6 @@ export function AdminRibbon({ controls, back, notice }: AdminRibbonProps) {
           {ADMIN_NOTICES[shown.data]}
         </p>
       )}
-    </div>
+    </RibbonFrame>
   );
 }

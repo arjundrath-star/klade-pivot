@@ -5,24 +5,15 @@ import { getDb } from "@/db/client";
 import { DEMO_STUDENT_ID } from "@/db/demo";
 import { studentEarnings } from "@/db/queries/rewards";
 import { getSession, openTodaySession } from "@/db/queries/sessions";
-import { badges, xpEvents } from "@/db/schema";
+import { badges } from "@/db/schema";
 import { completeSession } from "@/session/complete";
 import { studentStanding } from "@/session/pace";
 import { sessionRewards } from "@/session/rewards";
 import { recordPass, scheduleToday, sessionAtExit } from "../../helpers/answers";
-import { answerExit, solve, withTempDatabase } from "../../helpers/database";
+import { answerExit, solve, withTempDatabase, xpRows } from "../../helpers/database";
 
 // XP, the streak and badges against a real libSQL file.
 withTempDatabase("klade-rewards-", new Date("2026-10-01T12:00:00Z"));
-
-async function xpRows(sessionId: string) {
-  const db = await getDb();
-  return db
-    .select({ kind: xpEvents.kind, amount: xpEvents.amount })
-    .from(xpEvents)
-    .where(eq(xpEvents.sessionLogId, sessionId))
-    .orderBy(xpEvents.createdAt);
-}
 
 async function badgeKeys() {
   const db = await getDb();

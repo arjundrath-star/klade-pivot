@@ -25,6 +25,7 @@ const MESSAGES: Readonly<Record<CoachError, string | null>> = {
   closed: null,
   "wrong-block": null,
   solved: RELOAD_MESSAGE,
+  skipped: RELOAD_MESSAGE,
   exhausted: RELOAD_MESSAGE,
 };
 
