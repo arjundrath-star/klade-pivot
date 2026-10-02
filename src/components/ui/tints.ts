@@ -24,16 +24,6 @@ export const TINT_TEXT: Readonly<Record<Tint, string>> = {
   mentor: "text-mentor-deep",
 };
 
-/** The fill with the text that reads on it. */
-export const TINT_FILL: Readonly<Record<Tint, string>> = {
-  primary: "bg-primary text-white",
-  today: "bg-today text-ink",
-  course: "bg-course text-ink",
-  calendar: "bg-calendar text-ink",
-  progress: "bg-progress text-ink",
-  mentor: "bg-mentor text-ink",
-};
-
 /** The fill alone, for bars and marks. */
 export const TINT_BAR: Readonly<Record<Tint, string>> = {
   primary: "bg-primary",

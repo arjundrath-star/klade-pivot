@@ -1,8 +1,9 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { checkInLabel, CHECK_IN_MINUTES, lastCheckInDay, nextCheckInDay } from "./check-in";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { Card, cardClass } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { inSentence } from "@/content/title";
 import type { mentorFor } from "@/db/queries/mentor";
 import type { latestExplanation } from "@/db/queries/parent";
@@ -29,29 +30,12 @@ function mentorLine({ name, school, classYear }: Mentor): string {
   return `${name} · ${school} '${String(classYear % 100).padStart(2, "0")}`;
 }
 
-function KidNote({
-  mentor,
-  explanation,
-}: {
-  mentor: Mentor;
-  explanation: Explanation | undefined;
-}) {
+/** Words from the mentor, set off by a rule in the mentor's color, not a box of their own. */
+function MentorNote({ caption, children }: { caption: string; children: ReactNode }) {
   return (
-    <figure className={`${cardClass("well", "xs")} flex flex-col gap-2`}>
-      <figcaption className="text-sm font-semibold text-mentor-deep">
-        {mentor.name}&apos;s note
-      </figcaption>
-      {explanation?.text ? (
-        <>
-          <p>I read your explain-back on {inSentence(explanation.concept)}:</p>
-          <blockquote className="border-l-[3px] border-mentor-deep pl-3 leading-relaxed whitespace-pre-line">
-            {explanation.text}
-          </blockquote>
-          <p>{mentor.note}</p>
-        </>
-      ) : (
-        <p>I&apos;ll read your first explain-back before we talk. {mentor.note}</p>
-      )}
+    <figure className="flex flex-col gap-2 border-l-[3px] border-mentor-deep pl-4">
+      <figcaption className="text-sm font-semibold text-mentor-deep">{caption}</figcaption>
+      {children}
     </figure>
   );
 }
@@ -65,7 +49,7 @@ export function MentorCard({ mentor, now, student }: MentorCardProps) {
   const next = nextCheckInDay(mentor.checkInDay, mentor.checkInTime, now);
   const kid = student.viewer === "student";
   return (
-    <Card aria-labelledby="mentor-heading" tone="mentor" className="flex flex-col gap-4">
+    <Card aria-labelledby="mentor-heading" tone="mentor" className="flex flex-col gap-5">
       <div className="flex flex-wrap items-start gap-4">
         <span
           aria-hidden="true"
@@ -86,18 +70,29 @@ export function MentorCard({ mentor, now, student }: MentorCardProps) {
 
       {student.viewer === "student" ? (
         <>
-          <KidNote mentor={mentor} explanation={student.explanation} />
+          <MentorNote caption={`${mentor.name}'s note`}>
+            {student.explanation?.text ? (
+              <>
+                <p>I read your explain-back on {inSentence(student.explanation.concept)}:</p>
+                <blockquote className="leading-relaxed whitespace-pre-line text-ink-soft">
+                  {student.explanation.text}
+                </blockquote>
+                <p>{mentor.note}</p>
+              </>
+            ) : (
+              <p>I&apos;ll read your first explain-back before we talk. {mentor.note}</p>
+            )}
+          </MentorNote>
           <Link href="/mentor/waiting-room" className={`${buttonClass("primary")} self-start px-6`}>
-            Join
+            Join the check-in
           </Link>
         </>
       ) : (
-        <div className={`${cardClass("well", "xs")} flex flex-col gap-1`}>
-          <p className="text-sm font-semibold text-mentor-deep">
-            Last check-in, {formatDay(lastCheckInDay(mentor.checkInDay, mentor.checkInTime, now))}
-          </p>
+        <MentorNote
+          caption={`Last check-in, ${formatDay(lastCheckInDay(mentor.checkInDay, mentor.checkInTime, now))}`}
+        >
           <p>{mentor.lastSummary}</p>
-        </div>
+        </MentorNote>
       )}
     </Card>
   );

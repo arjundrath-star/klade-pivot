@@ -16,7 +16,7 @@ export function PhoneSection({ heading, children, ...phone }: PhoneSectionProps)
     <section aria-labelledby="phone-heading" className="@container">
       <div className="flex flex-col items-center gap-6 @md:flex-row @md:items-start @md:gap-8">
         <div className="flex w-full max-w-[268px] flex-col gap-3 text-center @md:order-last @md:max-w-none @md:pt-4 @md:text-left">
-          <h2 id="phone-heading" className="font-display text-xl font-semibold tracking-tight">
+          <h2 id="phone-heading" className="font-display text-lg font-semibold tracking-tight">
             {heading}
           </h2>
           {children}

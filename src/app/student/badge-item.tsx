@@ -1,22 +1,23 @@
-import { cardClass } from "@/components/ui/card";
 import { StarGlyph } from "@/components/ui/glyphs";
+
+const TONES = {
+  /** A badge, in the progress color. */
+  progress: "bg-progress text-ink",
+  /** A completion reward, in the mentor's color. */
+  mentor: "bg-mentor-deep text-white",
+} as const;
 
 interface BadgeItemProps {
   label: string;
   detail: string;
-  /** On the shelf the item sits on the progress tint; on the end screen, on white. */
-  surface?: "tint" | "white";
+  tone?: keyof typeof TONES;
 }
 
-/** One earned badge: a star in the progress color, its name and what earned it. */
-export function BadgeItem({ label, detail, surface = "tint" }: BadgeItemProps) {
+/** One earned badge or reward as a row: a star on its color, its name and what earned it. */
+export function BadgeItem({ label, detail, tone = "progress" }: BadgeItemProps) {
   return (
-    <li
-      className={`${cardClass("progress", "none")} flex items-start gap-3 rounded-md px-3.5 py-2.5 ${
-        surface === "white" ? "bg-white" : ""
-      }`}
-    >
-      <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-progress text-ink">
+    <li className="flex items-start gap-3 py-2.5">
+      <span className={`mt-0.5 grid size-7 shrink-0 place-items-center rounded-md ${TONES[tone]}`}>
         <StarGlyph className="size-4" />
       </span>
       <span className="flex flex-col">

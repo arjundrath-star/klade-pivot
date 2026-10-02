@@ -16,6 +16,8 @@ interface TodayCardProps {
   place: CoursePlace | undefined;
   /** The first concept not yet mastered, built or not, for when nothing playable is left. */
   next: CoursePlace | undefined;
+  /** When the session is due: today at the session time, or the next session day. */
+  due?: string;
   phone: LockView;
 }
 
@@ -25,22 +27,25 @@ function phoneLine(phone: LockView): string {
 }
 
 /**
- * Today's session: the unit, the concept, its standard and length, Start, and the phone in one
- * line. Once every built session is done it says what comes next in the course and that it is
- * not built yet.
+ * Today's session, first on the page: when it is due, the unit, the concept, its standard and
+ * length, Start, and the phone in one line. Once every built session is done it says what comes
+ * next in the course and that it is not built yet.
  */
-export function TodayCard({ today, place, next, phone }: TodayCardProps) {
+export function TodayCard({ today, place, next, due, phone }: TodayCardProps) {
   return (
     <Card id="today" aria-labelledby="today-heading" tone="today" className="flex flex-col gap-4">
-      <h2 id="today-heading" className="text-sm font-semibold text-today-deep">
-        Today&apos;s session
-      </h2>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 id="today-heading" className="text-sm font-semibold text-today-deep">
+          Today&apos;s session
+        </h2>
+        {due && <p className="text-sm font-medium">{due}</p>}
+      </div>
       {today.kind === "complete" ? (
         <div className="flex flex-col gap-3">
           <p className="font-display text-3xl leading-tight font-semibold">
             Every built session is done.
           </p>
-          <p className="text-ink-soft">
+          <p className="max-w-prose text-ink-soft">
             {next
               ? `Next in the course: ${next.concept.title} (${standardLabel(next.concept)}), concept ${next.position} of ${next.total}. It isn't built yet.`
               : `You finished ${ALGEBRA1_TITLE}.`}
@@ -53,11 +58,11 @@ export function TodayCard({ today, place, next, phone }: TodayCardProps) {
               Unit {place.unit.number} of {ALGEBRA1_COURSE.length}: {place.unit.title}
             </p>
           )}
-          <p className="font-display text-3xl leading-tight font-semibold sm:text-4xl">
+          <p className="font-display text-3xl leading-tight font-semibold">
             {today.repeat ? `Today: repeat ${inSentence(today.title)}` : today.title}
           </p>
           {today.repeat && (
-            <p className="text-ink-soft">
+            <p className="max-w-prose text-ink-soft">
               Last time didn&apos;t reach mastery, so this concept comes again before anything new.
             </p>
           )}
@@ -65,20 +70,19 @@ export function TodayCard({ today, place, next, phone }: TodayCardProps) {
             {place && (
               <>
                 <span>Standard {standardLabel(place.concept)}</span>
-                <span>
+                <span className="tabular-nums">
                   Concept {place.position} of {place.total}
                 </span>
               </>
             )}
-            <span>{SESSION_MINUTES} minutes</span>
-          </p>
-          <p className="text-sm text-ink-soft">
-            Warm-up, lesson, guided practice, explain-back, exit check.
+            <span>
+              {SESSION_MINUTES} minutes: warm-up, lesson, guided practice, explain-back, exit check
+            </span>
           </p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-3 pt-1">
             <form action={startTodaySession}>
-              <Button type="submit" className="px-7">
-                {today.kind === "open" ? "Resume" : "Start"}
+              <Button type="submit" className="px-6">
+                {today.kind === "open" ? "Resume today's session" : "Start today's session"}
               </Button>
             </form>
             <p className="flex items-center gap-1.5 text-sm font-medium">

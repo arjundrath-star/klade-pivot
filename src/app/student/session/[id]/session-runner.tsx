@@ -175,19 +175,27 @@ export function SessionRunner({
     >
       <div className="flex flex-col gap-8">
         <header className="flex flex-col gap-4">
-          <div className="flex items-baseline justify-between gap-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
             <h1 className="font-display text-2xl font-bold tracking-tight">{title}</h1>
-            <BlockTimer
-              key={block}
-              budgetSeconds={blockBudgetSeconds(block, timerMode)}
-              elapsedAtEntryMs={at.elapsedMs}
-            />
+            <div className="flex items-baseline gap-5">
+              <BlockTimer
+                key={block}
+                budgetSeconds={blockBudgetSeconds(block, timerMode)}
+                elapsedAtEntryMs={at.elapsedMs}
+              />
+              {/* The session is a focus view with no navigation: this is the one way out while it
+                  runs (the session resumes from Today), and the end screen has its own. A plain
+                  anchor, so the runner carries no link runtime. */}
+              <a href="/student" className="link text-sm">
+                Back to today
+              </a>
+            </div>
           </div>
           <BlockRail position={position} />
         </header>
 
         <section aria-labelledby="block-heading" className="flex flex-col gap-6">
-          <h2 id="block-heading" className="font-display text-xl font-semibold">
+          <h2 id="block-heading" className="font-display text-lg font-semibold">
             {BLOCKS[block].label}
           </h2>
           {panels[block]}

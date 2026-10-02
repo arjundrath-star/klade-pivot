@@ -11,7 +11,7 @@ interface PanelHeaderProps {
   children?: ReactNode;
 }
 
-const SIZES = { md: "text-xl", lg: "text-2xl" } as const;
+const SIZES = { md: "text-lg", lg: "text-2xl" } as const;
 
 /** A panel's heading with its aside and its description, the same on every card. */
 export function PanelHeader({ id, title, size = "md", aside, children }: PanelHeaderProps) {
@@ -23,7 +23,9 @@ export function PanelHeader({ id, title, size = "md", aside, children }: PanelHe
         </h2>
         {aside}
       </div>
-      {children && <div className="flex flex-col gap-1 text-sm text-ink-soft">{children}</div>}
+      {children && (
+        <div className="flex max-w-prose flex-col gap-1 text-sm text-ink-soft">{children}</div>
+      )}
     </div>
   );
 }

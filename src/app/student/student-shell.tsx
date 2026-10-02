@@ -7,11 +7,11 @@ import { ALGEBRA1_COURSE, ALGEBRA1_TITLE } from "@/content/algebra1/course";
 import { level } from "@/engine/progress";
 
 const ITEMS = [
-  { href: "/student", label: "Home", glyph: "home", tint: "today" },
-  { href: "/student/course", label: "Course", glyph: "course", tint: "course" },
-  { href: "/student/calendar", label: "Calendar", glyph: "calendar", tint: "calendar" },
-  { href: "/student/progress", label: "Progress", glyph: "progress", tint: "progress" },
-  { href: "/student/mentor", label: "Mentor", glyph: "mentor", tint: "mentor" },
+  { href: "/student", label: "Today", glyph: "home" },
+  { href: "/student/course", label: "Course", glyph: "course" },
+  { href: "/student/calendar", label: "Calendar", glyph: "calendar" },
+  { href: "/student/progress", label: "Progress", glyph: "progress" },
+  { href: "/student/mentor", label: "Mentor", glyph: "mentor" },
 ] as const satisfies readonly NavItem[];
 
 type StudentPage = (typeof ITEMS)[number]["href"];

@@ -61,7 +61,7 @@ export function Legend({
 export function Choice({ className = "", ...props }: ComponentPropsWithoutRef<"label">) {
   return (
     <label
-      className={`flex items-start gap-3 rounded-md border border-line bg-white px-3.5 py-3 transition-colors has-checked:border-primary has-checked:bg-primary-tint has-disabled:opacity-50 ${className}`}
+      className={`flex items-start gap-3 rounded-md border border-line bg-white px-3.5 py-3 transition-colors hover:border-line-strong has-checked:border-primary has-checked:bg-primary-tint has-disabled:opacity-50 has-disabled:hover:border-line ${className}`}
       {...props}
     />
   );

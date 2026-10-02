@@ -28,9 +28,11 @@ export function BadgeShelf({ earned, currentKey }: BadgeShelfProps) {
         title={`Badges: ${have.length} of ${ALGEBRA1_BADGES.length}`}
       />
       {have.length === 0 ? (
-        <p className="text-ink-soft">No badges yet. Your first comes with today&apos;s session.</p>
+        <p className="max-w-prose text-ink-soft">
+          No badges yet. Your first comes with today&apos;s session.
+        </p>
       ) : (
-        <ul aria-label="Badge shelf" className="flex flex-col gap-2">
+        <ul aria-label="Badge shelf" className="divide-y divide-line">
           {have.map((badge) => (
             <BadgeItem key={badge.key} label={badge.label} detail={badge.detail} />
           ))}

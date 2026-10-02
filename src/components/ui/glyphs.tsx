@@ -1,4 +1,4 @@
-/** The few marks the system draws itself: a check, a cross, a flame, a star, a microphone. */
+/** The few marks the system draws itself: a check, a cross, a chevron, a flame, a star, a microphone. */
 
 interface GlyphProps {
   className: string;
@@ -16,6 +16,15 @@ export function CrossGlyph({ className }: GlyphProps) {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true" className={`fill-none stroke-current ${className}`}>
       <path d="m4 4 8 8M12 4l-8 8" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Points down; the caller turns it when a disclosure is open. */
+export function ChevronGlyph({ className }: GlyphProps) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={`fill-none stroke-current ${className}`}>
+      <path d="m6 9 6 6 6-6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

@@ -15,7 +15,7 @@ export function PageHeader({ id, title, children }: PageHeaderProps) {
       <h1 id={id} className="font-display text-3xl font-bold tracking-tight">
         {title}
       </h1>
-      {children && <div className="flex flex-col gap-1 text-ink-soft">{children}</div>}
+      {children && <div className="flex max-w-prose flex-col gap-1 text-ink-soft">{children}</div>}
     </header>
   );
 }

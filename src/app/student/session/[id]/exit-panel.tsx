@@ -105,7 +105,7 @@ export function ExitPanel({ sessionId, index, remainingMs }: ExitPanelProps) {
           />
         </div>
         <Button type="submit" disabled={pending}>
-          Submit
+          Submit answer
         </Button>
       </form>
       <p aria-live="polite" className="min-h-5 text-sm font-medium text-ink-soft">

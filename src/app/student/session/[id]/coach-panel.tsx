@@ -7,7 +7,6 @@ import type { CoachState } from "./use-coach";
 import type { SimilarExample } from "@/coach/example";
 import { MAX_HINT_LEVEL } from "@/coach/turns";
 import { Button } from "@/components/ui/button";
-import { cardClass } from "@/components/ui/card";
 import { inputClass } from "@/components/ui/field";
 import { AppGlyph } from "@/phone/apps";
 
@@ -18,7 +17,11 @@ interface CoachPanelProps {
   onTryAgain: () => void;
 }
 
-/** The Socratic coach for one problem: the turns so far, a reply box, then the worked example. */
+/**
+ * The Socratic coach for one problem: the turns so far, a reply box, then the worked example.
+ * It opens inside the problem's card, set off by a rule above and the coach's color down its
+ * side, not as a card of its own.
+ */
 export function CoachPanel({ coach, example, onTryAgain }: CoachPanelProps) {
   const { turns, live, busy, error, exhausted } = coach;
   const [draft, setDraft] = useState("");
@@ -34,17 +37,17 @@ export function CoachPanel({ coach, example, onTryAgain }: CoachPanelProps) {
   return (
     <aside
       aria-label="Coach"
-      className={`${cardClass("course", "xs")} flex flex-col gap-4 rounded-md`}
+      className="flex flex-col gap-4 border-t border-l-[3px] border-t-line border-l-course pt-4 pl-4"
     >
       <div className="flex items-center justify-between gap-4">
         <h3 className="flex items-center gap-2 font-display text-lg font-semibold">
-          <span className="grid size-7 shrink-0 place-items-center rounded-full bg-course text-ink">
+          <span className="grid size-7 shrink-0 place-items-center rounded-md bg-course text-ink">
             <AppGlyph name="bubble" className="size-4" />
           </span>
           Coach
         </h3>
         {shown.length > 0 && (
-          <span className="text-sm text-ink-soft">
+          <span className="text-sm text-ink-soft tabular-nums">
             Hint {shown.length} of {MAX_HINT_LEVEL}
           </span>
         )}

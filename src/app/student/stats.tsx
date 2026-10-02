@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/card";
+import type { ReactNode } from "react";
 import { FlameGlyph } from "@/components/ui/glyphs";
 import { ProgressBar } from "@/components/ui/progress";
 import { ALGEBRA1_COURSE, ALGEBRA1_TITLE } from "@/content/algebra1/course";
@@ -7,16 +7,52 @@ import { currentUnit, level, type Streak } from "@/engine/progress";
 import { freezeLabel, plural, streakLabel } from "@/parent/progress";
 
 const MUTED = "text-sm text-ink-soft";
-const FIGURE = "font-display text-2xl leading-none font-semibold tracking-tight";
+const FIGURE = "font-display text-2xl leading-none font-semibold tracking-tight tabular-nums";
+
+/**
+ * The student's standing as one strip: a column per figure, divided by hairlines, so the figures
+ * read as one row of facts and not as a row of boxes.
+ */
+export function StatStrip({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <section
+      aria-label={label}
+      className="grid divide-y divide-line rounded-lg border border-line bg-white sm:grid-flow-col sm:auto-cols-fr sm:divide-x sm:divide-y-0"
+    >
+      {children}
+    </section>
+  );
+}
+
+const HEADING_TONES = {
+  course: "text-course-deep",
+  progress: "text-progress-deep",
+  today: "text-today-deep",
+} as const;
+
+/** One column of the strip: its heading in the feature's color, then the figure and its lines. */
+function Stat({
+  heading,
+  tone,
+  children,
+}: {
+  heading: string;
+  tone: keyof typeof HEADING_TONES;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2 p-5">
+      <h2 className={`text-sm font-semibold ${HEADING_TONES[tone]}`}>{heading}</h2>
+      {children}
+    </div>
+  );
+}
 
 /** Concepts mastered of the course's total, one pip per concept, and the units done. */
-export function CourseProgressTile({ progress }: { progress: CourseProgress }) {
+export function CourseProgressStat({ progress }: { progress: CourseProgress }) {
   const { mastered, total, percent, unitsDone, units } = progress;
   return (
-    <Card aria-labelledby="course-progress-heading" padding="sm" className="flex flex-col gap-2">
-      <h2 id="course-progress-heading" className="text-sm font-semibold text-course-deep">
-        Course progress
-      </h2>
+    <Stat heading="Course progress" tone="course">
       <p className="flex flex-col gap-1">
         <span className={FIGURE}>
           {mastered} of {total}
@@ -42,24 +78,22 @@ export function CourseProgressTile({ progress }: { progress: CourseProgress }) {
       <p className={MUTED}>
         {percent}% of {ALGEBRA1_TITLE}. {unitsDone} of {plural(units, "unit")} done.
       </p>
-    </Card>
+    </Stat>
   );
 }
 
 /** The level, the XP total and the bar to the next level: the current unit's concepts. */
-export function LevelTile({ xp, mastered }: { xp: number; mastered: ReadonlySet<string> }) {
+export function LevelStat({ xp, mastered }: { xp: number; mastered: ReadonlySet<string> }) {
   const current = level(ALGEBRA1_COURSE, mastered);
   const unit = currentUnit(ALGEBRA1_COURSE, mastered);
   return (
-    <Card aria-labelledby="level-heading" padding="sm" className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="level-heading" className={FIGURE}>
-          Level {current}
-        </h2>
-        <p className="font-display text-lg leading-none font-semibold text-progress-deep tabular-nums">
+    <Stat heading="Level and XP" tone="progress">
+      <p className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <span className={FIGURE}>Level {current}</span>
+        <span className="font-display text-lg leading-none font-semibold tabular-nums">
           {xp} XP
-        </p>
-      </div>
+        </span>
+      </p>
       {unit && (
         <>
           <ProgressBar
@@ -74,27 +108,19 @@ export function LevelTile({ xp, mastered }: { xp: number; mastered: ReadonlySet<
           </p>
         </>
       )}
-    </Card>
+    </Stat>
   );
 }
 
 /** Scheduled sessions done in a row, and whether the streak freeze is banked. */
-export function StreakTile({ streak }: { streak: Streak }) {
+export function StreakStat({ streak }: { streak: Streak }) {
   return (
-    <Card
-      aria-labelledby="streak-heading"
-      padding="sm"
-      className="flex flex-row items-center gap-4"
-    >
-      <span className="grid size-11 shrink-0 place-items-center rounded-md bg-today-tint text-today-deep">
-        <FlameGlyph className="size-6" />
-      </span>
-      <div className="flex flex-col gap-1">
-        <h2 id="streak-heading" className="font-display text-xl leading-tight font-semibold">
-          {streakLabel(streak.count)}
-        </h2>
-        <p className={MUTED}>{freezeLabel(streak)}</p>
-      </div>
-    </Card>
+    <Stat heading="Streak" tone="today">
+      <p className="flex items-center gap-3">
+        <FlameGlyph className="size-6 shrink-0 text-today-deep" />
+        <span className={FIGURE}>{streakLabel(streak.count)}</span>
+      </p>
+      <p className={MUTED}>{freezeLabel(streak)}</p>
+    </Stat>
   );
 }

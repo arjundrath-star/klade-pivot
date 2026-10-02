@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, inputClass } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
+import { PageHeader } from "@/components/ui/page-header";
 import { NextPath } from "@/gate/next-path";
 import { GATE_NOTICE_KEYS, GATE_NOTICES } from "@/gate/notices";
 
-export const metadata: Metadata = { title: "Sign in · Klade" };
+export const metadata: Metadata = { title: "Sign in" };
 
 const Params = z.object({
   next: NextPath.catch("/admin"),
@@ -23,14 +24,16 @@ export default async function Gate({ searchParams }: PageProps<"/gate">) {
   const { next, notice } = Params.parse(await searchParams);
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-6 py-12">
-      <header className="flex flex-col gap-2">
-        <h1 className="font-display text-3xl font-bold tracking-tight">Parent and admin views</h1>
-        <p className="text-ink-soft">
-          These pages are for the demo&apos;s parent and admin. Enter the shared password to open
-          them in this browser.
+    <main
+      id="main"
+      className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-6 py-12"
+    >
+      <PageHeader title="Sign in">
+        <p>
+          The parent and admin views are for the demo&apos;s parent and admin. Enter the shared
+          password to open them in this browser.
         </p>
-      </header>
+      </PageHeader>
 
       {notice && <Notice role="alert">{GATE_NOTICES[notice]}</Notice>}
 
@@ -50,7 +53,7 @@ export default async function Gate({ searchParams }: PageProps<"/gate">) {
             />
           </Field>
           <div>
-            <Button type="submit">Enter</Button>
+            <Button type="submit">Sign in</Button>
           </div>
         </form>
       </Card>

@@ -238,7 +238,7 @@ export function ExplainPanel({ sessionId, initialResults }: ExplainPanelProps) {
           <div className="flex flex-wrap items-center gap-3">
             {/* Chrome delivers the last words after stop(), so the student stops before submitting. */}
             <Button type="submit" disabled={pending || listening}>
-              {pending ? "Grading…" : "Submit"}
+              {pending ? "Grading…" : "Submit explanation"}
             </Button>
             {speechSupported && (
               <Button

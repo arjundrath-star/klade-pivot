@@ -11,7 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { INTEREST_LABELS } from "@/content/interests";
 import { INTERESTS } from "@/engine/types";
 
-const BUTTON = buttonClass("light", "sm");
+const BUTTON = buttonClass("secondary", "sm");
 
 interface AdminRibbonProps {
   /** From `adminControls`: null for a browser not signed in at the gate, which gets no ribbon. */
@@ -44,7 +44,8 @@ function RibbonAction({
 /**
  * The admin panel's demo controls as a thin bar on the student's screens, so the demo can be
  * driven without leaving the student view. Rendered only with `controls`, which a page gets for a
- * browser signed in at the gate; every action checks the gate again. Server-rendered forms.
+ * browser signed in at the gate; every action checks the gate again. Server-rendered forms, on
+ * the page's own light surface so the demo's controls never read as part of the product.
  */
 export function AdminRibbon({ controls, back, notice }: AdminRibbonProps) {
   if (!controls) return null;
@@ -53,10 +54,10 @@ export function AdminRibbon({ controls, back, notice }: AdminRibbonProps) {
     <div
       role="region"
       aria-label="Admin"
-      className="tone-night flex flex-col gap-2 rounded-md bg-night px-4 py-2.5 text-sm"
+      className="flex flex-col gap-2 rounded-md border border-dashed border-line-strong bg-well px-4 py-2.5 text-sm"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="mr-1 font-display font-semibold text-today">Admin</span>
+        <span className="mr-1 font-display font-semibold text-primary-deep">Admin</span>
         <RibbonAction action={simulateMissedSession} back={back} label="Simulate missed session" />
         <RibbonAction action={simulateSessionDay} back={back} label={controls.clockLabel} />
         <form action={switchInterest} className="flex items-center gap-2">
@@ -71,7 +72,7 @@ export function AdminRibbon({ controls, back, notice }: AdminRibbonProps) {
             className={BUTTON}
           >
             {INTERESTS.map((interest) => (
-              <option key={interest} value={interest} className="text-ink">
+              <option key={interest} value={interest}>
                 {INTEREST_LABELS[interest]}
               </option>
             ))}
