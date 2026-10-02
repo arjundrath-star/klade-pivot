@@ -41,10 +41,7 @@ Interest flourish (ten seconds, optional): `/admin`, Switch interest to gaming, 
 the same equation, framed in gaming. Switch back to sports afterwards.
 
 Grader down: `/admin`, **Override explain-back** passes the step; the parent view tags it. Coach
-down: say "prototype feature" and keep going; the session never depends on it. As of Oct 2 the key
-in the service's environment file is user-scoped and the API rejects it without a workspace header,
-so the deployed coach answers "didn't answer" until a workspace-scoped key replaces it and the app is
-redeployed.
+down: say "prototype feature" and keep going; the session never depends on it. The deployed coach works: the service sends the workspace header (milestone 16) and the red team passed 10 of 10 on Oct 2.
 
 ## Demo controls
 
