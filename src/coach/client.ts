@@ -42,10 +42,21 @@ function usageOf({ usage }: Anthropic.Message): CoachUsage {
 
 let client: Anthropic | undefined;
 
+/**
+ * The one client both the coach stream and the grader send through. An organization-level key is
+ * refused unless every request names the workspace it bills to.
+ */
+function anthropic(): Anthropic {
+  const workspaceId = process.env.ANTHROPIC_WORKSPACE_ID;
+  client ??= new Anthropic(
+    workspaceId ? { defaultHeaders: { "anthropic-workspace-id": workspaceId } } : {},
+  );
+  return client;
+}
+
 /** Streams one coach turn from the small model. Output is capped; the prefix is cached. */
 export function streamCoachReply(prompt: CoachPrompt): CoachReply {
-  client ??= new Anthropic();
-  const stream = client.messages.stream({
+  const stream = anthropic().messages.stream({
     model: COACH_MODEL,
     max_tokens: COACH_MAX_TOKENS,
     system: prompt.system,
@@ -69,8 +80,7 @@ const GRADE_REQUEST = { timeout: 5000, maxRetries: 0 } as const;
 export async function requestGrade(
   params: Anthropic.MessageCreateParamsNonStreaming,
 ): Promise<GradeReply> {
-  client ??= new Anthropic();
-  const message = await client.messages.create(params, GRADE_REQUEST);
+  const message = await anthropic().messages.create(params, GRADE_REQUEST);
   const text = message.content
     .filter((block) => block.type === "text")
     .map((block) => block.text)

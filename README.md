@@ -51,6 +51,8 @@ cp .env.example .env.local   # add ANTHROPIC_API_KEY and a password for ADMIN_PA
 npm run dev
 ```
 
+An organization-level Anthropic key also needs `ANTHROPIC_WORKSPACE_ID`, which the coach sends as the `anthropic-workspace-id` header.
+
 ```bash
 npm run gate                 # the full check
 scripts/gate.sh --quick      # typecheck, lint, and unit tests only
