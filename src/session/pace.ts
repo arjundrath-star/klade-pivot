@@ -60,6 +60,13 @@ export async function studentStanding(studentId: string, now: Date): Promise<Sta
   };
 }
 
+/** Scheduled sessions the student has done in a row as of `now`. */
+export async function studentStreak(studentId: string, now: Date): Promise<number> {
+  const today = calendarDay(now);
+  const { schedule, completed } = await scheduleRecord(studentId, today);
+  return streak(schedule, completed.map(calendarDay), today).count;
+}
+
 /** Sessions the student owes against their schedule as of `now`. */
 export async function studentPace(studentId: string, now: Date): Promise<number> {
   const today = calendarDay(now);

@@ -58,12 +58,13 @@ export default async function StudentHome({ searchParams }: PageProps<"/student"
   const progress = courseProgress(ALGEBRA1_COURSE, earnings.mastered);
   // The plan and the finished sessions feed the due line, the streak and this week's strip.
   const completedDays = record.completed.map(calendarDay);
+  const current = streak(record.schedule, completedDays, today);
 
   return (
     <StudentShell
       active="/student"
       student={student}
-      mastered={earnings.mastered}
+      standing={{ xp: earnings.xp, mastered: earnings.mastered, streak: current.count }}
       controls={controls}
       notice={params.notice}
     >
@@ -103,7 +104,7 @@ export default async function StudentHome({ searchParams }: PageProps<"/student"
                 <StatStrip label="Your standing">
                   <CourseProgressStat progress={progress} />
                   <LevelStat xp={earnings.xp} mastered={earnings.mastered} />
-                  <StreakStat streak={streak(record.schedule, completedDays, today)} />
+                  <StreakStat streak={current} />
                 </StatStrip>
                 <WeekStrip days={week} states={states} today={today} />
               </div>

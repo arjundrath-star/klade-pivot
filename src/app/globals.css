@@ -111,6 +111,11 @@
 }
 
 @layer base {
+  /* Anchors and focus land clear of the pinned top bar and the session's strip. */
+  html {
+    scroll-padding-top: 8rem;
+  }
+
   body {
     background-color: var(--color-white);
     color: var(--color-ink);

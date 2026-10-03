@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Instrument_Sans } from "next/font/google";
 import "./globals.css";
-import { Wordmark } from "@/components/wordmark";
 import { APP_DESCRIPTION, APP_NAME, THEME_COLOR } from "@/config/app";
 import { APP_URL } from "@/config/app-url";
 
@@ -42,9 +41,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
-        <header className="mx-auto flex w-full max-w-7xl items-center px-6 pt-5">
-          <Wordmark />
-        </header>
         {children}
       </body>
     </html>

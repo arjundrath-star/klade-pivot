@@ -7,6 +7,14 @@ import { currentUnit, level, type Streak } from "@/engine/progress";
 import { freezeLabel, plural, streakLabel } from "@/parent/progress";
 
 const MUTED = "text-sm text-ink-soft";
+/** What the top bar shows of the student: the XP total, the concepts mastered and the streak. */
+export interface TopBarStanding {
+  xp: number;
+  mastered: ReadonlySet<string>;
+  /** Scheduled sessions done in a row. */
+  streak: number;
+}
+
 const FIGURE = "font-display text-2xl leading-none font-semibold tracking-tight tabular-nums";
 
 /**
@@ -122,5 +130,37 @@ export function StreakStat({ streak }: { streak: Streak }) {
       </p>
       <p className={MUTED}>{freezeLabel(streak)}</p>
     </Stat>
+  );
+}
+
+/**
+ * The student's standing in one line for the top bar: the level and the bar to the next, the XP
+ * total and the streak.
+ */
+export function StandingLine({ xp, mastered, streak }: TopBarStanding) {
+  const current = level(ALGEBRA1_COURSE, mastered);
+  const unit = currentUnit(ALGEBRA1_COURSE, mastered);
+  return (
+    <div className="ml-auto flex items-center gap-x-3 text-sm tabular-nums">
+      <span className="font-display font-semibold text-progress-deep">Level {current}</span>
+      {unit && (
+        <span className="w-14 sm:w-20">
+          <ProgressBar
+            label={`Progress to Level ${current + 1}`}
+            value={unit.mastered}
+            max={unit.total}
+            valueText={`${unit.mastered} of ${plural(unit.total, "concept")} mastered`}
+            tone="progress"
+            size="thin"
+          />
+        </span>
+      )}
+      <span className="hidden text-ink-soft sm:inline">{xp} XP</span>
+      <span className="flex items-center gap-1 font-semibold text-today-deep">
+        <FlameGlyph className="size-4 shrink-0" />
+        <span className="sr-only">Streak</span>
+        {streak}
+      </span>
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { NextPath } from "@/gate/next-path";
 import { GATE_NOTICE_KEYS, GATE_NOTICES } from "@/gate/notices";
+import { SiteHeader } from "@/components/site-header";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -24,47 +25,50 @@ export default async function Gate({ searchParams }: PageProps<"/gate">) {
   const { next, notice } = Params.parse(await searchParams);
 
   return (
-    <main
-      id="main"
-      className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-6 py-12"
-    >
-      <PageHeader title="Sign in">
-        <p>
-          The parent and admin views are for the demo&apos;s parent and admin. Enter the shared
-          password to open them in this browser.
+    <>
+      <SiteHeader />
+      <main
+        id="main"
+        className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-6 py-12"
+      >
+        <PageHeader title="Sign in">
+          <p>
+            The parent and admin views are for the demo&apos;s parent and admin. Enter the shared
+            password to open them in this browser.
+          </p>
+        </PageHeader>
+
+        {notice && <Notice role="alert">{GATE_NOTICES[notice]}</Notice>}
+
+        <Card>
+          <form action="/gate/enter" method="post" className="flex flex-col gap-5">
+            <input type="hidden" name="next" value={next} />
+            <Field id="gate-password" label="Password">
+              <input
+                id="gate-password"
+                type="password"
+                name="password"
+                required
+                maxLength={200}
+                autoComplete="current-password"
+                autoFocus
+                className={`${inputClass} w-full`}
+              />
+            </Field>
+            <div>
+              <Button type="submit">Sign in</Button>
+            </div>
+          </form>
+        </Card>
+
+        <p className="text-sm text-ink-soft">
+          The student&apos;s pages need no password.{" "}
+          <Link href="/student" className="link">
+            Go to today&apos;s session
+          </Link>
+          .
         </p>
-      </PageHeader>
-
-      {notice && <Notice role="alert">{GATE_NOTICES[notice]}</Notice>}
-
-      <Card>
-        <form action="/gate/enter" method="post" className="flex flex-col gap-5">
-          <input type="hidden" name="next" value={next} />
-          <Field id="gate-password" label="Password">
-            <input
-              id="gate-password"
-              type="password"
-              name="password"
-              required
-              maxLength={200}
-              autoComplete="current-password"
-              autoFocus
-              className={`${inputClass} w-full`}
-            />
-          </Field>
-          <div>
-            <Button type="submit">Sign in</Button>
-          </div>
-        </form>
-      </Card>
-
-      <p className="text-sm text-ink-soft">
-        The student&apos;s pages need no password.{" "}
-        <Link href="/student" className="link">
-          Go to today&apos;s session
-        </Link>
-        .
-      </p>
-    </main>
+      </main>
+    </>
   );
 }

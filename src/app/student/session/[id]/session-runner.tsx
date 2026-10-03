@@ -245,8 +245,12 @@ export function SessionRunner({
         setExplainBack,
       }}
     >
-      <div className="flex flex-1 flex-col gap-6">
-        <header className="flex flex-col gap-3 border-b border-line pb-4">
+      {/* From tablet width the strip stays at the top while the block scrolls beneath it (on a
+          phone it is a quarter of the screen, so it scrolls away). --strip is its height on a wide
+          screen with the breadcrumb on two lines; the notebook and the chapter's contents pin
+          below it. */}
+      <div className="flex flex-1 flex-col gap-6 lg:[--strip:7rem]">
+        <header className="flex flex-col gap-3 border-b border-line pb-4 md:sticky md:top-0 md:z-10 md:-mx-6 md:bg-white md:px-6 md:pt-3">
           <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
             {crumb}
             {/* The session is a focus view with no navigation: this is the one way out while it

@@ -22,7 +22,7 @@ export function ChapterReader({
 }) {
   return (
     <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[12rem_minmax(0,1fr)] xl:items-start xl:gap-10">
-      <div className="xl:sticky xl:top-4">{chapter.contents}</div>
+      <div className="xl:sticky xl:top-[calc(var(--strip)+0.5rem)]">{chapter.contents}</div>
       <article className="flex max-w-prose flex-col gap-8">
         <h2 className="font-display text-xl font-semibold tracking-tight">{chapter.title}</h2>
         {chapter.sections}

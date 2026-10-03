@@ -33,7 +33,11 @@ export default async function ProgressPage() {
     <StudentShell
       active="/student/progress"
       student={student}
-      mastered={earnings.mastered}
+      standing={{
+        xp: earnings.xp,
+        mastered: earnings.mastered,
+        streak: standing.streak.count,
+      }}
       controls={controls}
     >
       {() => (

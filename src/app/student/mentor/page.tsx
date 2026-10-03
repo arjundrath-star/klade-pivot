@@ -7,20 +7,23 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { mentorFor } from "@/db/queries/mentor";
 import { latestExplanation } from "@/db/queries/parent";
-import { masteredConcepts } from "@/db/queries/rewards";
+import { masteredConcepts, studentXp } from "@/db/queries/rewards";
 import { getStudent } from "@/db/queries/students";
 import { MentorCard } from "@/mentor/mentor-card";
 import { currentStudentId } from "@/session/current-student";
+import { studentStreak } from "@/session/pace";
 
 export const metadata: Metadata = { title: "Mentor" };
 
 export default async function MentorPage() {
   await connection();
   const studentId = await currentStudentId();
-  const [controls, student, mastered, mentor, explanation] = await Promise.all([
+  const [controls, student, xp, mastered, streak, mentor, explanation] = await Promise.all([
     adminControls(),
     getStudent(studentId),
+    studentXp(studentId),
     masteredConcepts(studentId),
+    studentStreak(studentId, new Date()),
     mentorFor(studentId),
     latestExplanation(studentId),
   ]);
@@ -29,7 +32,7 @@ export default async function MentorPage() {
     <StudentShell
       active="/student/mentor"
       student={student}
-      mastered={mastered}
+      standing={{ xp, mastered, streak }}
       controls={controls}
     >
       {() => (

@@ -79,7 +79,7 @@ export function Notebook({ sessionId, initialNotes, flushNotes, reference }: Not
   return (
     <aside
       aria-label="Notebook"
-      className="flex min-w-0 flex-col lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:self-start"
+      className="flex min-w-0 flex-col lg:sticky lg:top-[calc(var(--strip)+0.5rem)] lg:max-h-[calc(100dvh-var(--strip)-1rem)] lg:self-start"
     >
       <div role="tablist" aria-label="Notebook" className="flex flex-wrap gap-1 px-1">
         {tabs.map((name) => {

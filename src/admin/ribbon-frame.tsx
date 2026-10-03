@@ -40,6 +40,7 @@ export function RibbonFrame({ initialHidden, children }: RibbonFrameProps) {
     <div
       role="region"
       aria-label="Admin"
+      data-ribbon-open
       className="flex items-start gap-3 rounded-md border border-dashed border-line-strong bg-well px-4 py-2.5 text-sm"
     >
       <div className="flex min-w-0 flex-1 flex-col gap-2">{children}</div>

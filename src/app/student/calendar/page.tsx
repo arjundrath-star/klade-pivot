@@ -19,9 +19,10 @@ import { MonthView } from "@/calendar/month-view";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { masteredConcepts } from "@/db/queries/rewards";
+import { masteredConcepts, studentXp } from "@/db/queries/rewards";
 import { getStudent } from "@/db/queries/students";
 import { addDays, SCHEDULE_DAYS_AHEAD, SESSION_MINUTES } from "@/engine/pace";
+import { streak } from "@/engine/progress";
 import { timeLabel } from "@/parent/phone-rule";
 import { calendarDay, formatDay, plannedSlots, sessionCount } from "@/parent/progress";
 import { currentStudentId } from "@/session/current-student";
@@ -52,9 +53,10 @@ export default async function CalendarPage({ searchParams }: PageProps<"/student
   const today = calendarDay(new Date());
   const params = Params.parse(await searchParams);
   const month = monthToShow(params.month, monthOf(today));
-  const [controls, student, mastered, record] = await Promise.all([
+  const [controls, student, xp, mastered, record] = await Promise.all([
     adminControls(),
     getStudent(studentId),
+    studentXp(studentId),
     masteredConcepts(studentId),
     scheduleRecord(studentId, today),
   ]);
@@ -64,7 +66,11 @@ export default async function CalendarPage({ searchParams }: PageProps<"/student
     <StudentShell
       active="/student/calendar"
       student={student}
-      mastered={mastered}
+      standing={{
+        xp,
+        mastered,
+        streak: streak(record.schedule, completedDays, today).count,
+      }}
       controls={controls}
     >
       {(student) => {

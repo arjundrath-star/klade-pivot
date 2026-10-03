@@ -270,8 +270,12 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   await expect(
     page.getByText(/^Next in the course: Equations with variables on both sides \(AI-A\.REI\.3\)/),
   ).toBeVisible();
-  await expect(page.getByText("Level 2", { exact: true })).toBeVisible();
-  await expect(page.getByText(`${xp * (SEEDED_SESSIONS + 1)} XP`, { exact: true })).toBeVisible();
+  // The top bar shows the level and the XP too; these are the standing strip's.
+  const standingAfter = page.getByRole("region", { name: "Your standing" });
+  await expect(standingAfter.getByText("Level 2", { exact: true })).toBeVisible();
+  await expect(
+    standingAfter.getByText(`${xp * (SEEDED_SESSIONS + 1)} XP`, { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("progressbar", { name: "Course progress" })).toHaveAttribute(
     "aria-valuenow",
     String(SEEDED_SESSIONS + 1),

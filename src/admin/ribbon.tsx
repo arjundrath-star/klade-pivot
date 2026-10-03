@@ -58,7 +58,7 @@ export function AdminRibbon({ controls, back, notice }: AdminRibbonProps) {
         <span className="mr-1 font-display font-semibold text-primary-deep">Admin</span>
         <RibbonAction action={simulateMissedSession} back={back} label="Simulate missed session" />
         <RibbonAction action={simulateSessionDay} back={back} label={controls.clockLabel} />
-        <form action={switchInterest} className="flex items-center gap-2">
+        <form action={switchInterest} className="flex flex-wrap items-center gap-2">
           <input type="hidden" name="back" value={back} />
           <label htmlFor="ribbon-interest" className="sr-only">
             Interest

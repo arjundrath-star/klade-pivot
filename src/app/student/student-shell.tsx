@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { AdminControls } from "@/admin/controls";
 import { AdminRibbon } from "@/admin/ribbon";
+import { StandingLine, type TopBarStanding } from "./stats";
 import { NoStudent } from "@/components/no-student";
 import { AppShell, type NavItem } from "@/components/shell/app-shell";
 import { ALGEBRA1_COURSE, ALGEBRA1_TITLE } from "@/content/algebra1/course";
@@ -20,8 +21,8 @@ interface StudentShellProps<S extends { name: string }> {
   active: StudentPage;
   /** The student, or undefined when the browser has none yet. */
   student: S | undefined;
-  /** The concepts mastered, for the level in the sidebar. */
-  mastered: ReadonlySet<string>;
+  /** For the level in the sidebar and the standing in the top bar. */
+  standing: TopBarStanding;
   controls: AdminControls | null;
   /** The home page's `notice` query parameter, as a ribbon action left it. */
   notice?: string | string[];
@@ -30,14 +31,14 @@ interface StudentShellProps<S extends { name: string }> {
 }
 
 /**
- * The student area's frame: the navigation, the student's name and level, the admin ribbon at the
- * top of every page, and the empty state when there is no student. The ribbon's actions come back
- * to the home page.
+ * The student area's frame: the navigation, the student's name and level, a top bar with their
+ * standing and the admin ribbon on every page, and the empty state when there is no student. The
+ * ribbon's actions come back to the home page.
  */
 export function StudentShell<S extends { name: string }>({
   active,
   student,
-  mastered,
+  standing,
   controls,
   notice,
   children,
@@ -49,10 +50,15 @@ export function StudentShell<S extends { name: string }>({
       active={active}
       identity={{
         name: student?.name ?? "Student",
-        detail: `${ALGEBRA1_TITLE}, Level ${level(ALGEBRA1_COURSE, mastered)}`,
+        detail: `${ALGEBRA1_TITLE}, Level ${level(ALGEBRA1_COURSE, standing.mastered)}`,
       }}
+      bar={
+        <>
+          {student && <StandingLine {...standing} />}
+          <AdminRibbon controls={controls} back="/student" notice={notice} />
+        </>
+      }
     >
-      <AdminRibbon controls={controls} back="/student" notice={notice} />
       {student ? children(student) : <NoStudent onboarding />}
     </AppShell>
   );

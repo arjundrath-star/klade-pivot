@@ -44,16 +44,23 @@ export async function masteredConcepts(studentId: string): Promise<Set<string>> 
   return new Set(rows.map((row) => row.key));
 }
 
+/** The student's XP across every session. */
+export async function studentXp(studentId: string): Promise<number> {
+  const db = await getDb();
+  const [total] = await db
+    .select({ xp: sum(xpEvents.amount).mapWith(Number) })
+    .from(xpEvents)
+    .where(eq(xpEvents.studentId, studentId));
+  return total?.xp ?? 0;
+}
+
 /** The student's XP across every session, their badges and the concepts they have mastered. */
 export async function studentEarnings(studentId: string) {
   const db = await getDb();
-  const [[total], earned, mastered] = await Promise.all([
-    db
-      .select({ xp: sum(xpEvents.amount).mapWith(Number) })
-      .from(xpEvents)
-      .where(eq(xpEvents.studentId, studentId)),
+  const [xp, earned, mastered] = await Promise.all([
+    studentXp(studentId),
     db.select({ key: badges.key }).from(badges).where(eq(badges.studentId, studentId)),
     masteredConcepts(studentId),
   ]);
-  return { xp: total?.xp ?? 0, badges: new Set(earned.map((row) => row.key)), mastered };
+  return { xp, badges: new Set(earned.map((row) => row.key)), mastered };
 }
