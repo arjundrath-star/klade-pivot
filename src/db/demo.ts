@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { ALGEBRA1_COURSE, ALGEBRA1_TITLE } from "@/content/algebra1/course";
-import { S1_KEY } from "@/content/keys";
+import { S1_DEMO_KEY, S1_KEY } from "@/content/keys";
 import type { RewardProgress } from "@/content/rewards";
 import { sessionContent } from "@/content/sessions";
 import { getDb } from "@/db/client";
@@ -66,6 +66,18 @@ export const DEMO_SESSION_SEED = 20261002;
 /** The seed for a session `studentId` opens: the fixed demo seed for Maya, else random. */
 export function sessionSeedFor(studentId: string): number {
   return studentId === DEMO_STUDENT_ID ? DEMO_SESSION_SEED : randomSeed();
+}
+
+/**
+ * The content the demo student runs in place of a concept's own: Session 1 with two problems a
+ * practice block. The concept, its template row, mastery and the map are the same as anyone's.
+ */
+const DEMO_CONTENT_KEYS: ReadonlyMap<string, string> = new Map([[S1_KEY, S1_DEMO_KEY]]);
+
+/** The content key a session of `conceptKey` runs for `studentId`: the demo variant for Maya. */
+export function sessionContentKeyFor(studentId: string, conceptKey: string): string {
+  if (studentId !== DEMO_STUDENT_ID) return conceptKey;
+  return DEMO_CONTENT_KEYS.get(conceptKey) ?? conceptKey;
 }
 
 const COURSE_ID = "algebra-1";

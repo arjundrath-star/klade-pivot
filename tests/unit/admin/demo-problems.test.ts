@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEMO_PROBLEMS_HEADER, demoProblemCells, demoProblemsTable } from "@/admin/demo-problems";
 import { demoProblemRows, replaceDemoProblems, RUNBOOK_PATH } from "@/admin/runbook";
-import { S1_KEY } from "@/content/keys";
+import { S1_DEMO_KEY } from "@/content/keys";
 import { sessionContent } from "@/content/sessions";
 
 describe("the demo session's problems", () => {
-  it("list every problem of the session, the word problems framed in Maya's interests", () => {
-    const content = sessionContent(S1_KEY);
+  it("list every problem of Maya's shortened session, the word problems framed in her interests", () => {
+    const content = sessionContent(S1_DEMO_KEY);
     const cells = demoProblemCells();
     expect(cells).toHaveLength(content.warmup.length + content.guided.length + content.exit.length);
     expect(cells.filter((row) => row[2] !== "Solve for x.").length).toBeGreaterThan(0);

@@ -80,10 +80,8 @@ describe("the demo session", () => {
 
   it("records a signed-in skip as a skipped attempt that settles the problem and nothing else", async () => {
     expect(await skip(sessionId, "warmup", 0)).toEqual({ ok: true });
-    expect(await skip(sessionId, "warmup", 1)).toEqual({ ok: true });
     expect(await attemptRows(sessionId)).toEqual([
       { block: "warmup", problemIndex: 0, answer: "", correct: false, skipped: true },
-      { block: "warmup", problemIndex: 1, answer: "", correct: false, skipped: true },
     ]);
     // A skipped problem takes no answer and no second skip; the next one is still on the desk.
     expect(await skip(sessionId, "warmup", 0)).toEqual({ ok: false, error: "skipped" });
@@ -94,12 +92,12 @@ describe("the demo session", () => {
       error: "incomplete",
     });
     const loaded = await loadSession(sessionId, DEMO_STUDENT_ID);
-    expect([...(loaded?.progress.skipped ?? [])]).toEqual(["warmup:0", "warmup:1"]);
+    expect([...(loaded?.progress.skipped ?? [])]).toEqual(["warmup:0"]);
     expect([...(loaded?.progress.solved ?? [])]).toEqual([]);
   });
 
   it("completes the warm-up with skips and pays it no XP", async () => {
-    await solve(sessionId, "warmup", [2]);
+    await solve(sessionId, "warmup", [1]);
     expect(await moveBlock({ sessionId, from: "warmup", direction: "next" })).toMatchObject({
       to: "learn",
     });
@@ -118,14 +116,13 @@ describe("the demo session", () => {
 
   it("pays guided practice for its solved problems only, and never explains a skipped one", async () => {
     expect(await skip(sessionId, "guided", 0)).toEqual({ ok: true });
-    await solve(sessionId, "guided", [1, 2, 3, 4]);
+    await solve(sessionId, "guided", [1]);
     expect(await moveBlock({ sessionId, from: "guided", direction: "next" })).toMatchObject({
       to: "explain",
     });
-    expect(await xpRows(sessionId)).toEqual([{ kind: "guided", amount: 20 }]);
+    expect(await xpRows(sessionId)).toEqual([{ kind: "guided", amount: 5 }]);
     const loaded = await loadSession(sessionId, DEMO_STUDENT_ID);
-    expect(loaded?.explain.problem).toMatchObject({ block: "guided" });
-    expect(loaded?.explain.problem.index).not.toBe(0);
+    expect(loaded?.explain.problem).toMatchObject({ block: "guided", index: 1 });
   });
 
   it("decides mastery from the exit check and the explain-back as for any session", async () => {
@@ -135,7 +132,7 @@ describe("the demo session", () => {
     const result = await moveBlock({ sessionId, from: "exit", direction: "next" });
     expect(result).toMatchObject({ ok: true, to: "done", summary: { outcome: "mastered" } });
     if (!result.ok || result.to !== "done") throw new Error("the session did not finish");
-    expect(result.summary.rewards.xp).toBe(20 + 25 + 50);
+    expect(result.summary.rewards.xp).toBe(5 + 25 + 50);
     const db = await getDb();
     const [row] = await db
       .select({ status: mastery.status, exitScore: mastery.exitScore })
@@ -148,7 +145,7 @@ describe("the demo session", () => {
     const history = await sessionHistory(DEMO_STUDENT_ID);
     expect(history.find((row) => row.id === sessionId)).toMatchObject({
       outcome: "mastered",
-      skipped: 3,
+      skipped: 2,
     });
     // A problem a second tab solved while the skip landed counts as solved, not skipped.
     const db = await getDb();
@@ -165,6 +162,6 @@ describe("the demo session", () => {
       .where(and(eq(attempts.sessionLogId, sessionId), eq(attempts.skipped, true)));
     await db.insert(attempts).values({ ...row, answer: "13", correct: true, timeMs: 1000 });
     const after = await sessionHistory(DEMO_STUDENT_ID);
-    expect(after.find((r) => r.id === sessionId)?.skipped).toBe(2);
+    expect(after.find((r) => r.id === sessionId)?.skipped).toBe(1);
   });
 });

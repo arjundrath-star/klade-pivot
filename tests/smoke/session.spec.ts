@@ -6,6 +6,7 @@ import {
   expectProblem,
   passExplainBack,
   SEEDED_SESSIONS,
+  SEEDED_XP,
   SEEDED_STREAK,
   sessionXp,
   solveBlock,
@@ -69,8 +70,9 @@ test("a student walks all five blocks of a session and it is saved as they go", 
 
   // The workspace: one problem at a time, counted in the strip beside the clock, with the
   // notebook at the side. The notebook has no chapter tab until guided practice.
+  // Maya runs the demo's shortened Session 1: two problems in each practice block.
   await expectBlock(page, "Warm-up", 1);
-  await expectProblem(page, 1, 3);
+  await expectProblem(page, 1, 2);
   const timer = page.getByRole("timer");
   await expect(timer).toHaveText(/^\d+:\d\d left$/);
   const firstReading = await timer.textContent();
@@ -90,7 +92,7 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   await expect(nextProblem).toBeDisabled();
 
   await solveBlock(page, sessionId, "warmup");
-  await expectProblem(page, 3, 3);
+  await expectProblem(page, 2, 2);
   await next.click();
   await expectBlock(page, "Learn", 2);
 
@@ -137,7 +139,7 @@ test("a student walks all five blocks of a session and it is saved as they go", 
 
   await next.click();
   await expectBlock(page, "Guided practice", 3);
-  await expectProblem(page, 1, 5);
+  await expectProblem(page, 1, 2);
   await expect(nextProblem).toBeDisabled();
 
   // Notes are the student's own desk: typed here, saved as they go, there again after a reload.
@@ -161,11 +163,11 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   await expect(problem).toBeVisible();
   await notebook.getByRole("tab", { name: "Notes" }).click();
 
-  // Maya likes sports and music, so every guided word problem is framed as one of them, and each
-  // comes to the desk in turn.
+  // Maya likes sports and music: guided practice opens on the soccer juggling problem, then the
+  // symbolic two-step, each to the desk in turn.
   const guided = await renderedFor(sessionId, "guided");
-  const framed = guided.filter((p) => p.kind === "word");
-  expect(framed.length).toBeGreaterThanOrEqual(3);
+  expect(guided.map((p) => p.kind)).toEqual(["word", "symbolic"]);
+  expect(guided[0].text).toMatch(/^You can juggle a soccer ball/);
   const answers = await answersFor(sessionId, "guided");
   for (const [i, rendered] of guided.entries()) {
     await expectProblem(page, i + 1, guided.length);
@@ -273,9 +275,7 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   // The top bar shows the level and the XP too; these are the standing strip's.
   const standingAfter = page.getByRole("region", { name: "Your standing" });
   await expect(standingAfter.getByText("Level 2", { exact: true })).toBeVisible();
-  await expect(
-    standingAfter.getByText(`${xp * (SEEDED_SESSIONS + 1)} XP`, { exact: true }),
-  ).toBeVisible();
+  await expect(standingAfter.getByText(`${SEEDED_XP + xp} XP`, { exact: true })).toBeVisible();
   await expect(page.getByRole("progressbar", { name: "Course progress" })).toHaveAttribute(
     "aria-valuenow",
     String(SEEDED_SESSIONS + 1),

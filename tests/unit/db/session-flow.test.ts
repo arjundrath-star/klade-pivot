@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { confirmLesson, moveBlock, submitAnswer } from "@/app/student/session/[id]/actions";
 import { s1 } from "@/content/algebra1/linear-equations/s1";
 import { getDb } from "@/db/client";
@@ -11,6 +11,13 @@ import { attempts, students } from "@/db/schema";
 import { sessionProblems } from "@/session/problems";
 import { answersFor, recordPass } from "../../helpers/answers";
 import { answerExit, solve, withTempDatabase } from "../../helpers/database";
+
+// The session these tests drive is the full one every student but the demo one runs; the demo
+// student's shortened variant has tests of its own.
+vi.mock("@/db/demo", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/db/demo")>()),
+  sessionContentKeyFor: (_studentId: string, conceptKey: string) => conceptKey,
+}));
 
 // Runs the session flow against a real libSQL file.
 withTempDatabase("klade-db-", new Date("2026-09-29T12:00:00Z"));

@@ -1,6 +1,7 @@
 import { explainStatus, type ExplainResult } from "@/coach/rubric";
 import type { CoachTurn } from "@/coach/turns";
 import { sessionContent } from "@/content/sessions";
+import { sessionContentKeyFor } from "@/db/demo";
 import { exitAttemptsFor, settledAttempts } from "@/db/queries/attempts";
 import { coachTurnsFor } from "@/db/queries/coach";
 import { explainBacksFor } from "@/db/queries/explain";
@@ -73,7 +74,7 @@ export async function loadSession(id: string, studentId: string) {
     exitAttemptsFor(id),
   ]);
   if (!session) return undefined;
-  const content = sessionContent(session.contentKey);
+  const content = sessionContent(sessionContentKeyFor(studentId, session.contentKey));
   const problems = sessionProblems(content, session.seed);
   const coachTurns = turnsByProblem(turns);
   const keysOf = (skipped: boolean) =>

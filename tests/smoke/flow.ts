@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { answersFor, recordPass } from "../helpers/answers";
+import { s1 } from "@/content/algebra1/linear-equations/s1";
 import { DEMO_MASTERED_KEYS, STREAK_REWARD_WEEKS } from "@/db/demo";
 import { addDays, weekdayOf } from "@/engine/pace";
 import { XP_TABLE } from "@/engine/progress";
@@ -24,6 +25,9 @@ export function sessionXp(guidedProblems: number): number {
 
 /** The demo persona's record: five sessions of the shipped shape, one per mastered concept. */
 export const SEEDED_SESSIONS = DEMO_MASTERED_KEYS.length;
+
+/** The XP her record holds: each seeded session paid what a full Session 1 pays. */
+export const SEEDED_XP = SEEDED_SESSIONS * sessionXp(s1.guided.length);
 
 /** Her streak going into the demo day: every seeded session was on its day. */
 export const SEEDED_STREAK = SEEDED_SESSIONS;

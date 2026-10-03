@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { confirmLesson, moveBlock } from "@/app/student/session/[id]/actions";
 import { getDb } from "@/db/client";
 import { DEMO_STUDENT_ID } from "@/db/demo";
@@ -11,6 +11,13 @@ import { studentStanding } from "@/session/pace";
 import { sessionRewards } from "@/session/rewards";
 import { recordPass, scheduleToday, sessionAtExit } from "../../helpers/answers";
 import { answerExit, solve, withTempDatabase, xpRows } from "../../helpers/database";
+
+// The session these tests drive is the full one every student but the demo one runs; the demo
+// student's shortened variant has tests of its own.
+vi.mock("@/db/demo", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/db/demo")>()),
+  sessionContentKeyFor: (_studentId: string, conceptKey: string) => conceptKey,
+}));
 
 // XP, the streak and badges against a real libSQL file.
 withTempDatabase("klade-rewards-", new Date("2026-10-01T12:00:00Z"));

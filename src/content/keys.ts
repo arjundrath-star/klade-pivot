@@ -6,3 +6,6 @@
 
 /** Solving two-step linear equations, the one session that ships. */
 export const S1_KEY = "algebra1/linear-equations/s1";
+
+/** The demo student's shortened run of the same session: two problems a practice block. */
+export const S1_DEMO_KEY = "algebra1/linear-equations/s1-demo";

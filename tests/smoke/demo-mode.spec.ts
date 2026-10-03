@@ -7,12 +7,11 @@ import {
   expectProblem,
   passExplainBack,
   readLesson,
-  solveBlock,
+  sessionXp,
   solveShown,
   startSession,
 } from "./flow";
 import { demoProblemRows, RUNBOOK_PATH } from "@/admin/runbook";
-import { XP_TABLE } from "@/engine/progress";
 
 const EXPLANATION =
   "I took the same number away from both sides, then divided both sides, so it stays balanced.";
@@ -31,7 +30,7 @@ function answerOf(row: readonly string[]): number {
 test.describe("signed in at the gate", () => {
   test.setTimeout(90_000);
 
-  test("the demo driver hides the ribbon, skips practice and runs the runbook's problems", async ({
+  test("the demo driver hides the ribbon and runs the runbook's problems without a skip", async ({
     page,
   }) => {
     const errors = watchConsole(page);
@@ -49,28 +48,29 @@ test.describe("signed in at the gate", () => {
     await pill.click();
     await expect(ribbon.getByRole("button", { name: "Reset demo" })).toBeVisible();
 
-    // After the reset, Start opens the session the runbook's table lists.
+    // After the reset, Start opens the session the runbook's table lists: two problems in each
+    // practice block, every one answered.
     const sessionId = await startSession(page);
     const problem = page.getByRole("article", { name: "Problem" });
-    const skip = problem.getByRole("button", { name: "Skip (demo)" });
-    const skipped = problem.getByText("Skipped for the demo. It earns nothing.");
     const nextProblem = page.getByRole("button", { name: "Next problem" });
     const next = page.getByRole("button", { name: "Next" });
+    const answerRows = async (rows: readonly string[][]) => {
+      for (const [i, row] of rows.entries()) {
+        await expectProblem(page, i + 1, rows.length);
+        await expect(problem).toContainText(row[2]);
+        // A word problem shows its text; a symbolic one its equation.
+        if (row[2] === "Solve for x.") await expect(problem).toContainText(row[3]);
+        await solveShown(page, answerOf(row));
+        if (i < rows.length - 1) await nextProblem.click();
+      }
+    };
 
-    // Warm-up: two skips, then the third answered.
+    // Warm-up: the skip stays for a recording that needs it; the rehearsed route answers.
     await expectBlock(page, "Warm-up", 1);
+    await expect(problem.getByRole("button", { name: "Skip (demo)" })).toBeVisible();
     const warmup = tableRows("Warm-up");
-    for (const [i, row] of warmup.entries()) {
-      await expectProblem(page, i + 1, warmup.length);
-      await expect(problem).toContainText(row[2]);
-      await expect(problem).toContainText(row[3]);
-      if (i === warmup.length - 1) break;
-      await skip.click();
-      await expect(skipped).toBeVisible();
-      await expect(problem.getByLabel("Your answer")).toHaveCount(0);
-      await nextProblem.click();
-    }
-    await solveShown(page, answerOf(warmup[warmup.length - 1]));
+    expect(warmup).toHaveLength(2);
+    await answerRows(warmup);
     await next.click();
 
     // Learn: the confirmation alone opens the gate, with no example revealed.
@@ -81,23 +81,17 @@ test.describe("signed in at the gate", () => {
     await readLesson(page);
     await next.click();
 
-    // Guided: skip to the first word problem, answer it wrong, and the coach opens.
+    // Guided: the soccer juggling problem first; a wrong answer opens the coach.
     await expectBlock(page, "Guided practice", 3);
     const guided = tableRows("Guided practice");
-    const word = guided.findIndex((row) => row[2] !== "Solve for x.");
-    expect(word).toBeGreaterThan(0);
-    for (let i = 0; i < word; i += 1) {
-      await skip.click();
-      await expect(skipped).toBeVisible();
-      await nextProblem.click();
-    }
-    await expect(problem).toContainText(guided[word][2]);
-    await problem.getByLabel("Your answer").fill(String(answerOf(guided[word]) + 1));
+    expect(guided.map((row) => row[2] === "Solve for x.")).toEqual([false, true]);
+    await expect(problem).toContainText(guided[0][2]);
+    await problem.getByLabel("Your answer").fill(String(answerOf(guided[0]) + 1));
     await problem.getByRole("button", { name: "Check" }).click();
     await expect(problem.getByText("Not quite. Try again.")).toBeVisible();
     const coach = problem.getByRole("complementary", { name: "Coach" });
     await expect(coach.getByRole("alert")).toHaveText(/Your coach is offline right now/);
-    await solveBlock(page, sessionId, "guided", word);
+    await answerRows(guided);
     await next.click();
 
     // The rest as the runbook says: the explain-back and the exit check have no skip.
@@ -111,16 +105,16 @@ test.describe("signed in at the gate", () => {
     await answerExitCheck(page, sessionId, [true, true, true]);
     await page.getByRole("button", { name: "Finish" }).click();
 
-    // Skips earn nothing: no warm-up XP, and guided practice pays for its solved problems only.
+    // Every problem solved: the full XP for the session she ran.
     await expect(page.getByRole("heading", { level: 1, name: "Mastered" })).toBeVisible();
-    const xp = XP_TABLE.guided * (guided.length - word) + XP_TABLE.explain + XP_TABLE.exit;
     await expect(
-      page.getByRole("region", { name: "This session" }).getByText(`+${xp} XP`),
+      page.getByRole("region", { name: "This session" }).getByText(`+${sessionXp(2)} XP`),
     ).toBeVisible();
 
-    // The parent's history marks the session's skips.
+    // The parent's history has nothing to mark.
     await page.goto("/parent");
-    await expect(page.getByText(`${warmup.length - 1 + word} skipped (demo)`)).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByText(/skipped \(demo\)/)).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 });

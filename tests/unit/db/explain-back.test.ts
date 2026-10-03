@@ -11,6 +11,13 @@ import { aiUsage, coachTurns, explainBacks, sessionLogs } from "@/db/schema";
 import { loadSession } from "@/session/load";
 import { solve, withTempDatabase } from "../../helpers/database";
 
+// The session these tests drive is the full one every student but the demo one runs; the demo
+// student's shortened variant has tests of its own.
+vi.mock("@/db/demo", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/db/demo")>()),
+  sessionContentKeyFor: (_studentId: string, conceptKey: string) => conceptKey,
+}));
+
 // The model is mocked; the action, the pass rule and the database are real.
 vi.mock("@/coach/client", () => ({
   coachConfigured: vi.fn(() => true),
