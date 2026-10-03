@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { describe, expect, it } from "vitest";
@@ -9,9 +10,10 @@ import {
 } from "@/app/student/session/[id]/actions";
 import { startTodaySession } from "@/app/student/actions";
 import { getDb } from "@/db/client";
-import { DEMO_SESSION_SEED, DEMO_STUDENT_ID, sessionSeedFor } from "@/db/demo";
+import { DEMO_SESSION_SEED, DEMO_STUDENT_ID, S1_TEMPLATE_ID, sessionSeedFor } from "@/db/demo";
 import { sessionHistory } from "@/db/queries/parent";
 import { getSession } from "@/db/queries/sessions";
+import { createFamily } from "@/db/queries/students";
 import { attempts, mastery } from "@/db/schema";
 import { GATE_COOKIE } from "@/gate/token";
 import { loadSession } from "@/session/load";
@@ -52,9 +54,11 @@ describe("the demo session", () => {
     sessionId = path.split("/").pop() ?? "";
     expect(path).toBe(`/student/session/${sessionId}`);
     expect((await getSession(sessionId, DEMO_STUDENT_ID))?.seed).toBe(DEMO_SESSION_SEED);
-    expect(sessionSeedFor(DEMO_STUDENT_ID)).toBe(DEMO_SESSION_SEED);
+    expect(sessionSeedFor({ studentId: DEMO_STUDENT_ID, visitor: false })).toBe(DEMO_SESSION_SEED);
+    expect(sessionSeedFor({ studentId: "a-visitor", visitor: true })).toBe(DEMO_SESSION_SEED);
     // Any other student draws a fresh seed.
-    const others = new Set(Array.from({ length: 4 }, () => sessionSeedFor("another-student")));
+    const other = { studentId: "another-student", visitor: false };
+    const others = new Set(Array.from({ length: 4 }, () => sessionSeedFor(other)));
     expect(others.has(DEMO_SESSION_SEED)).toBe(false);
     expect(others.size).toBeGreaterThan(1);
   });
@@ -66,7 +70,23 @@ describe("the demo session", () => {
   });
 
   it("refuses a skip for any student but the one the gate stands for", async () => {
-    (await cookies()).set("klade_student", "0b2f4a1e-7c3d-4e5f-8a9b-0c1d2e3f4a5b");
+    // A signed-in browser that onboarded a family acts as that student on the student's side.
+    const otherStudent = randomUUID();
+    await createFamily(
+      "Sam",
+      {
+        id: otherStudent,
+        familyId: randomUUID(),
+        name: "Ava",
+        grade: 7,
+        targetDate: "2027-05-31",
+        pacePerWeek: 4,
+        interests: ["animals"],
+      },
+      [{ day: "2026-10-03", sessionTemplateId: S1_TEMPLATE_ID, seed: 7 }],
+      null,
+    );
+    (await cookies()).set("klade_student", otherStudent);
     expect(await skip(sessionId, "warmup", 0)).toEqual({ ok: false, error: "refused" });
     expect(await attemptRows(sessionId)).toEqual([]);
   });

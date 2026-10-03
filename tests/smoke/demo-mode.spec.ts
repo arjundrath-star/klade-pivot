@@ -5,6 +5,7 @@ import {
   answerExitCheck,
   expectBlock,
   expectProblem,
+  PASSING_EXPLANATION,
   passExplainBack,
   readLesson,
   sessionXp,
@@ -12,9 +13,6 @@ import {
   startSession,
 } from "./flow";
 import { demoProblemRows, RUNBOOK_PATH } from "@/admin/runbook";
-
-const EXPLANATION =
-  "I took the same number away from both sides, then divided both sides, so it stays balanced.";
 
 /** The runbook's "Demo problems" rows for one block: [block, number, text, equation, answer]. */
 function tableRows(block: string): string[][] {
@@ -97,7 +95,7 @@ test.describe("signed in at the gate", () => {
     // The rest as the runbook says: the explain-back and the exit check have no skip.
     await expectBlock(page, "Explain-back", 4);
     await expect(page.getByRole("button", { name: "Skip (demo)" })).toHaveCount(0);
-    await passExplainBack(page, sessionId, EXPLANATION);
+    await passExplainBack(page, sessionId, PASSING_EXPLANATION);
     await next.click();
     await expectBlock(page, "Exit check", 5);
     await expect(problem).toContainText(tableRows("Exit check")[0][3]);

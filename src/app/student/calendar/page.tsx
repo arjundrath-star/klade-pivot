@@ -20,12 +20,11 @@ import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { masteredConcepts, studentXp } from "@/db/queries/rewards";
-import { getStudent } from "@/db/queries/students";
 import { addDays, SCHEDULE_DAYS_AHEAD, SESSION_MINUTES } from "@/engine/pace";
 import { streak } from "@/engine/progress";
 import { timeLabel } from "@/parent/phone-rule";
 import { calendarDay, formatDay, plannedSlots, sessionCount } from "@/parent/progress";
-import { currentStudentId } from "@/session/current-student";
+import { studentOnPage } from "@/session/current-student";
 import { scheduleRecord } from "@/session/pace";
 
 export const metadata: Metadata = { title: "Calendar" };
@@ -49,13 +48,12 @@ function monthToShow(asked: string | undefined, current: string): string {
 
 export default async function CalendarPage({ searchParams }: PageProps<"/student/calendar">) {
   await connection();
-  const studentId = await currentStudentId();
+  const { id: studentId, student } = await studentOnPage("/student/calendar");
   const today = calendarDay(new Date());
   const params = Params.parse(await searchParams);
   const month = monthToShow(params.month, monthOf(today));
-  const [controls, student, xp, mastered, record] = await Promise.all([
+  const [controls, xp, mastered, record] = await Promise.all([
     adminControls(),
-    getStudent(studentId),
     studentXp(studentId),
     masteredConcepts(studentId),
     scheduleRecord(studentId, today),

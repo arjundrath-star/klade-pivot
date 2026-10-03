@@ -7,9 +7,15 @@ fallback for a bad network. Rehearse it twice the day before and once an hour be
 
 - Public URL: `https://foothold.rathworkspace.cloud` (the VPS behind the Cloudflare tunnel, HTTPS, so
   voice input works in Chrome). `https://klade.rathworkspace.cloud` still reaches the same app.
-- `/parent`, `/parent/settings` and `/admin` ask for the shared password once per browser (24
-  hours). It is `ADMIN_PASSWORD` in the service's environment file on the VPS, never in the repo.
-  The student pages and onboarding need no password.
+- `/admin` and the alert email preview ask for the shared password once per browser (24 hours). It
+  is `ADMIN_PASSWORD` in the service's environment file on the VPS, never in the repo. Signed in,
+  the student and parent pages show the canonical persona, with the admin ribbon.
+- Any other browser (the deck's link, `/student`) gets its own copy of the demo on its first
+  request: a student cookie, then Maya's record with the phone rule on and the demo clock set, so
+  the phone shows locked and today's session waits. Judges never see each other's copy or the
+  admin controls, `/parent` opens for their copy without the password, and "Start the demo over"
+  on the student's home and the end screen puts the copy back. Copies go after 48 hours, swept on
+  the next new visitor. Reset demo restores Maya and leaves the copies alone.
 - Chrome offers "Install app" from the address bar; installed, the app opens on `/student`.
 
 ## Before the demo (two minutes)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { S1_DEMO_KEY, S1_KEY } from "@/content/keys";
-import { DEMO_SESSION_SEED, DEMO_STUDENT_ID, sessionContentKeyFor } from "@/db/demo";
+import { DEMO_SESSION_SEED, DEMO_STUDENT_ID, MAYA, sessionContentKeyFor } from "@/db/demo";
 import { openTodaySession } from "@/db/queries/sessions";
 import { enrollStudent } from "@/onboarding/enroll";
 import { loadSession } from "@/session/load";
@@ -19,10 +19,13 @@ async function openedCounts(studentId: string) {
 }
 
 describe("the demo student's Session 1", () => {
-  it("is the shortened variant for the demo student only", () => {
-    expect(sessionContentKeyFor(DEMO_STUDENT_ID, S1_KEY)).toBe(S1_DEMO_KEY);
-    expect(sessionContentKeyFor("another-student", S1_KEY)).toBe(S1_KEY);
-    expect(sessionContentKeyFor(DEMO_STUDENT_ID, "algebra1/linear-equations/s2")).toBe(
+  it("is the shortened variant for the demo student and a visitor's copy only", () => {
+    expect(sessionContentKeyFor(MAYA, S1_KEY)).toBe(S1_DEMO_KEY);
+    const visitor = { studentId: "a-visitor", visitor: true };
+    expect(sessionContentKeyFor(visitor, S1_KEY)).toBe(S1_DEMO_KEY);
+    const other = { studentId: "another-student", visitor: false };
+    expect(sessionContentKeyFor(other, S1_KEY)).toBe(S1_KEY);
+    expect(sessionContentKeyFor(MAYA, "algebra1/linear-equations/s2")).toBe(
       "algebra1/linear-equations/s2",
     );
   });

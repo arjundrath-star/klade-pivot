@@ -2,6 +2,7 @@ import { z } from "zod";
 import { APP_URL } from "@/config/app-url";
 import { familyAlert } from "@/db/queries/alerts";
 import { gatedFamily } from "@/gate/server";
+import { STATIC_HTML_HEADERS } from "@/http/static-html";
 import { alertEmailHtml } from "@/parent/alerts";
 
 /** The alert email exactly as it would be sent. Nothing is sent; this is the preview. */
@@ -17,12 +18,6 @@ export async function GET(request: Request, ctx: RouteContext<"/parent/alerts/[i
     message: alert.message,
     parentUrl: new URL("/parent", APP_URL ?? request.url).href,
   });
-  return new Response(html, {
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      // Email HTML carries inline styles and nothing else.
-      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'",
-      "Cache-Control": "no-store",
-    },
-  });
+  // Email HTML carries inline styles and nothing else.
+  return new Response(html, { headers: STATIC_HTML_HEADERS });
 }

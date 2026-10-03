@@ -28,16 +28,26 @@ const SESSION_STATUSES = ["scheduled", "in_progress", "done", "missed", "repeat"
 // and the plan. No email, no birthdate, no free text.
 
 /** The parent's account. Parents create and own every student account. */
-export const families = sqliteTable("families", {
-  id: id(),
-  parentName: text("parent_name").notNull(),
-  /**
-   * Demo only: the moment the phone lock reads as "now" while set, so a demo can run at 5 PM on a
-   * session day whatever the real day and hour. Set and cleared from /admin; only the lock reads it.
-   */
-  demoClock: integer("demo_clock", { mode: "timestamp_ms" }),
-  createdAt: createdAt(),
-});
+export const families = sqliteTable(
+  "families",
+  {
+    id: id(),
+    parentName: text("parent_name").notNull(),
+    /**
+     * Demo only: the moment the phone lock reads as "now" while set, so a demo can run at 5 PM on a
+     * session day whatever the real day and hour. Set and cleared from /admin; only the lock reads it.
+     */
+    demoClock: integer("demo_clock", { mode: "timestamp_ms" }),
+    /**
+     * A visitor's copy of the demo persona, made for a browser that opened the public link: swept
+     * after 48 hours, never the family Reset demo restores.
+     */
+    visitor: integer("visitor", { mode: "boolean" }).notNull().default(false),
+    createdAt: createdAt(),
+  },
+  // The sweep's filter: visitors' copies by age.
+  (t) => [index("families_visitor_created_idx").on(t.visitor, t.createdAt)],
+);
 
 export const students = sqliteTable(
   "students",
@@ -279,7 +289,12 @@ export const mastery = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date()),
   },
-  (t) => [uniqueIndex("mastery_student_concept_idx").on(t.studentId, t.sessionTemplateId)],
+  (t) => [
+    uniqueIndex("mastery_student_concept_idx").on(t.studentId, t.sessionTemplateId),
+    // Foreign keys are enforced: deleting a session or an explanation checks these columns.
+    index("mastery_session_log_idx").on(t.sessionLogId),
+    index("mastery_explain_back_idx").on(t.explainBackId),
+  ],
 );
 
 /**
@@ -308,6 +323,8 @@ export const alerts = sqliteTable(
   },
   (t) => [
     index("alerts_family_created_idx").on(t.familyId, t.createdAt),
+    // Foreign keys are enforced: deleting a student checks this column.
+    index("alerts_student_id_idx").on(t.studentId),
     // A session raises each kind of alert once, even when two requests raise it together.
     uniqueIndex("alerts_session_type_idx").on(t.sessionLogId, t.type),
   ],

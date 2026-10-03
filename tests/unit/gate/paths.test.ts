@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { NextPath } from "@/gate/next-path";
-import { gatedPath, gateUrl } from "@/gate/paths";
+import { adminPath, gatedPath, gateUrl } from "@/gate/paths";
 
 describe("gatedPath", () => {
   it.each(["/admin", "/admin/anything", "/parent", "/parent/settings", "/parent/alerts/x/preview"])(
@@ -11,6 +11,17 @@ describe("gatedPath", () => {
   it.each(["/", "/student", "/onboarding", "/gate", "/parents", "/administrator", "/api/parent"])(
     "leaves %s open",
     (path) => expect(gatedPath(path)).toBe(false),
+  );
+});
+
+describe("adminPath", () => {
+  it.each(["/admin", "/admin/anything"])("is only the founder's at %s", (path) =>
+    expect(adminPath(path)).toBe(true),
+  );
+
+  it.each(["/parent", "/parent/alerts/x/preview", "/student", "/administrator", "/gate"])(
+    "is not %s",
+    (path) => expect(adminPath(path)).toBe(false),
   );
 });
 

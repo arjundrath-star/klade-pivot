@@ -14,8 +14,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { coachTurnsFor } from "@/db/queries/coach";
 import { explainIntegrity, latestExplanation } from "@/db/queries/parent";
 import { getStudent } from "@/db/queries/students";
-import { gatedFamily } from "@/gate/server";
 import { plural } from "@/parent/progress";
+import { parentOnPage } from "@/session/current-student";
 
 export const metadata: Metadata = { title: "Explanations" };
 
@@ -34,7 +34,7 @@ async function latestWithTranscript(studentId: string) {
 
 export default async function ExplanationsPage() {
   await connection();
-  const { studentId } = await gatedFamily("/parent/explanations");
+  const { studentId } = await parentOnPage("/parent/explanations");
   const [student, { explanation, transcript }, integrity] = await Promise.all([
     getStudent(studentId),
     latestWithTranscript(studentId),

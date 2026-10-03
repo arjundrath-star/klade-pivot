@@ -63,9 +63,11 @@ function explainResult(row: ExplainBackRow): ExplainResult {
 
 /**
  * A student's session log with its problems, the progress that gates each block, and what the
- * coach has said so far, in one round trip. Undefined when the student has no log with that id.
+ * coach has said so far, in one round trip. Undefined when the student has no log with that id,
+ * and for nobody (a browser with no student), who has no session at all.
  */
-export async function loadSession(id: string, studentId: string) {
+export async function loadSession(id: string, studentId: string | undefined) {
+  if (!studentId) return undefined;
   const [session, settled, turns, explained, exitAttempts] = await Promise.all([
     getSession(id, studentId),
     settledAttempts(id),
@@ -74,7 +76,7 @@ export async function loadSession(id: string, studentId: string) {
     exitAttemptsFor(id),
   ]);
   if (!session) return undefined;
-  const content = sessionContent(sessionContentKeyFor(studentId, session.contentKey));
+  const content = sessionContent(sessionContentKeyFor(session, session.contentKey));
   const problems = sessionProblems(content, session.seed);
   const coachTurns = turnsByProblem(turns);
   const keysOf = (skipped: boolean) =>
@@ -141,7 +143,7 @@ export type OpenProblem = ({ ok: true } & OpenedProblem) | { ok: false; error: O
  */
 export async function openProblem(
   sessionId: string,
-  studentId: string,
+  studentId: string | undefined,
   block: AnsweredBlockId,
   index: number,
 ): Promise<OpenProblem> {

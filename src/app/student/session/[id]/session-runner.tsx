@@ -110,6 +110,8 @@ interface SessionRunnerProps {
   /** The explain-back and exit-check panels, rendered on the server. */
   panels: Readonly<Record<"explain" | "exit", ReactNode>>;
   initialNotes: string;
+  /** The student is a visitor's copy of the demo: the end screen offers Start the demo over. */
+  restart: boolean;
 }
 
 export function SessionRunner({
@@ -129,6 +131,7 @@ export function SessionRunner({
   chapter,
   panels,
   initialNotes,
+  restart,
 }: SessionRunnerProps) {
   const router = useRouter();
   // Where the student is, and how long they had already spent there when they arrived; once the
@@ -158,7 +161,9 @@ export function SessionRunner({
   const markSkipped = (key: string) => setSkipped((prev) => new Set(prev).add(key));
   const markLessonRead = () => setLessonRead(true);
 
-  if (at.block === "done") return <SessionComplete title={title} summary={at.summary} />;
+  if (at.block === "done") {
+    return <SessionComplete title={title} summary={at.summary} restart={restart} />;
+  }
   const block = at.block;
   const position = BLOCK_IDS.indexOf(block);
   const complete = isBlockComplete(block, counts, {

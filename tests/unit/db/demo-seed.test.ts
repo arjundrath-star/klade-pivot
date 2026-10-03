@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq, getTableName, is } from "drizzle-orm";
 import { SQLiteTable } from "drizzle-orm/sqlite-core";
+import { cookies } from "next/headers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ALGEBRA1_COURSE } from "@/content/algebra1/course";
 import { rewardBoard } from "@/content/rewards";
@@ -11,13 +12,13 @@ import {
   DEMO_FAMILY_ID,
   DEMO_LOCK_RULE,
   DEMO_MASTERED_KEYS,
-  DEMO_RESET_TABLES,
   DEMO_STUDENT_ID,
   resetDemoData,
   S1_TEMPLATE_ID,
   templateIdFor,
 } from "@/db/demo";
 import { familyAlerts } from "@/db/queries/alerts";
+import { FAMILY_TABLES, SHARED_TABLES } from "@/db/queries/families";
 import { lockInputs, lockSettings, resetDemoClock, setLockOverride } from "@/db/queries/lock";
 import { mentorFor } from "@/db/queries/mentor";
 import { latestExplanation, masteryGrid, sessionHistory } from "@/db/queries/parent";
@@ -36,6 +37,7 @@ import {
   xpEvents,
 } from "@/db/schema";
 import { courseProgress, nextConcept } from "@/engine/course";
+import { freshGateToken, GATE_COOKIE } from "@/gate/token";
 import { conceptBadgeKey, level, unitBadgeKey } from "@/engine/progress";
 import { historyMinutes } from "@/parent/history";
 import { calendarDay } from "@/parent/progress";
@@ -44,6 +46,7 @@ import { completeSession } from "@/session/complete";
 import { studentPace, studentStanding } from "@/session/pace";
 import { sessionAtExit } from "../../helpers/answers";
 import { answerExit, withTempDatabase } from "../../helpers/database";
+import { TEST_ADMIN_PASSWORD } from "../../setup";
 
 // Friday Oct 2, 2026 at noon in New York: the demo day, which is not one of Maya's session days.
 const DEMO_DAY = new Date("2026-10-02T16:00:00Z");
@@ -224,6 +227,8 @@ describe("the demo-day reward", () => {
     for (let offset = 0; offset < 7; offset++) {
       const day = new Date(Date.UTC(2026, 9, 5 + offset, 16));
       vi.setSystemTime(day);
+      // A sign-in lasts a day: the browser signs in again on the day the test moves to.
+      (await cookies()).set(GATE_COOKIE, freshGateToken(TEST_ADMIN_PASSWORD));
       await resetDemoData(day);
       const before = rewardBoard(
         await rewardRows(DEMO_STUDENT_ID),
@@ -242,11 +247,17 @@ describe("the demo-day reward", () => {
 });
 
 describe("Reset demo", () => {
-  it("empties every table the schema has, except the curriculum", () => {
+  it("knows every table the schema has as a family's, shared, or the curriculum's", () => {
     const tables = Object.values(schema)
       .flatMap((value) => (is(value, SQLiteTable) ? [getTableName(value)] : []))
       .sort();
-    const covered = [...DEMO_RESET_TABLES, ...CURRICULUM_TABLES].map(getTableName).sort();
+    const covered = [
+      ...FAMILY_TABLES.map(({ table }) => table),
+      ...SHARED_TABLES,
+      ...CURRICULUM_TABLES,
+    ]
+      .map(getTableName)
+      .sort();
     expect(covered).toEqual(tables);
   });
 

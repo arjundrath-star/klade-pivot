@@ -5,14 +5,14 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { mentorFor } from "@/db/queries/mentor";
 import { getStudent } from "@/db/queries/students";
-import { gatedFamily } from "@/gate/server";
 import { MentorCard } from "@/mentor/mentor-card";
+import { parentOnPage } from "@/session/current-student";
 
 export const metadata: Metadata = { title: "Mentor" };
 
 export default async function ParentMentorPage() {
   await connection();
-  const { studentId } = await gatedFamily("/parent/mentor");
+  const { studentId } = await parentOnPage("/parent/mentor");
   const [student, mentor] = await Promise.all([getStudent(studentId), mentorFor(studentId)]);
 
   return (

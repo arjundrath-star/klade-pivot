@@ -204,7 +204,7 @@ describe("completeOnboarding", () => {
     expect(await redirectOf(() => completeOnboarding(noor))).toBe("/student");
     const studentId = await currentStudentId();
     expect(studentId).not.toBe(DEMO_STUDENT_ID);
-    expect(await getStudent(studentId)).toMatchObject({ name: "Noor" });
+    expect(studentId && (await getStudent(studentId))).toMatchObject({ name: "Noor" });
   });
 
   it("falls back to the demo student when the cookie holds no student id", async () => {

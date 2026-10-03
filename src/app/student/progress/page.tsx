@@ -9,19 +9,17 @@ import { rewardBoard } from "@/content/rewards";
 import { rewardRows } from "@/db/queries/reward-progress";
 import { studentEarnings } from "@/db/queries/rewards";
 import { findTodaySession } from "@/db/queries/sessions";
-import { getStudent } from "@/db/queries/students";
 import { RewardsPanel } from "@/rewards/rewards-panel";
-import { currentStudentId } from "@/session/current-student";
+import { studentOnPage } from "@/session/current-student";
 import { studentStanding } from "@/session/pace";
 
 export const metadata: Metadata = { title: "Progress" };
 
 export default async function ProgressPage() {
   await connection();
-  const studentId = await currentStudentId();
-  const [controls, student, today, earnings, standing, rows] = await Promise.all([
+  const { id: studentId, student } = await studentOnPage("/student/progress");
+  const [controls, today, earnings, standing, rows] = await Promise.all([
     adminControls(),
-    getStudent(studentId),
     findTodaySession(studentId),
     studentEarnings(studentId),
     studentStanding(studentId, new Date()),

@@ -10,10 +10,10 @@ import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { PanelHeader } from "@/components/ui/panel-header";
 import { lockSettings } from "@/db/queries/lock";
-import { gatedFamily } from "@/gate/server";
 import { ruleSummary } from "@/parent/phone-rule";
 import { RuleFields } from "@/phone/rule-fields";
 import { defaultRule, overrideActive } from "@/session/lock";
+import { parentOnPage } from "@/session/current-student";
 
 export const metadata: Metadata = { title: "Phone rule" };
 
@@ -24,7 +24,7 @@ const NoticeParam = z.enum(SETTINGS_NOTICE_KEYS);
 export default async function PhoneRuleSettings({ searchParams }: PageProps<"/parent/settings">) {
   // Reads the database, so it renders per request.
   await connection();
-  const { familyId, studentId } = await gatedFamily("/parent/settings");
+  const { familyId, studentId } = await parentOnPage("/parent/settings");
   const [params, settings] = await Promise.all([searchParams, lockSettings(familyId, studentId)]);
   const notice = NoticeParam.safeParse(params.notice);
 

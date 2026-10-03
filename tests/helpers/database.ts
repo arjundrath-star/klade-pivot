@@ -4,10 +4,14 @@ import path from "node:path";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, expect, vi } from "vitest";
 import { submitAnswer, submitExitAnswer } from "@/app/student/session/[id]/actions";
+import { cookies } from "next/headers";
 import { getDb } from "@/db/client";
 import { seedDemo } from "@/db/demo";
 import { markExitShown } from "@/db/queries/exit";
 import { xpEvents } from "@/db/schema";
+import { freshGateToken, GATE_COOKIE } from "@/gate/token";
+import { STUDENT_COOKIE } from "@/session/student-cookie";
+import { TEST_ADMIN_PASSWORD } from "../setup";
 import type { AnsweredBlockId } from "@/session/blocks";
 import { answersFor } from "./answers";
 
@@ -67,6 +71,20 @@ export async function xpRows(sessionId: string) {
     .from(xpEvents)
     .where(eq(xpEvents.sessionLogId, sessionId))
     .orderBy(xpEvents.createdAt);
+}
+
+/** Makes the test's browser the founder's: signed in at the gate, with no student cookie. */
+export async function signIn(): Promise<void> {
+  const jar = await cookies();
+  jar.delete(STUDENT_COOKIE);
+  jar.set(GATE_COOKIE, freshGateToken(TEST_ADMIN_PASSWORD));
+}
+
+/** Makes the test's browser a visitor's or an onboarded family's: `studentId`'s, not signed in. */
+export async function actAs(studentId: string): Promise<void> {
+  const jar = await cookies();
+  jar.delete(GATE_COOKIE);
+  jar.set(STUDENT_COOKIE, studentId);
 }
 
 /** A FormData from a record, as a form would post it. */

@@ -1,27 +1,21 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { ALGEBRA1_COURSE, ALGEBRA1_TITLE } from "@/content/algebra1/course";
 import { S1_DEMO_KEY, S1_KEY } from "@/content/keys";
 import type { RewardProgress } from "@/content/rewards";
 import { sessionContent } from "@/content/sessions";
 import { getDb } from "@/db/client";
+import { familyDeletes } from "@/db/queries/families";
 import { scheduleRows, type ScheduledDay } from "@/db/queries/students";
 import {
-  aiUsage,
-  alerts,
-  attempts,
   badges,
-  coachTurns,
   courses,
-  exitShown,
-  explainBacks,
   families,
   lockRules,
   mastery,
   mentorAssignments,
   mentors,
   rewardProgress,
-  rewardUnlocks,
   sessionLogs,
   sessionTemplates,
   students,
@@ -43,14 +37,43 @@ import { earnedBadges, streakSpan, XP_KINDS, xpAward } from "@/engine/progress";
 import type { Interest } from "@/engine/types";
 import { calendarDay, familyMoment } from "@/parent/progress";
 import { BLOCK_IDS, BLOCKS, type BlockId } from "@/session/blocks";
-import { defaultRule } from "@/session/lock";
+import { defaultRule, demoClockMoment } from "@/session/lock";
 import { randomSeed } from "@/session/random-seed";
 
-/** There is no sign-in yet, so the student pages act as this seeded student. */
+/** There is no sign-in yet, so a browser signed in at the gate acts as this seeded student. */
 export const DEMO_STUDENT_ID = "demo-student-maya";
 
-/** The demo student's family: the parent pages and the admin panel act for it. */
+/** The demo student's family: the parent pages and the admin panel act for it once signed in. */
 export const DEMO_FAMILY_ID = "demo-family";
+
+/** What decides whether a student runs the demo: Maya by her id, a visitor's copy by its family. */
+export interface StudentScope {
+  studentId: string;
+  /** The student's family is a visitor's copy. */
+  visitor: boolean;
+}
+
+/**
+ * A home for the demo persona: the canonical one, Maya's, or a visitor's copy of it (milestone
+ * 20), which the public link makes for each new browser. Both are written by the same statements.
+ */
+export interface DemoHome extends StudentScope {
+  familyId: string;
+  /** When the home was first made, for a copy written again on a reset; now when absent. */
+  createdAt?: Date;
+}
+
+/** The canonical persona's home, and the scope the student pages read her under. */
+export const MAYA: DemoHome = {
+  familyId: DEMO_FAMILY_ID,
+  studentId: DEMO_STUDENT_ID,
+  visitor: false,
+};
+
+/** Whether a student runs the demo's fixed session: Maya, and every visitor's copy of her. */
+export function runsDemo({ studentId, visitor }: StudentScope): boolean {
+  return visitor || studentId === DEMO_STUDENT_ID;
+}
 
 /** Maya's interests as the seed writes them; the demo's word problems are framed in them. */
 export const DEMO_INTERESTS: readonly Interest[] = ["sports", "music"];
@@ -63,20 +86,20 @@ export const DEMO_INTERESTS: readonly Interest[] = ["sports", "music"];
  */
 export const DEMO_SESSION_SEED = 20261002;
 
-/** The seed for a session `studentId` opens: the fixed demo seed for Maya, else random. */
-export function sessionSeedFor(studentId: string): number {
-  return studentId === DEMO_STUDENT_ID ? DEMO_SESSION_SEED : randomSeed();
+/** The seed for a session `student` opens: the fixed demo seed for a demo student, else random. */
+export function sessionSeedFor(student: StudentScope): number {
+  return runsDemo(student) ? DEMO_SESSION_SEED : randomSeed();
 }
 
 /**
- * The content the demo student runs in place of a concept's own: Session 1 with two problems a
+ * The content a demo student runs in place of a concept's own: Session 1 with two problems a
  * practice block. The concept, its template row, mastery and the map are the same as anyone's.
  */
 const DEMO_CONTENT_KEYS: ReadonlyMap<string, string> = new Map([[S1_KEY, S1_DEMO_KEY]]);
 
-/** The content key a session of `conceptKey` runs for `studentId`: the demo variant for Maya. */
-export function sessionContentKeyFor(studentId: string, conceptKey: string): string {
-  if (studentId !== DEMO_STUDENT_ID) return conceptKey;
+/** The content key a session of `conceptKey` runs for `student`: the demo variant for a demo student. */
+export function sessionContentKeyFor(student: StudentScope, conceptKey: string): string {
+  if (!runsDemo(student)) return conceptKey;
   return DEMO_CONTENT_KEYS.get(conceptKey) ?? conceptKey;
 }
 
@@ -133,32 +156,17 @@ const MAYA_PLAN = {
 /** The demo's phone rule: the one onboarding proposes for Maya's plan, games and social at 5 PM. */
 export const DEMO_LOCK_RULE = defaultRule(MAYA_PLAN);
 
+/**
+ * The demo clock a visitor's copy starts on: the rule's latest session day, just after the rule
+ * starts, so the phone shows locked whatever the real day and hour. What the admin panel's clock
+ * button sets for Maya, who starts with the clock off.
+ */
+export function demoStartClock(now: Date): Date {
+  return demoClockMoment(DEMO_LOCK_RULE, MAYA_PLAN, calendarDay(now));
+}
+
 /** The tables the curriculum lives in. Reset demo keeps them; the seed upserts into them. */
 export const CURRICULUM_TABLES = [courses, units, sessionTemplates] as const;
-
-/**
- * Every other table, children before parents, which Reset demo empties. A unit test checks the
- * two lists together cover the schema, so a new table cannot survive a reset by accident.
- */
-export const DEMO_RESET_TABLES = [
-  aiUsage,
-  coachTurns,
-  rewardUnlocks,
-  rewardProgress,
-  mentorAssignments,
-  mentors,
-  badges,
-  xpEvents,
-  alerts,
-  mastery,
-  explainBacks,
-  exitShown,
-  attempts,
-  sessionLogs,
-  lockRules,
-  students,
-  families,
-] as const;
 
 /** May 31 of the next May that has not started yet. */
 export function nextMay(now: Date): string {
@@ -217,21 +225,29 @@ function curriculumStatements(db: LibSQLDatabase): Statements {
 }
 
 /**
- * The curriculum rows and the demo family: a parent and Maya, grade 6, on track for May, with the
- * prototype's reward rows and mentor, and the demo clock off. Every statement is an upsert, so a
- * re-seed restores the profile and leaves session history, reward progress and unlocked rewards
- * alone. `streakWeeksBeforeRecord` is what the 4-week streak row starts at: on a blank record, one
- * session short of the target, less the weeks a seeded record covers.
+ * The demo family at `home`: a parent and Maya, grade 6, on track for May, with the prototype's
+ * reward rows and mentor. A visitor's copy starts with the demo clock on, so its phone shows
+ * locked; Maya's starts with it off, for the admin panel's button. Every statement is an upsert,
+ * so a re-seed restores the profile and leaves session history, reward progress and unlocked
+ * rewards alone. `streakWeeksBeforeRecord` is what the 4-week streak row starts at: on a blank
+ * record, one session short of the target, less the weeks a seeded record covers.
  */
 function profileStatements(
   db: LibSQLDatabase,
   now: Date,
+  home: DemoHome,
   streakWeeksBeforeRecord = STREAK_REWARD_WEEKS - 1,
 ): Statements {
-  const family = { id: DEMO_FAMILY_ID, parentName: "Dana", demoClock: null };
+  const family = {
+    id: home.familyId,
+    parentName: "Dana",
+    demoClock: home.visitor ? demoStartClock(now) : null,
+    visitor: home.visitor,
+    createdAt: home.createdAt ?? now,
+  };
   const maya = {
-    id: DEMO_STUDENT_ID,
-    familyId: DEMO_FAMILY_ID,
+    id: home.studentId,
+    familyId: home.familyId,
     name: "Maya",
     grade: 6,
     targetDate: nextMay(now),
@@ -255,7 +271,6 @@ function profileStatements(
   return [
     db.insert(families).values(family).onConflictDoUpdate({ target: families.id, set: family }),
     db.insert(students).values(maya).onConflictDoUpdate({ target: students.id, set: maya }),
-    ...curriculumStatements(db),
     // A re-seed restores a reward's target and leaves its progress as the record left it.
     db
       .insert(rewardProgress)
@@ -328,12 +343,16 @@ function seededBlockTimes(index: number): Record<BlockId, number> {
 }
 
 /**
- * Maya's record as rows: one finished session per mastered concept, each with the mastery row,
- * the XP and the badges its session would have earned, worked out by the same rules the live
- * session uses. Completion rewards read her sessions live, so none is seeded as unlocked. No
- * explain-back is seeded either: her words come from the session the demo runs.
+ * Maya's record as rows for `studentId`: one finished session per mastered concept, each with the
+ * mastery row, the XP and the badges its session would have earned, worked out by the same rules
+ * the live session uses. Completion rewards read her sessions live, so none is seeded as unlocked.
+ * No explain-back is seeded either: her words come from the session the demo runs.
  */
-function historyStatements(db: LibSQLDatabase, record: readonly RecordDay[]): Statements[number][] {
+function historyStatements(
+  db: LibSQLDatabase,
+  record: readonly RecordDay[],
+  studentId: string,
+): Statements[number][] {
   const mastered = new Set<string>();
   const earned = new Set<string>();
   const logs: (typeof sessionLogs.$inferInsert)[] = [];
@@ -341,7 +360,7 @@ function historyStatements(db: LibSQLDatabase, record: readonly RecordDay[]): St
   const xp: (typeof xpEvents.$inferInsert)[] = [];
   const badgeRows: (typeof badges.$inferInsert)[] = [];
   record.forEach(({ day, key, seed }, index) => {
-    const id = `demo-session-${index + 1}`;
+    const id = `${studentId}-session-${index + 1}`;
     const blockElapsedMs = seededBlockTimes(index);
     const startedAt = familyMoment(day, MAYA_PLAN.sessionTime);
     const elapsed = Object.values(blockElapsedMs).reduce((sum, ms) => sum + ms, 0);
@@ -356,7 +375,7 @@ function historyStatements(db: LibSQLDatabase, record: readonly RecordDay[]): St
     newBadges.forEach((badge) => earned.add(badge.key));
     logs.push({
       id,
-      studentId: DEMO_STUDENT_ID,
+      studentId,
       sessionTemplateId: templateId,
       status: "done",
       seed,
@@ -370,7 +389,7 @@ function historyStatements(db: LibSQLDatabase, record: readonly RecordDay[]): St
       createdAt: startedAt,
     });
     masteryRows.push({
-      studentId: DEMO_STUDENT_ID,
+      studentId,
       sessionTemplateId: templateId,
       status: "mastered",
       sessionLogId: id,
@@ -380,7 +399,7 @@ function historyStatements(db: LibSQLDatabase, record: readonly RecordDay[]): St
     });
     xp.push(
       ...XP_KINDS.map((kind) => ({
-        studentId: DEMO_STUDENT_ID,
+        studentId,
         sessionLogId: id,
         ...xpAward(kind, kind === "guided" ? SESSION_SHAPE.guided.length : 1),
         createdAt: completedAt,
@@ -388,7 +407,7 @@ function historyStatements(db: LibSQLDatabase, record: readonly RecordDay[]): St
     );
     badgeRows.push(
       ...newBadges.map((badge) => ({
-        studentId: DEMO_STUDENT_ID,
+        studentId,
         key: badge.key,
         sessionLogId: id,
         earnedAt: completedAt,
@@ -413,28 +432,43 @@ function demoScheduleDays(record: readonly RecordDay[], today: string): Schedule
 }
 
 /**
- * The state the demo starts from (milestone 12, extended in 13): Maya's record of the concepts
- * before two-step equations, today on her schedule whatever its weekday (the demo day is a Friday
- * and her days are not), the next two weeks of her session days, and her phone rule switched on
- * with no unlock running.
+ * The state the demo starts from (milestone 12, extended in 13) for the student at `home`: Maya's
+ * record of the concepts before two-step equations, today on her schedule whatever its weekday
+ * (the demo day is a Friday and her days are not), the next two weeks of her session days, and
+ * her phone rule switched on with no unlock running.
  */
 function demoStateStatements(
   db: LibSQLDatabase,
   now: Date,
   record: readonly RecordDay[],
+  { studentId }: DemoHome,
 ): Statements {
   const today = calendarDay(now);
   const rule = { enabled: true, ...DEMO_LOCK_RULE, overrideUntil: null, updatedAt: now };
   return [
     db
       .insert(sessionLogs)
-      .values(scheduleRows(DEMO_STUDENT_ID, demoScheduleDays(record, today)))
+      .values(scheduleRows(studentId, demoScheduleDays(record, today)))
       .onConflictDoNothing(),
     db
       .insert(lockRules)
-      .values({ studentId: DEMO_STUDENT_ID, ...rule })
+      .values({ studentId, ...rule })
       .onConflictDoUpdate({ target: lockRules.studentId, set: rule }),
-    ...historyStatements(db, record),
+    ...historyStatements(db, record, studentId),
+  ];
+}
+
+/**
+ * Everything the demo persona starts with, at `home`: the profile, her record, the schedule and
+ * the phone rule. Reset demo writes it for Maya; a visitor's copy is written, and started over,
+ * with the same statements.
+ */
+export function personaStatements(db: LibSQLDatabase, now: Date, home: DemoHome): Statements {
+  const today = calendarDay(now);
+  const record = demoRecord(today);
+  return [
+    ...profileStatements(db, now, home, streakWeeksBeforeRecord(record, today)),
+    ...demoStateStatements(db, now, record, home),
   ];
 }
 
@@ -445,24 +479,22 @@ function demoStateStatements(
  */
 export async function seedDemo(now = new Date()): Promise<void> {
   const db = await getDb();
-  await db.batch(profileStatements(db, now));
+  await db.batch([...curriculumStatements(db), ...profileStatements(db, now, MAYA)]);
 }
 
 /**
- * Puts the database in exactly the state the demo starts from: every family and all history gone,
- * then the demo profile and the demo's starting state, Maya's record included. `npm run db:seed --
- * --demo` and the admin panel's "Reset demo" both run this. One transaction, so a page that loads
- * during the reset sees the old state or the new, never neither.
+ * Puts the database in exactly the state the demo starts from: every family but the visitors'
+ * copies gone with all its history, then the curriculum, the demo profile and the demo's starting
+ * state, Maya's record included, with the demo clock off. `npm run db:seed -- --demo` and the
+ * admin panel's "Reset demo" both run this. One transaction, so a page that loads during the
+ * reset sees the old state or the new, never neither. Visitors' copies are theirs alone: the
+ * sweep in `src/db/visitors.ts` removes them.
  */
 export async function resetDemoData(now = new Date()): Promise<void> {
   const db = await getDb();
-  const today = calendarDay(now);
-  const record = demoRecord(today);
-  const [first, ...rest] = DEMO_RESET_TABLES;
   await db.batch([
-    db.delete(first),
-    ...rest.map((table) => db.delete(table)),
-    ...profileStatements(db, now, streakWeeksBeforeRecord(record, today)),
-    ...demoStateStatements(db, now, record),
+    ...familyDeletes(db, eq(families.visitor, false)),
+    ...curriculumStatements(db),
+    ...personaStatements(db, now, MAYA),
   ]);
 }

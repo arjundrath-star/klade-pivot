@@ -6,14 +6,14 @@ import { Card, cardClass } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { familyAlerts } from "@/db/queries/alerts";
 import { getStudent } from "@/db/queries/students";
-import { gatedFamily } from "@/gate/server";
 import { calendarDay, formatDay } from "@/parent/progress";
+import { parentOnPage } from "@/session/current-student";
 
 export const metadata: Metadata = { title: "Alerts" };
 
 export default async function AlertsPage() {
   await connection();
-  const { familyId, studentId } = await gatedFamily("/parent/alerts");
+  const { familyId, studentId, signedIn } = await parentOnPage("/parent/alerts");
   const [student, alerts] = await Promise.all([getStudent(studentId), familyAlerts(familyId)]);
 
   return (
@@ -40,9 +40,12 @@ export default async function AlertsPage() {
                   <p className="font-medium">{alert.message}</p>
                   <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-soft">
                     <span>{formatDay(calendarDay(alert.createdAt))}</span>
-                    <Link href={`/parent/alerts/${alert.id}/preview`} className="link">
-                      Email preview
-                    </Link>
+                    {/* The preview stays behind the gate, so only the founder's browser gets the link. */}
+                    {signedIn && (
+                      <Link href={`/parent/alerts/${alert.id}/preview`} className="link">
+                        Email preview
+                      </Link>
+                    )}
                   </p>
                 </li>
               ))}

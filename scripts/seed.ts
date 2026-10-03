@@ -5,7 +5,7 @@
 // panel's "Reset demo". --open-session also opens Maya's session for today and prints its path.
 import { existsSync } from "node:fs";
 import { deleteLocalDatabase } from "@/db/client";
-import { DEMO_STUDENT_ID, resetDemoData, seedDemo, sessionSeedFor } from "@/db/demo";
+import { DEMO_SESSION_SEED, DEMO_STUDENT_ID, resetDemoData, seedDemo } from "@/db/demo";
 import { openTodaySession } from "@/db/queries/sessions";
 
 // Read the same DATABASE_URL `next dev` reads. Variables already set in the shell win.
@@ -22,7 +22,7 @@ async function main(): Promise<void> {
     console.log("seeded the demo family and curriculum");
   }
   if (flags.has("--open-session")) {
-    const sessionId = await openTodaySession(DEMO_STUDENT_ID, sessionSeedFor(DEMO_STUDENT_ID));
+    const sessionId = await openTodaySession(DEMO_STUDENT_ID, DEMO_SESSION_SEED);
     if (sessionId === null) throw new Error("Maya has no session left to open");
     console.log(`/student/session/${sessionId}`);
   }

@@ -9,11 +9,14 @@ import { streakLabel, XP_LABELS } from "@/parent/progress";
 import type { SessionSummary } from "@/session/complete";
 import { EXIT_PASS_MARK } from "@/session/mastery";
 import type { StreakChange } from "@/session/rewards";
+import { StartOver } from "@/visitor/start-over";
 
 interface SessionCompleteProps {
   title: string;
   /** Absent only for a session finished before verdicts were recorded. */
   summary?: SessionSummary;
+  /** The student is a visitor's copy of the demo, which can start over from here. */
+  restart?: boolean;
 }
 
 const MUTED = "text-sm text-ink-soft";
@@ -99,7 +102,7 @@ function Earned({ rewards }: Pick<SessionSummary, "rewards">) {
   );
 }
 
-export function SessionComplete({ title, summary }: SessionCompleteProps) {
+export function SessionComplete({ title, summary, restart = false }: SessionCompleteProps) {
   const mastered = summary?.outcome === "mastered";
   return (
     <div className="flex flex-col gap-8">
@@ -126,9 +129,12 @@ export function SessionComplete({ title, summary }: SessionCompleteProps) {
         )}
       </Card>
       {summary && <Earned rewards={summary.rewards} />}
-      <Link href="/student" className={`${buttonClass("primary")} self-start`}>
-        Back to today
-      </Link>
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href="/student" className={buttonClass("primary")}>
+          Back to today
+        </Link>
+        {restart && <StartOver />}
+      </div>
     </div>
   );
 }

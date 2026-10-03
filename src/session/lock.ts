@@ -3,7 +3,7 @@
  * is done, the chosen app categories are locked. Pure: the route reads the inputs, this decides.
  */
 import { addDays, scheduleDays, weekdayOf, type Weekday } from "@/engine/pace";
-import { calendarDay, clockTime } from "@/parent/progress";
+import { calendarDay, clockTime, familyMoment } from "@/parent/progress";
 
 /** Where the phone panel sits: the parent view (the demo family) or the student's own view. */
 export const LOCK_VIEWERS = ["parent", "student"] as const;
@@ -137,4 +137,10 @@ export function demoClockFor(
     day: latestLockDay(today, fields) ?? today,
     time: demoClockTime(fields.startTime),
   };
+}
+
+/** `demoClockFor` as the moment the family's clock is set to. */
+export function demoClockMoment(rule: LockRuleFields | null, plan: Plan, today: string): Date {
+  const { day, time } = demoClockFor(rule, plan, today);
+  return familyMoment(day, time);
 }

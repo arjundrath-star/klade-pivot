@@ -16,6 +16,8 @@ export const getStudent = cache(async (id: string) => {
       id: students.id,
       familyId: students.familyId,
       parentName: families.parentName,
+      /** The family is a visitor's copy of the demo (milestone 20). */
+      visitor: families.visitor,
       name: students.name,
       pronoun: students.pronoun,
       targetDate: students.targetDate,

@@ -8,10 +8,10 @@ import { lockSettings, resetDemoClock } from "@/db/queries/lock";
 import { setInterests } from "@/db/queries/students";
 import { INTERESTS } from "@/engine/types";
 import { gatedFamily } from "@/gate/server";
-import { calendarDay, familyMoment } from "@/parent/progress";
+import { calendarDay } from "@/parent/progress";
 import { markTodayMissed } from "@/session/alerts";
 import { forgetStudent } from "@/session/current-student";
-import { demoClockFor } from "@/session/lock";
+import { demoClockMoment } from "@/session/lock";
 import { lockView } from "@/session/lock-status";
 import { overrideExplainBack } from "@/session/override";
 
@@ -76,8 +76,8 @@ export async function simulateSessionDay(formData?: FormData): Promise<void> {
   const { familyId, studentId } = await gatedFamily(ADMIN);
   const settings = await lockSettings(familyId, studentId);
   if (!settings) backWith(formData, "not-found");
-  const { day, time } = demoClockFor(settings.rule, settings, calendarDay(new Date()));
-  const set = await resetDemoClock(familyId, familyMoment(day, time));
+  const at = demoClockMoment(settings.rule, settings, calendarDay(new Date()));
+  const set = await resetDemoClock(familyId, at);
   if (!set) backWith(formData, "not-found");
   const { reason } = await lockView(studentId);
   backWith(formData, reason === "session-done" ? "clock-done" : "clock");

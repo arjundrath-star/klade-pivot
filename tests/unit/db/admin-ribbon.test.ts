@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { describe, expect, it } from "vitest";
 import { adminControls } from "@/admin/controls";
@@ -5,7 +6,8 @@ import { RIBBON_COOKIE, ribbonCookie, ribbonHidden } from "@/admin/ribbon-cookie
 import { resetDemo, simulateMissedSession, switchInterest } from "@/app/admin/actions";
 import { DEMO_STUDENT_ID } from "@/db/demo";
 import { getStudent } from "@/db/queries/students";
-import { formOf, redirectOf, withTempDatabase } from "../../helpers/database";
+import { createVisitor } from "@/db/visitors";
+import { actAs, formOf, redirectOf, withTempDatabase } from "../../helpers/database";
 
 withTempDatabase("klade-admin-ribbon-", new Date("2026-10-02T16:00:00Z"));
 
@@ -42,6 +44,17 @@ describe("the admin ribbon's actions", () => {
     expect(await redirectOf(() => resetDemo(formOf({ back: "/student" })))).toBe(
       "/student?notice=reset",
     );
+  });
+});
+
+describe("the ribbon for a visitor", () => {
+  it("is nothing: the controls key off the gate cookie, which a visitor's browser never has", async () => {
+    const studentId = randomUUID();
+    await createVisitor(studentId);
+    await actAs(studentId);
+    expect(await adminControls()).toBeNull();
+    (await cookies()).set(RIBBON_COOKIE, "hidden");
+    expect(await adminControls()).toBeNull();
   });
 });
 

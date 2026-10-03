@@ -25,7 +25,7 @@ import {
   type AnsweredBlockId,
 } from "@/session/blocks";
 import { sessionSummary } from "@/session/complete";
-import { currentStudentId } from "@/session/current-student";
+import { studentOnPage } from "@/session/current-student";
 import { loadSession, type LoadedSession } from "@/session/load";
 import { findProblem, renderSessionProblem } from "@/session/problems";
 import { sessionRewards } from "@/session/rewards";
@@ -80,7 +80,7 @@ export default async function SessionPage({
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
 
-  const studentId = await currentStudentId();
+  const { id: studentId } = await studentOnPage(`/student/session/${id}`);
   const [loaded, notes, controls, { notice }] = await Promise.all([
     loadSession(id, studentId),
     sessionNotes(id, studentId),
@@ -104,7 +104,7 @@ export default async function SessionPage({
     return frame(
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
         <CourseBreadcrumb contentKey={session.contentKey} />
-        <SessionComplete title={session.title} summary={summary} />
+        <SessionComplete title={session.title} summary={summary} restart={session.visitor} />
       </div>,
     );
   }
@@ -200,6 +200,7 @@ export default async function SessionPage({
         exit: await exitPanel(loaded),
       }}
       initialNotes={notes}
+      restart={session.visitor}
     />,
   );
 }

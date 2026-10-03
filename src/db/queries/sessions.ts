@@ -4,6 +4,7 @@ import { getDb } from "@/db/client";
 import type { XpGrant } from "@/db/queries/rewards";
 import {
   badges,
+  families,
   mastery,
   rewardUnlocks,
   sessionLogs,
@@ -143,10 +144,13 @@ export async function getSession(id: string, studentId: string) {
       sessionDays: students.sessionDays,
       familyId: students.familyId,
       studentName: students.name,
+      /** The student's family is a visitor's copy of the demo, which runs the demo's session. */
+      visitor: families.visitor,
     })
     .from(sessionLogs)
     .innerJoin(sessionTemplates, eq(sessionTemplates.id, sessionLogs.sessionTemplateId))
     .innerJoin(students, eq(students.id, sessionLogs.studentId))
+    .innerJoin(families, eq(families.id, students.familyId))
     .where(and(eq(sessionLogs.id, id), eq(sessionLogs.studentId, studentId)));
   return session;
 }

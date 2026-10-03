@@ -7,6 +7,10 @@ import { XP_TABLE } from "@/engine/progress";
 import { calendarDay } from "@/parent/progress";
 import type { AnsweredBlockId } from "@/session/blocks";
 
+/** An explanation the stored pass carries, in a student's words. */
+export const PASSING_EXPLANATION =
+  "I took the same number away from both sides, then divided both sides, so it stays balanced.";
+
 /** What the phone panel says while the rule holds the apps. */
 export const LOCKED = "Locked. Finish today's 30-minute session to unlock.";
 
@@ -56,7 +60,7 @@ export async function expectProblem(page: Page, index: number, count: number) {
 
 /** Presses Start on the student's page and returns the new session's id from its URL. */
 export async function startSession(page: Page): Promise<string> {
-  await page.getByRole("button", { name: "Start" }).click();
+  await page.getByRole("button", { name: "Start today's session", exact: true }).click();
   await expect(page).toHaveURL(/\/student\/session\/[0-9a-f-]{36}$/);
   return page.url().split("/").pop() ?? "";
 }

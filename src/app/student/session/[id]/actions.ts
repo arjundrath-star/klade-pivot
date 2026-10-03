@@ -187,7 +187,7 @@ export async function submitAnswer(input: z.input<typeof AnswerInput>): Promise<
  */
 export async function skipProblem(input: z.input<typeof SkipInput>): Promise<SkipResult> {
   const [family, studentId] = await Promise.all([signedInFamily(), currentStudentId()]);
-  if (family?.studentId !== studentId) return { ok: false, error: "refused" };
+  if (!family || family.studentId !== studentId) return { ok: false, error: "refused" };
   const parsed = SkipInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { sessionId, block, index, timeMs } = parsed.data;
@@ -250,7 +250,8 @@ export async function submitExitAnswer(
 export async function confirmLesson(input: z.input<typeof LessonInput>): Promise<LessonResult> {
   const parsed = LessonInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid" };
-  const marked = await markLessonRead(parsed.data.sessionId, await currentStudentId());
+  const studentId = await currentStudentId();
+  const marked = studentId && (await markLessonRead(parsed.data.sessionId, studentId));
   return marked ? { ok: true } : { ok: false, error: "closed" };
 }
 
@@ -263,7 +264,8 @@ export async function saveNotes(input: z.input<typeof NotesInput>): Promise<Note
   const parsed = NotesInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { sessionId, notes } = parsed.data;
-  const saved = await saveSessionNotes(sessionId, await currentStudentId(), notes);
+  const studentId = await currentStudentId();
+  const saved = studentId && (await saveSessionNotes(sessionId, studentId, notes));
   return saved ? { ok: true } : { ok: false, error: "closed" };
 }
 

@@ -66,15 +66,17 @@ test("the steering §7 demo script runs end to end, with the phone unlocking liv
   expect(formErrors).toEqual([]);
   await signup.close();
 
-  // The parent and admin views sit behind the shared password; a wrong one is refused.
-  await page.goto("/parent");
-  await expect(page).toHaveURL(/\/gate\?next=%2Fparent$/);
+  // The admin panel sits behind the shared password; a wrong one is refused. Signed in, the
+  // parent view is the demo family's.
+  await page.goto("/admin");
+  await expect(page).toHaveURL(/\/gate\?next=%2Fadmin$/);
   await page.getByLabel("Password").fill("not the password");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByText("That password is not right.")).toBeVisible();
   await page.getByLabel("Password").fill(SMOKE_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/parent$/);
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.goto("/parent");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Overview");
   await expect(page.getByText("Dana", { exact: true })).toBeVisible();
 

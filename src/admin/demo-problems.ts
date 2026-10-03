@@ -1,11 +1,6 @@
 import { S1_KEY } from "@/content/keys";
 import { sessionContent } from "@/content/sessions";
-import {
-  DEMO_INTERESTS,
-  DEMO_SESSION_SEED,
-  DEMO_STUDENT_ID,
-  sessionContentKeyFor,
-} from "@/db/demo";
+import { DEMO_INTERESTS, DEMO_SESSION_SEED, MAYA, sessionContentKeyFor } from "@/db/demo";
 import { formatEquation } from "@/engine/format";
 import { generateInstance } from "@/engine/generate";
 import { BLOCKS } from "@/session/blocks";
@@ -20,7 +15,7 @@ export const DEMO_PROBLEMS_HEADER = ["Block", "Problem", "Text", "Equation", "An
  * seeded interests, and numbered as the workspace's counter says it.
  */
 export function demoProblemCells(): string[][] {
-  const content = sessionContent(sessionContentKeyFor(DEMO_STUDENT_ID, S1_KEY));
+  const content = sessionContent(sessionContentKeyFor(MAYA, S1_KEY));
   return sessionProblems(content, DEMO_SESSION_SEED).map((problem) => {
     const instance = generateInstance(problem.template, problem.seed);
     return [

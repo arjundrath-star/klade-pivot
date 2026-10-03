@@ -8,19 +8,17 @@ import { ALGEBRA1_COURSE, ALGEBRA1_TITLE } from "@/content/algebra1/course";
 import { CourseMap } from "@/course/course-map";
 import { masteredConcepts, studentXp } from "@/db/queries/rewards";
 import { findTodaySession } from "@/db/queries/sessions";
-import { getStudent } from "@/db/queries/students";
 import { courseProgress } from "@/engine/course";
-import { currentStudentId } from "@/session/current-student";
+import { studentOnPage } from "@/session/current-student";
 import { studentStreak } from "@/session/pace";
 
 export const metadata: Metadata = { title: "Course" };
 
 export default async function CoursePage() {
   await connection();
-  const studentId = await currentStudentId();
-  const [controls, student, today, xp, mastered, streak] = await Promise.all([
+  const { id: studentId, student } = await studentOnPage("/student/course");
+  const [controls, today, xp, mastered, streak] = await Promise.all([
     adminControls(),
-    getStudent(studentId),
     findTodaySession(studentId),
     studentXp(studentId),
     masteredConcepts(studentId),

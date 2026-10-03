@@ -8,19 +8,17 @@ import { PageHeader } from "@/components/ui/page-header";
 import { mentorFor } from "@/db/queries/mentor";
 import { latestExplanation } from "@/db/queries/parent";
 import { masteredConcepts, studentXp } from "@/db/queries/rewards";
-import { getStudent } from "@/db/queries/students";
 import { MentorCard } from "@/mentor/mentor-card";
-import { currentStudentId } from "@/session/current-student";
+import { studentOnPage } from "@/session/current-student";
 import { studentStreak } from "@/session/pace";
 
 export const metadata: Metadata = { title: "Mentor" };
 
 export default async function MentorPage() {
   await connection();
-  const studentId = await currentStudentId();
-  const [controls, student, xp, mastered, streak, mentor, explanation] = await Promise.all([
+  const { id: studentId, student } = await studentOnPage("/student/mentor");
+  const [controls, xp, mastered, streak, mentor, explanation] = await Promise.all([
     adminControls(),
-    getStudent(studentId),
     studentXp(studentId),
     masteredConcepts(studentId),
     studentStreak(studentId, new Date()),

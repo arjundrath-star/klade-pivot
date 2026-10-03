@@ -6,20 +6,22 @@ import { TodayCard } from "./today-card";
 import { adminControls } from "@/admin/controls";
 import { dayStates, nextSessionDay, weekOf, type DayState } from "@/calendar/month";
 import { WeekStrip } from "@/calendar/week-strip";
+import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { PanelHeader } from "@/components/ui/panel-header";
 import { ALGEBRA1_COURSE, ALGEBRA1_TITLE } from "@/content/algebra1/course";
 import { studentEarnings } from "@/db/queries/rewards";
 import { findTodaySession } from "@/db/queries/sessions";
-import { getStudent } from "@/db/queries/students";
 import { conceptPlace, courseProgress, nextConcept } from "@/engine/course";
 import { addDays, SCHEDULE_DAYS_AHEAD } from "@/engine/pace";
 import { streak } from "@/engine/progress";
 import { timeLabel } from "@/parent/phone-rule";
 import { calendarDay, formatDay, plannedSlots } from "@/parent/progress";
 import { PhoneSection } from "@/phone/phone-section";
-import { currentStudentId } from "@/session/current-student";
+import { studentOnPage } from "@/session/current-student";
 import { lockView } from "@/session/lock-status";
 import { scheduleRecord } from "@/session/pace";
+import { StartOver } from "@/visitor/start-over";
 
 export const metadata: Metadata = { title: "Today" };
 
@@ -40,14 +42,13 @@ function dueLine(states: ReadonlyMap<string, DayState>, today: string, sessionTi
 export default async function StudentHome({ searchParams }: PageProps<"/student">) {
   // Reads the database, so it renders per request, never at build time.
   await connection();
-  const studentId = await currentStudentId();
+  const { id: studentId, student } = await studentOnPage("/student");
   const now = new Date();
   const today = calendarDay(now);
   const week = weekOf(today);
-  const [params, controls, student, todaySession, record, earnings, phone] = await Promise.all([
+  const [params, controls, todaySession, record, earnings, phone] = await Promise.all([
     searchParams,
     adminControls(),
-    getStudent(studentId),
     findTodaySession(studentId),
     scheduleRecord(studentId, today),
     studentEarnings(studentId),
@@ -123,6 +124,17 @@ export default async function StudentHome({ searchParams }: PageProps<"/student"
                 </PhoneSection>
               )}
             </div>
+            {student.visitor && (
+              <Card aria-labelledby="demo-heading" className="flex flex-col gap-3">
+                <PanelHeader id="demo-heading" title="Your copy of the demo" />
+                <p className="max-w-prose text-ink-soft">
+                  This browser has its own copy of Maya&apos;s record; no one else sees it. Start
+                  the demo over puts it back to the beginning: her five sessions, the phone locked,
+                  today&apos;s session waiting.
+                </p>
+                <StartOver className="self-start" />
+              </Card>
+            )}
           </>
         );
       }}

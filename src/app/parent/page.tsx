@@ -12,7 +12,6 @@ import { rewardRows } from "@/db/queries/reward-progress";
 import { findTodaySession } from "@/db/queries/sessions";
 import { getStudent } from "@/db/queries/students";
 import { courseProgress } from "@/engine/course";
-import { gatedFamily } from "@/gate/server";
 import { HistoryTable } from "@/parent/history-table";
 import { ruleSummary } from "@/parent/phone-rule";
 import {
@@ -27,6 +26,7 @@ import { PhoneSection } from "@/phone/phone-section";
 import { RewardsPanel } from "@/rewards/rewards-panel";
 import { lockView } from "@/session/lock-status";
 import { studentStanding } from "@/session/pace";
+import { parentOnPage } from "@/session/current-student";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -50,7 +50,7 @@ function masteryNote({ status, exitScore, exitTotal }: GridRow): string | undefi
 export default async function ParentOverview() {
   // Reads the database, so it renders per request and shows a session the moment it ends.
   await connection();
-  const { studentId } = await gatedFamily("/parent");
+  const { studentId } = await parentOnPage("/parent");
   const now = new Date();
   const [student, standing, history, grid, phone, rewardProgress, today] = await Promise.all([
     getStudent(studentId),

@@ -214,8 +214,10 @@ test("a student walks all five blocks of a session and it is saved as they go", 
   await page.getByRole("button", { name: "Speak" }).click();
   await expect(field).toHaveValue("I took five away from both sides");
 
-  // Without the API there is no microphone button, and typing works.
+  // Without the API there is no microphone button, and typing works. The same student's browser
+  // (its cookies), since a browser with none would get a copy of the demo of its own.
   const noSpeech = await browser.newContext();
+  await noSpeech.addCookies(await page.context().cookies());
   await noSpeech.addInitScript(() => {
     for (const name of ["SpeechRecognition", "webkitSpeechRecognition"]) {
       Object.defineProperty(window, name, { value: undefined, configurable: true });
